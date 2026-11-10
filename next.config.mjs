@@ -28,18 +28,15 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const rawBackend =
-      process.env.BACKEND_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      "http://localhost:5000";
-    const backendUrl = rawBackend.startsWith("http")
-      ? rawBackend
-      : `http://${rawBackend}`;
-
+    const backendBase = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+    if (!backendBase) {
+      return [];
+    }
+    const cleanUrl = backendBase.trim().replace(/\/+$/, "");
     return [
       {
         source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
+        destination: `${cleanUrl}/api/:path*`,
       },
     ];
   },
