@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_BASE =
+const rawBackend =
   process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://192.168.1.42:5000";
+  process.env.NEXT_PUBLIC_API_URL;
+
+const BACKEND_BASE = rawBackend.startsWith("http")
+  ? rawBackend
+  : `http://${rawBackend}`;
 
 async function proxyRequest(request, { params }) {
   const resolvedParams = await params;
@@ -11,6 +14,7 @@ async function proxyRequest(request, { params }) {
   const path = pathParts.join("/");
   const url = new URL(request.url);
   const targetUrl = `${BACKEND_BASE}/api/auth/${path}${url.search}`;
+  console.log(`\x1b[35m[BACKEND PROXY]\x1b[0m ${request.method} ${url.pathname} ➜ ${targetUrl}`);
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
@@ -53,6 +57,7 @@ async function proxyRequest(request, { params }) {
       headers: responseHeaders,
     });
   } catch (err) {
+    console.error(`\x1b[31m[BACKEND PROXY FAILED]\x1b[0m ${targetUrl} - ${err.message}`);
     return NextResponse.json(
       {
         success: false,

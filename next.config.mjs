@@ -28,10 +28,18 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const rawBackend =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:5000";
+    const backendUrl = rawBackend.startsWith("http")
+      ? rawBackend
+      : `http://${rawBackend}`;
+
     return [
       {
         source: "/api/:path*",
-        destination: "http://192.168.1.42:5000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
