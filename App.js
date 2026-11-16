@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, Platform, View } from 'react-native';
+import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -10,11 +11,15 @@ import Colors from './src/theme/colors';
  * Cross-platform React Native / Expo implementation
  */
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('login'); // 'login' | 'register' | 'home'
+  const [currentScreen, setCurrentScreen] = useState('landing'); // 'landing' | 'login' | 'register' | 'home'
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [registeredParam, setRegisteredParam] = useState(false);
   const [prefilledEmail, setPrefilledEmail] = useState('');
+
+  const handleNavigateToLanding = () => {
+    setCurrentScreen('landing');
+  };
 
   const handleNavigateToRegister = () => {
     setRegisteredParam(false);
@@ -42,7 +47,7 @@ export default function App() {
     setUser(null);
     setToken(null);
     setRegisteredParam(false);
-    setCurrentScreen('login');
+    setCurrentScreen('landing');
   };
 
   return (
@@ -52,9 +57,17 @@ export default function App() {
         backgroundColor={Colors.background}
       />
       <View style={styles.container}>
+        {currentScreen === 'landing' && (
+          <LandingScreen
+            onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToRegister={handleNavigateToRegister}
+          />
+        )}
+
         {currentScreen === 'login' && (
           <LoginScreen
             onNavigateToRegister={handleNavigateToRegister}
+            onNavigateToLanding={handleNavigateToLanding}
             onLoginSuccess={handleLoginSuccess}
             registeredParam={registeredParam}
             prefilledEmail={prefilledEmail}
@@ -64,6 +77,7 @@ export default function App() {
         {currentScreen === 'register' && (
           <RegisterScreen
             onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToLanding={handleNavigateToLanding}
             onRegisterSuccess={handleRegisterSuccess}
           />
         )}
