@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, StatusBar, StyleSheet, Platform } from 'react-native';
+import { View, StatusBar, StyleSheet, Platform, LogBox } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import Colors from './src/theme/colors';
+
+LogBox.ignoreLogs([
+  'SafeAreaView has been deprecated',
+  'ImageBackground is deprecated',
+]);
 
 /**
  * Ulavan Santhai - Mobile Application Root

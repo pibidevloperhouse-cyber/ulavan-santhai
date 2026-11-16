@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   StyleSheet,
-  Image,
+  ImageBackground,
 } from 'react-native';
 import Colors from '../theme/colors';
 import AuthHeader from '../components/AuthHeader';
@@ -200,12 +200,11 @@ export default function RegisterScreen({
   };
 
   return (
-    <View style={styles.mainContainer}>
-      <Image
-        source={require('../../assets/images/register-paddy-harvest.webp')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
+    <ImageBackground
+      source={require('../../assets/images/register-paddy-harvest.webp')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
       <View style={styles.overlayLayer}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -423,17 +422,13 @@ export default function RegisterScreen({
         message={popup.message}
         onClose={() => setPopup((prev) => ({ ...prev, visible: false }))}
       />
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    position: 'relative',
-  },
   backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     width: '100%',
     height: '100%',
   },
