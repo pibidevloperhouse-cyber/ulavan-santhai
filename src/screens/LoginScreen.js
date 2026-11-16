@@ -14,7 +14,9 @@ import {
 import Colors from '../theme/colors';
 import AuthHeader from '../components/AuthHeader';
 import FeedbackModal from '../components/FeedbackModal';
+import ServerConfigModal from '../components/ServerConfigModal';
 import { loginUser } from '../services/authService';
+import { getBaseUrl } from '../config/api';
 
 export default function LoginScreen({
   onNavigateToRegister,
@@ -27,6 +29,8 @@ export default function LoginScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [serverUrl, setServerUrl] = useState(getBaseUrl());
 
   // Popup Modal state
   const [popup, setPopup] = useState({
@@ -134,6 +138,17 @@ export default function LoginScreen({
                 title="Welcome Back"
                 subtitle="Empowering Farmers & Buyers Across Tamil Nadu"
               />
+
+              {/* Dynamic Server Config Pill */}
+              <TouchableOpacity
+                style={styles.serverPill}
+                onPress={() => setShowServerModal(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.serverPillText}>
+                  ⚙️ Server: <Text style={styles.serverPillBold}>{serverUrl}</Text>
+                </Text>
+              </TouchableOpacity>
 
               {/* Identifier Input */}
               <View style={styles.inputGroup}>
@@ -245,6 +260,13 @@ export default function LoginScreen({
         message={popup.message}
         onClose={() => setPopup((prev) => ({ ...prev, visible: false }))}
       />
+
+      {/* Server IP Config Modal */}
+      <ServerConfigModal
+        visible={showServerModal}
+        onClose={() => setShowServerModal(false)}
+        onSaved={(newUrl) => setServerUrl(newUrl)}
+      />
     </ImageBackground>
   );
 }
@@ -279,6 +301,24 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  serverPill: {
+    alignSelf: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 16,
+  },
+  serverPillText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
+  serverPillBold: {
+    fontWeight: '700',
+    color: Colors.primary,
   },
   registeredBanner: {
     flexDirection: 'row',

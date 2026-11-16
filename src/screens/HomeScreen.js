@@ -6,12 +6,11 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
-  TextInput,
-  Modal,
 } from 'react-native';
 import Colors from '../theme/colors';
 import AuthHeader from '../components/AuthHeader';
-import { getBaseUrl, setCustomBaseUrl } from '../config/api';
+import ServerConfigModal from '../components/ServerConfigModal';
+import { getBaseUrl } from '../config/api';
 import { clearSessionCache } from '../services/authService';
 
 export default function HomeScreen({ user, token, onLogout }) {
@@ -19,15 +18,7 @@ export default function HomeScreen({ user, token, onLogout }) {
     user?.role === 'SELLER' ? 'seller' : 'buyer'
   );
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [apiUrl, setApiUrl] = useState(getBaseUrl());
-
-  const handleSaveApiUrl = () => {
-    if (apiUrl.trim()) {
-      setCustomBaseUrl(apiUrl.trim());
-      setShowConfigModal(false);
-      Alert.alert('Configuration Saved', `Backend URL set to: ${apiUrl.trim()}`);
-    }
-  };
+  const [currentUrl, setCurrentUrl] = useState(getBaseUrl());
 
   const handleLogoutPress = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of Ulavan Santhai?', [
@@ -134,7 +125,7 @@ export default function HomeScreen({ user, token, onLogout }) {
           activeOpacity={0.8}
         >
           <Text style={styles.configPillText}>
-            ⚙ Backend Server: <Text style={styles.boldIp}>{getBaseUrl()}</Text>
+            ⚙ Backend Server: <Text style={styles.boldIp}>{currentUrl}</Text>
           </Text>
         </TouchableOpacity>
 
@@ -149,43 +140,11 @@ export default function HomeScreen({ user, token, onLogout }) {
       </ScrollView>
 
       {/* Backend IP Config Modal */}
-      <Modal
+      <ServerConfigModal
         visible={showConfigModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfigModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Backend Server Connection</Text>
-            <Text style={styles.modalDesc}>
-              Enter your backend API URL (IP address of the laptop running backend branch):
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              value={apiUrl}
-              onChangeText={setApiUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="http://192.168.1.50:5000"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => setShowConfigModal(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalSave}
-                onPress={handleSaveApiUrl}
-              >
-                <Text style={styles.modalSaveText}>Save URL</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowConfigModal(false)}
+        onSaved={(newUrl) => setCurrentUrl(newUrl)}
+      />
     </View>
   );
 }

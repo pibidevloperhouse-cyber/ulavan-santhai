@@ -52,7 +52,20 @@ export default function OtpModal({
   }, [visible, cooldown]);
 
   const handleDigitChange = (val, index) => {
-    const clean = val.replace(/\D/g, '').slice(-1);
+    const numbers = val.replace(/\D/g, '');
+    if (numbers.length > 1) {
+      // User pasted multiple digits (e.g. 6-digit OTP from email/SMS)
+      const newDigits = [...digits];
+      for (let i = 0; i < numbers.length && index + i < 6; i++) {
+        newDigits[index + i] = numbers[i];
+      }
+      setDigits(newDigits);
+      const nextIndex = Math.min(index + numbers.length, 5);
+      inputRefs.current[nextIndex]?.focus();
+      return;
+    }
+
+    const clean = numbers.slice(-1);
     const newDigits = [...digits];
     newDigits[index] = clean;
     setDigits(newDigits);
