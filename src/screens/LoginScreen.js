@@ -15,12 +15,12 @@ import Colors from '../theme/colors';
 import AuthHeader from '../components/AuthHeader';
 import FeedbackModal from '../components/FeedbackModal';
 import ServerConfigModal from '../components/ServerConfigModal';
-import { loginUser } from '../services/authService';
+import OtpModal from '../components/OtpModal';
+import { loginUser, verifyEmailOtp, resendEmailOtp } from '../services/authService';
 import { getBaseUrl } from '../config/api';
 
 export default function LoginScreen({
   onNavigateToRegister,
-  onNavigateToLanding,
   onLoginSuccess,
   registeredParam = false,
   prefilledEmail = '',
@@ -40,6 +40,11 @@ export default function LoginScreen({
     title: '',
     message: '',
   });
+
+  // OTP Modal State for pending email verification
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState('');
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
@@ -61,6 +66,13 @@ export default function LoginScreen({
       });
 
       if (!result.success) {
+        // If user registration is pending OTP verification, open OTP verification modal immediately
+        if (result.message && result.message.toLowerCase().includes('pending verification')) {
+          setOtpError('');
+          setShowOtpModal(true);
+          return;
+        }
+
         setPopup({
           visible: true,
           type: 'error',
@@ -93,6 +105,53 @@ export default function LoginScreen({
     }
   };
 
+  const handleVerifyOtp = async (otpCode) => {
+    setIsVerifyingOtp(true);
+    setOtpError('');
+
+    try {
+      const result = await verifyEmailOtp({
+        email: identifier.trim(),
+        otp: otpCode,
+      });
+
+      if (!result.success) {
+        setOtpError(result.message);
+        return;
+      }
+
+      setShowOtpModal(false);
+
+      setPopup({
+        visible: true,
+        type: 'success',
+        title: 'Account Activated',
+        message: 'Email verified successfully! Logging you into Ulavan Santhai...',
+      });
+
+      setTimeout(() => {
+        setPopup((prev) => ({ ...prev, visible: false }));
+        onLoginSuccess(result.user, result.token);
+      }, 1200);
+    } catch {
+      setOtpError('Verification failed. Please check your connection.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    const result = await resendEmailOtp({
+      email: identifier.trim(),
+    });
+
+    if (!result.success) {
+      setOtpError(result.message);
+    } else {
+      setOtpError('');
+    }
+  };
+
   const handleForgotPassword = () => {
     setPopup({
       visible: true,
@@ -118,18 +177,6 @@ export default function LoginScreen({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Top Back to Home Button */}
-            {onNavigateToLanding ? (
-              <TouchableOpacity
-                style={styles.backToHomeBtn}
-                onPress={onNavigateToLanding}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.backToHomeIcon}>←</Text>
-                <Text style={styles.backToHomeText}>Marketplace Home</Text>
-              </TouchableOpacity>
-            ) : null}
-
             {/* Main Form Container Card */}
             <View style={styles.card}>
               {/* Registration Success Banner */}
@@ -280,6 +327,17 @@ export default function LoginScreen({
         onClose={() => setShowServerModal(false)}
         onSaved={(newUrl) => setServerUrl(newUrl)}
       />
+
+      {/* Pending Registration OTP Verification Modal */}
+      <OtpModal
+        visible={showOtpModal}
+        email={identifier.trim()}
+        onVerify={handleVerifyOtp}
+        onResend={handleResendOtp}
+        onClose={() => setShowOtpModal(false)}
+        isLoading={isVerifyingOtp}
+        errorMessage={otpError}
+      />
     </ImageBackground>
   );
 }
@@ -302,34 +360,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 32,
-  },
-  backToHomeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-    gap: 6,
-  },
-  backToHomeIcon: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  backToHomeText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: Colors.primary,
   },
   card: {
     backgroundColor: Colors.surfaceTranslucent,

@@ -179,6 +179,16 @@ export default function OtpModal({
             )}
           </TouchableOpacity>
 
+          {/* Quick Dev/Test OTP Fill (Backend accepts 123456 in non-production) */}
+          <TouchableOpacity
+            style={styles.testBadge}
+            onPress={() => {
+              setDigits(['1', '2', '3', '4', '5', '6']);
+            }}
+          >
+            <Text style={styles.testBadgeText}>⚡ Dev/Test Auto-Fill: 123456</Text>
+          </TouchableOpacity>
+
           {/* Resend OTP Section */}
           <View style={styles.resendRow}>
             {cooldown > 0 ? (
@@ -321,6 +331,20 @@ const styles = StyleSheet.create({
   },
   resendRow: {
     alignItems: 'center',
+  },
+  testBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginBottom: 14,
+  },
+  testBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
   },
   resendTimerText: {
     fontSize: 12,

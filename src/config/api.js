@@ -22,8 +22,9 @@ const getHostAddress = () => {
   return 'localhost';
 };
 
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
 export const BACKEND_PORT = DEFAULT_PORT;
-export const API_BASE_URL = `http://${getHostAddress()}:${DEFAULT_PORT}`;
+export const API_BASE_URL = envApiUrl ? envApiUrl.replace(/\/+$/, '') : `http://${getHostAddress()}:${DEFAULT_PORT}`;
 
 export const API_ENDPOINTS = {
   // Authentication Routes (from backend branch: src/routes/auth.routes.js)
@@ -32,8 +33,8 @@ export const API_ENDPOINTS = {
   VERIFY_OTP: '/api/auth/email/verify',
   RESEND_OTP: '/api/auth/email/resend',
   
-  // Status / Health check
-  HEALTH: '/api/health',
+  // Status / Health check (from backend branch: src/server.js app.get('/'))
+  HEALTH: '/',
 };
 
 /**

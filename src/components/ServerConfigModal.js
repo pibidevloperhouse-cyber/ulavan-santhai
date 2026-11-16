@@ -27,8 +27,8 @@ export default function ServerConfigModal({ visible, onClose, onSaved }) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 4000);
 
-      // Check health endpoint or auth endpoint
-      const res = await fetch(`${target}/api/health`, {
+      // Check root health endpoint (matches backend src/server.js app.get('/'))
+      const res = await fetch(`${target}/`, {
         signal: controller.signal,
       }).catch(() => null);
 
@@ -37,10 +37,10 @@ export default function ServerConfigModal({ visible, onClose, onSaved }) {
       if (res && res.status < 500) {
         setTestResult({
           success: true,
-          message: `Connected successfully to backend (${res.status})!`,
+          message: `Connected successfully to Ulavan Santhai backend (${res.status})!`,
         });
       } else {
-        // Fallback: ping root or auth route
+        // Fallback: ping auth route
         const authPing = await fetch(`${target}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

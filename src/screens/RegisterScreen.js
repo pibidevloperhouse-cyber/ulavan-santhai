@@ -23,7 +23,6 @@ import {
 
 export default function RegisterScreen({
   onNavigateToLogin,
-  onNavigateToLanding,
   onRegisterSuccess,
 }) {
   const [formData, setFormData] = useState({
@@ -216,18 +215,6 @@ export default function RegisterScreen({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Top Back to Home Button */}
-            {onNavigateToLanding ? (
-              <TouchableOpacity
-                style={styles.backToHomeBtn}
-                onPress={onNavigateToLanding}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.backToHomeIcon}>←</Text>
-                <Text style={styles.backToHomeText}>Marketplace Home</Text>
-              </TouchableOpacity>
-            ) : null}
-
             <View style={styles.card}>
               {/* Branding Header */}
               <AuthHeader
@@ -457,34 +444,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 28,
-  },
-  backToHomeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-    gap: 6,
-  },
-  backToHomeIcon: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.primary,
-  },
-  backToHomeText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: Colors.primary,
   },
   card: {
     backgroundColor: Colors.surfaceTranslucent,
