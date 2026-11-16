@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,622 +9,852 @@ import {
   ImageBackground,
   Dimensions,
 } from 'react-native';
-import Colors from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
+// 1. Audience Cards (Exactly from frontend:components/landing/AudienceSection.js)
+const AUDIENCE_CARDS = [
+  {
+    number: '01',
+    badge: 'Producers & FPOs',
+    title: 'Farmers & Sellers',
+    description: 'For farmers, growers and producer groups who want to introduce their harvest to interested buyers.',
+    details: [
+      'Create a seller profile and submit verification details',
+      'Add product photos, quantities and listing information',
+      'Approved listings can receive buyer enquiries',
+    ],
+    actionText: 'Connect as Seller ↗',
+    image: require('../../assets/images/photographs/farmer-full-supplied.png'),
+  },
+  {
+    number: '02',
+    badge: 'Commercial Buyers',
+    title: 'Buyers & Traders',
+    description: 'For individual buyers, retailers and traders looking for produce and dependable supplier connections.',
+    details: [
+      'Browse agricultural categories after access approval',
+      'Review supplier profiles and product information',
+      'Ask sellers about quantity, quality and availability',
+    ],
+    actionText: 'Connect as Buyer ↗',
+    image: require('../../assets/images/photographs/commercial-buyers-supplied.png'),
+  },
+  {
+    number: '03',
+    badge: 'Agro Industries',
+    title: 'Manufacturers & Processors',
+    description: 'For food processors and manufacturers sourcing produce or ingredients for their operations.',
+    details: [
+      'Discover raw materials and agricultural ingredients',
+      'Discuss specifications and volumes with suppliers',
+      'Add a seller role to showcase your own products',
+    ],
+    actionText: 'Explore Sourcing ↗',
+    image: require('../../assets/images/photographs/agro-factory-supplied.png'),
+  },
+  {
+    number: '04',
+    badge: 'Bulk Distribution',
+    title: 'Wholesalers & Businesses',
+    description: 'For wholesalers, distributors and businesses connecting with agricultural suppliers and customers.',
+    details: [
+      'Explore produce for wholesale business needs',
+      'Contact suppliers about bulk availability',
+      'Buy, sell or do both using the same account',
+    ],
+    actionText: 'Build Relationships ↗',
+    image: require('../../assets/images/photographs/bulk-people-supplied.jpg'),
+  },
+];
+
+// 2. How It Works (Exactly from frontend:components/landing/HowItWorksSection.js)
+const JOURNEYS = {
+  buyer: [
+    {
+      step: '1',
+      tabLabel: 'Register',
+      title: 'Create your account',
+      desc: 'Sign up with your name, mobile number and email.',
+      caption: 'Start with one account',
+      items: ['Name & contact details', 'Create your password'],
+    },
+    {
+      step: '2',
+      tabLabel: 'Profile',
+      title: 'Set up your buyer profile',
+      desc: 'Choose Individual or Business and fill in the details that apply to you.',
+      caption: 'Tell us what you need',
+      items: ['Individual or business buyer', 'Submit details for review'],
+    },
+    {
+      step: '3',
+      tabLabel: 'Discover',
+      title: 'Find products & suppliers',
+      desc: 'After access is approved, explore produce and compare seller details and quantities.',
+      caption: 'Find the right match',
+      items: ['Products • quantities • suppliers', 'Review listing information'],
+    },
+    {
+      step: '4',
+      tabLabel: 'Connect',
+      title: 'Send an enquiry',
+      desc: 'Contact a seller to discuss availability, quantities and your requirements.',
+      caption: 'Start a conversation',
+      items: ['Ask about availability & quantity', 'Discuss your requirements directly'],
+    },
+  ],
+  seller: [
+    {
+      step: '1',
+      tabLabel: 'Register',
+      title: 'Create your account',
+      desc: 'Sign up with your name, mobile number and email.',
+      caption: 'Start with one account',
+      items: ['Name & contact details', 'Create your password'],
+    },
+    {
+      step: '2',
+      tabLabel: 'Profile',
+      title: 'Set up your seller profile',
+      desc: 'Choose your business category and submit your details and verification documents.',
+      caption: 'Submit for review',
+      items: ['Business category & documents', 'Submit details for review'],
+    },
+    {
+      step: '3',
+      tabLabel: 'List products',
+      title: 'Showcase your products',
+      desc: 'Once your seller profile is approved, submit product details and photos for listing review.',
+      caption: 'Help buyers discover you',
+      items: ['Photos • quantities • product details', 'Submit your listing for approval'],
+    },
+    {
+      step: '4',
+      tabLabel: 'Connect',
+      title: 'Receive buyer enquiries',
+      desc: 'Interested buyers contact you. Discuss their needs and build business connections.',
+      caption: 'Turn interest into connections',
+      items: ['Respond to interested buyers', 'Discuss your requirements directly'],
+    },
+  ],
+};
+
+// 3. Categories (Exactly from frontend:components/landing/CategoriesSection.js)
 const CATEGORIES = [
   {
     id: 'vegetables',
     name: 'Vegetables',
+    description: 'Fresh vegetables and farm produce.',
     tag: 'Farm Fresh',
-    desc: 'Fresh vegetables and harvested farm produce direct from growers.',
-    icon: '🥕',
     image: require('../../assets/images/photographs/vegetables.jpg'),
   },
   {
     id: 'fruits',
     name: 'Fruits',
+    description: 'Seasonal and tropical fruits.',
     tag: 'Orchard Harvest',
-    desc: 'Seasonal and tropical fruits harvested at peak freshness.',
     icon: '🥭',
-    image: null,
   },
   {
     id: 'grains',
-    name: 'Grains & Paddy',
+    name: 'Grains',
+    description: 'Rice, wheat, millets and more.',
     tag: 'Cereal Harvest',
-    desc: 'Paddy, Ponni raw rice, wheat, millets, and grains.',
     icon: '🌾',
-    image: null,
   },
   {
     id: 'spices',
     name: 'Spices',
+    description: 'A variety of aromatic spices.',
     tag: 'Aromatic Produce',
-    desc: 'Authentic South Indian aromatic spices, turmeric, and pepper.',
     icon: '🌶️',
-    image: null,
   },
   {
     id: 'pulses',
-    name: 'Pulses & Dal',
+    name: 'Pulses',
+    description: 'Lentils, beans and legumes.',
     tag: 'Protein Crops',
-    desc: 'Toor dal, moong dal, lentils, and beans from farms.',
-    icon: '🌱',
     image: require('../../assets/images/photographs/lentils.jpg'),
   },
   {
     id: 'other',
-    name: 'Coconut & Cash Crops',
-    tag: 'Plantation Crops',
-    desc: 'Tender coconut, copra, oil seeds, and natural produce.',
-    icon: '🥥',
+    name: 'Other Produce',
+    description: 'Explore more agricultural products.',
+    tag: 'Plantation & Cash',
     image: require('../../assets/images/photographs/coconuts.jpg'),
   },
 ];
 
-const JOURNEYS = {
-  buyer: [
-    {
-      step: '01',
-      title: 'Create your account',
-      subtitle: 'Sign up with your name, mobile number, and email. Quick 6-digit OTP verification.',
-      caption: 'Start with one account',
-    },
-    {
-      step: '02',
-      title: 'Set up your buyer profile',
-      subtitle: 'Choose Individual or Business buyer and specify your commodity needs.',
-      caption: 'Tell us what you need',
-    },
-    {
-      step: '03',
-      title: 'Find products & suppliers',
-      subtitle: 'Explore authentic produce, check seller location, and compare bulk quantities.',
-      caption: 'Find the right match',
-    },
-    {
-      step: '04',
-      title: 'Send direct enquiry',
-      subtitle: 'Contact the farmer or seller directly without any middleman cuts or fees.',
-      caption: 'Direct connection',
-    },
-  ],
-  seller: [
-    {
-      step: '01',
-      title: 'Create your account',
-      subtitle: 'Sign up with your details. One account can buy, sell, or do both.',
-      caption: 'Start with one account',
-    },
-    {
-      step: '02',
-      title: 'Set up your seller profile',
-      subtitle: 'Select your farming/business category and submit details for quick review.',
-      caption: 'Submit for review',
-    },
-    {
-      step: '03',
-      title: 'Showcase your harvest',
-      subtitle: 'Upload high-resolution photos of your crops, stock quantities, and pricing.',
-      caption: 'Help buyers discover you',
-    },
-    {
-      step: '04',
-      title: 'Receive buyer enquiries',
-      subtitle: 'Get phone calls and inquiries from genuine wholesale mandis and commercial buyers.',
-      caption: 'Turn interest into deals',
-    },
-  ],
-};
-
-const FEATURES = [
+// 4. Why Choose Us Features (Exactly from frontend:components/landing/WhyChooseUsSection.js)
+const WHY_FEATURES = [
   {
     num: '01',
     icon: '🌐',
     title: 'One Common Platform',
-    desc: 'Brings agricultural producers, suppliers, bulk buyers, and mandis together.',
+    desc: 'Bring agricultural producers, suppliers, buyers and businesses together.',
   },
   {
     num: '02',
     icon: '🔍',
     title: 'Discover Products & Suppliers',
-    desc: 'Explore authentic agricultural categories with direct farmer contact details.',
+    desc: 'Explore agricultural categories and find relevant suppliers.',
   },
   {
     num: '03',
     icon: '👥',
-    title: 'Dual Buyer & Seller Accounts',
-    desc: 'One seamless account allows you to sell harvests and procure raw materials.',
+    title: 'Buyer & Seller Accounts',
+    desc: 'Register as a buyer, seller or both based on your business needs.',
   },
   {
     num: '04',
     icon: '🛡️',
-    title: 'Verified Profile Process',
-    desc: 'Structured onboarding reviews protect farmers and buyers from fraud.',
+    title: 'Seller Profile Review',
+    desc: 'A structured profile review process supports seller onboarding.',
   },
   {
     num: '05',
     icon: '🤝',
-    title: 'Direct Business Connections',
-    desc: 'Zero commission, zero middlemen. Real trade partnerships across Tamil Nadu.',
+    title: 'Business Connections',
+    desc: 'Find relevant agricultural businesses and build new connections.',
+  },
+];
+
+// 5. Plans (Exactly from frontend:components/reference-home/ReferencePlans.js)
+const PLANS = [
+  {
+    type: 'buyer',
+    title: 'Buyer access',
+    desc: 'Find produce and connect with agricultural suppliers.',
+    price: '₹365',
+    period: '',
+    items: [
+      'Access to 10 sellers',
+      'Discover agricultural products',
+      'Send enquiries directly to sellers',
+    ],
+    extraTitle: 'Need more connections?',
+    extraDesc: '₹10 adds access to another 10 sellers.',
+    action: 'Join as a buyer ↗',
+  },
+  {
+    type: 'seller',
+    title: 'Seller plan',
+    desc: 'Showcase your products and reach interested buyers.',
+    price: '₹365',
+    period: '/ month',
+    items: [
+      'Create your seller profile',
+      'Submit products for approval',
+      'Be discovered by potential buyers',
+    ],
+    extraTitle: 'Ready to showcase your produce?',
+    extraDesc: 'Seller profiles and product listings are reviewed before going live.',
+    action: 'Join as a seller ↗',
   },
 ];
 
 export default function LandingScreen({ onNavigateToLogin, onNavigateToRegister }) {
-  const [activeRole, setActiveRole] = useState('buyer');
+  const [role, setRole] = useState('buyer');
+  const [activeStep, setActiveStep] = useState(0);
+  const scrollViewRef = useRef(null);
 
   return (
     <View style={styles.container}>
-      {/* Top Fixed Brand Navbar */}
-      <View style={styles.navbar}>
-        <View style={styles.brandRow}>
+      {/* 1. Header / Navbar (Mirrors ReferenceNavbar.js) */}
+      <View style={styles.referenceHeader}>
+        <View style={styles.referenceNav}>
           <Image
-            source={require('../../assets/images/ulavan-santhai-emblem.png')}
-            style={styles.navLogo}
+            source={require('../../assets/images/ulavan-mart-animated.gif')}
+            style={styles.referenceBrandGif}
             resizeMode="contain"
           />
-          <View>
-            <Text style={styles.navBrandText}>உழவன் சந்தை</Text>
-            <Text style={styles.navBrandSub}>ULAVAN SANTHAI</Text>
+
+          <View style={styles.referenceAuth}>
+            <TouchableOpacity
+              style={styles.referenceLoginBtn}
+              onPress={onNavigateToLogin}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.referenceLoginText}>Login</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.referenceSignUpBtn}
+              onPress={onNavigateToRegister}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.referenceSignUpText}>Sign Up ↗</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.navActions}>
-          <TouchableOpacity
-            style={styles.navLoginBtn}
-            onPress={onNavigateToLogin}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.navLoginText}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navRegisterBtn}
-            onPress={onNavigateToRegister}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.navRegisterText}>Sign Up</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* HERO SECTION */}
-        <ImageBackground
-          source={require('../../assets/images/hero-aerial-fields.jpg')}
-          style={styles.heroBackground}
-          resizeMode="cover"
-        >
-          <View style={styles.heroOverlay}>
-            <View style={styles.eyebrowBadge}>
+        {/* 2. ReferenceContent HERO: Grass Visual & Intro (Mirrors ReferenceContent.js) */}
+        <View style={styles.heroWrap}>
+          {/* Top visual graphic */}
+          <Image
+            source={require('../../assets/images/reference-home/original-1.png')}
+            style={styles.heroGrassVisual}
+            resizeMode="cover"
+          />
+
+          <View style={styles.grassIntro}>
+            <View style={styles.eyebrowRow}>
+              <View style={styles.eyebrowDash} />
               <Text style={styles.eyebrowText}>
-                🌱 Rooted in agriculture. Connected through opportunity.
+                Rooted in agriculture. Connected through opportunity.
               </Text>
             </View>
 
-            <Text style={styles.heroTitle}>
+            <Text style={styles.heroH1}>
               Good things grow{'\n'}
-              <Text style={styles.heroTitleItalic}>from the right connection.</Text>
-            </Text>
-
-            <Text style={styles.heroTamilSubtitle}>
-              விவசாயிகள் மற்றும் வணிகர்களுக்கான நேரடி வேளாண் சந்தை
+              <Text style={styles.heroH1Em}>from the right connection.</Text>
             </Text>
 
             <Text style={styles.heroLead}>
               From the field to your business or home. Discover agricultural products,
-              find suppliers, and reach your next buyer directly without middlemen.
+              find suppliers, and reach your next buyer.
             </Text>
 
-            {/* CTAs */}
-            <View style={styles.heroButtonRow}>
+            <View style={styles.heroActions}>
               <TouchableOpacity
-                style={styles.heroPrimaryBtn}
+                style={styles.btnPrimary}
                 onPress={onNavigateToRegister}
                 activeOpacity={0.85}
               >
-                <Text style={styles.heroPrimaryBtnText}>Start Selling / Sign Up →</Text>
+                <Text style={styles.btnPrimaryText}>Find what you need ↗</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.heroSecondaryBtn}
-                onPress={onNavigateToLogin}
+                style={styles.btnSecondary}
+                onPress={onNavigateToRegister}
                 activeOpacity={0.85}
               >
-                <Text style={styles.heroSecondaryBtnText}>Sign In to Account</Text>
+                <Text style={styles.btnSecondaryText}>Start selling ↗</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </ImageBackground>
 
-        {/* SECTION: SOIL STORY (3-STEP JOURNEY) */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>ABOVE THE SOIL. BEYOND THE FIELD.</Text>
-            <Text style={styles.sectionTitle}>One harvest. Many possibilities.</Text>
-            <Text style={styles.sectionSubtitle}>
+            <Text style={styles.grassScroll}>Follow the journey ↓</Text>
+          </View>
+        </View>
+
+        {/* 3. Soil Story Section (Mirrors .soil-story in ReferenceContent.js) */}
+        <View style={styles.soilStory}>
+          <View style={styles.soilTitle}>
+            <Text style={styles.soilEyebrow}>ABOVE THE SOIL. BEYOND THE FIELD.</Text>
+            <Text style={styles.soilH2}>
+              One harvest.{'\n'}Many possibilities.
+            </Text>
+            <Text style={styles.soilSubtitle}>
               Every connection carries the farmer’s effort further.
             </Text>
           </View>
 
-          <View style={styles.cardsColumn}>
-            <View style={styles.storyCard}>
-              <View style={styles.stepNumBadge}>
-                <Text style={styles.stepNumText}>01 / SEED & GROW</Text>
-              </View>
-              <Text style={styles.cardTitle}>It starts in the soil.</Text>
-              <Text style={styles.cardDesc}>
-                Farmers grow the produce that feeds homes and businesses with care and dedication.
+          <View style={styles.soilStepsList}>
+            {/* Step 1 */}
+            <View style={styles.soilStepItem}>
+              <Text style={styles.soilStepNumber}>01 / SEED & GROW</Text>
+              <Text style={styles.soilStepH3}>It starts in the soil.</Text>
+              <Text style={styles.soilStepP}>
+                Farmers grow the produce that feeds homes and businesses.
               </Text>
             </View>
 
-            <View style={[styles.storyCard, styles.storyCardGreen]}>
-              <View style={[styles.stepNumBadge, styles.stepNumBadgeLight]}>
-                <Text style={styles.stepNumTextGreen}>02 / HARVEST & VALUE</Text>
-              </View>
-              <Text style={[styles.cardTitle, styles.cardTitleGreen]}>
-                A harvest finds new value.
-              </Text>
-              <Text style={[styles.cardDesc, styles.cardDescGreen]}>
-                Sell fresh produce or source raw ingredients wholesale to process and create value.
+            {/* Step 2 */}
+            <View style={styles.soilStepItem}>
+              <Text style={styles.soilStepNumber}>02 / HARVEST & CREATE</Text>
+              <Text style={styles.soilStepH3}>A harvest finds new value.</Text>
+              <Text style={styles.soilStepP}>
+                Sell fresh produce or source ingredients to process and make something more.
               </Text>
             </View>
 
-            <View style={styles.storyCard}>
-              <View style={styles.stepNumBadge}>
-                <Text style={styles.stepNumText}>03 / DIRECT CONNECT</Text>
-              </View>
-              <Text style={styles.cardTitle}>Find the right people.</Text>
-              <Text style={styles.cardDesc}>
-                Buyers discover verified products. Sellers receive direct inquiries. One account does both.
+            {/* Step 3 */}
+            <View style={styles.soilStepItem}>
+              <Text style={styles.soilStepNumber}>03 / CONNECT</Text>
+              <Text style={styles.soilStepH3}>Find the right people.</Text>
+              <Text style={styles.soilStepP}>
+                Buyers discover products. Sellers receive enquiries. One account can do both.
               </Text>
             </View>
           </View>
         </View>
 
-        {/* SECTION: ABOUT SECTION */}
-        <View style={[styles.sectionContainer, styles.aboutBg]}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>COMMUNITY PLATFORM</Text>
-            <Text style={styles.sectionTitle}>
+        {/* 4. About Section (Mirrors AboutSection.js) */}
+        <View style={styles.aboutSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.greenEyebrow}>COMMUNITY PLATFORM</Text>
+            <Text style={styles.sectionHeading}>
               Bringing the Agricultural{'\n'}
-              <Text style={{ color: Colors.accentLeaf }}>Community Together</Text>
+              <Text style={{ color: '#729B59' }}>Community Together</Text>
             </Text>
-            <Text style={styles.sectionSubtitle}>
+            <Text style={styles.sectionLead}>
+              Ulavan Santhai is designed to connect agricultural producers and businesses
+              through one common marketplace. Whether you grow, supply, process or purchase
+              agricultural products, the platform helps you discover relevant business connections.
+            </Text>
+            <Text style={styles.sectionSubLead}>
               We bridge the gap between rural farming heartlands and commercial buyers,
-              eliminating intermediaries and establishing direct, transparent trade.
+              eliminating intermediaries and establishing direct, transparent trade partnerships.
             </Text>
           </View>
 
-          <View style={styles.aboutPillarsGrid}>
-            <View style={styles.pillarCard}>
-              <View style={styles.pillarIconBox}>
-                <Text style={styles.pillarEmoji}>🌍</Text>
-              </View>
+          {/* Pillars */}
+          <View style={styles.aboutPillars}>
+            <View style={[styles.toneCard, styles.toneWhite]}>
+              <Text style={styles.pillarIcon}>🌍</Text>
               <Text style={styles.pillarTitle}>Direct Access</Text>
               <Text style={styles.pillarDesc}>
-                Connect directly with primary producers, local aggregators, and commercial buyers.
+                Connect directly with primary producers, local aggregators and commercial buyers.
               </Text>
             </View>
 
-            <View style={[styles.pillarCard, styles.pillarCardGreen]}>
-              <View style={[styles.pillarIconBox, styles.pillarIconBoxLight]}>
-                <Text style={styles.pillarEmoji}>🤝</Text>
-              </View>
-              <Text style={[styles.pillarTitle, { color: Colors.white }]}>
+            <View style={[styles.toneCard, styles.toneGreen]}>
+              <Text style={styles.pillarIcon}>🤝</Text>
+              <Text style={[styles.pillarTitle, { color: '#174B35' }]}>
                 Community Driven
               </Text>
-              <Text style={[styles.pillarDesc, { color: '#E2F3D9' }]}>
+              <Text style={[styles.pillarDesc, { color: '#4D5C53' }]}>
                 Designed to support producers and business buyers across Tamil Nadu.
               </Text>
             </View>
           </View>
+
+          {/* Real Photographs */}
+          <View style={styles.aboutPhotosWrap}>
+            <Image
+              source={require('../../assets/images/photographs/paddy-planting-supplied.png')}
+              style={styles.aboutPhotoPrimary}
+              resizeMode="cover"
+            />
+            <Image
+              source={require('../../assets/images/photographs/paddy-threshing-supplied.png')}
+              style={styles.aboutPhotoSecondary}
+              resizeMode="cover"
+            />
+          </View>
         </View>
 
-        {/* SECTION: AGRICULTURAL CATEGORIES */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>PRODUCE CATALOG</Text>
-            <Text style={styles.sectionTitle}>Explore Agricultural Categories</Text>
-            <Text style={styles.sectionSubtitle}>
+        {/* 5. Audience Section (Mirrors AudienceSection.js) */}
+        <View style={styles.audienceSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeading}>
+              Connecting Every Part of Agriculture
+            </Text>
+            <Text style={styles.sectionLead}>
+              Whether you grow, buy, process or distribute — find your place in the marketplace.
+            </Text>
+          </View>
+
+          <View style={styles.audienceList}>
+            {AUDIENCE_CARDS.map((card, idx) => (
+              <View
+                key={card.number}
+                style={[
+                  styles.audienceCard,
+                  idx % 2 === 1 ? styles.audienceCardAlt : null,
+                ]}
+              >
+                <Image
+                  source={card.image}
+                  style={styles.audiencePhoto}
+                  resizeMode="cover"
+                />
+
+                <View style={styles.audienceContent}>
+                  <Text style={styles.audienceBadge}>
+                    {card.number} / {card.badge}
+                  </Text>
+                  <Text style={styles.audienceTitle}>{card.title}</Text>
+                  <Text style={styles.audienceDesc}>{card.description}</Text>
+
+                  <View style={styles.audienceDetails}>
+                    {card.details.map((detail, dIdx) => (
+                      <View key={dIdx} style={styles.detailRow}>
+                        <Text style={styles.checkIcon}>✓</Text>
+                        <Text style={styles.detailText}>{detail}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.audienceBtn}
+                    onPress={onNavigateToRegister}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.audienceBtnText}>{card.actionText}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* 6. How It Works Section (Mirrors HowItWorksSection.js) */}
+        <View style={styles.worksSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeading}>How Ulavan Santhai Works</Text>
+            <Text style={styles.sectionLead}>
+              Looking to buy or ready to sell? See your next steps.
+            </Text>
+
+            {/* Toggle: I want to buy / I want to sell */}
+            <View style={styles.worksSwitch}>
+              <TouchableOpacity
+                style={[
+                  styles.worksSwitchBtn,
+                  role === 'buyer' && styles.worksSwitchBtnActive,
+                ]}
+                onPress={() => {
+                  setRole('buyer');
+                  setActiveStep(0);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.worksSwitchText,
+                    role === 'buyer' && styles.worksSwitchTextActive,
+                  ]}
+                >
+                  I want to buy
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.worksSwitchBtn,
+                  role === 'seller' && styles.worksSwitchBtnActive,
+                ]}
+                onPress={() => {
+                  setRole('seller');
+                  setActiveStep(0);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.worksSwitchText,
+                    role === 'seller' && styles.worksSwitchTextActive,
+                  ]}
+                >
+                  I want to sell
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.worksAccountNote}>
+              One account. You can be a buyer, a seller, or both.
+            </Text>
+          </View>
+
+          {/* Stepper Tabs */}
+          <View style={styles.stepperTabs}>
+            {JOURNEYS[role].map((step, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.stepperTab,
+                  activeStep === idx && styles.stepperTabActive,
+                ]}
+                onPress={() => setActiveStep(idx)}
+              >
+                <View
+                  style={[
+                    styles.stepperNum,
+                    activeStep === idx && styles.stepperNumActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stepperNumText,
+                      activeStep === idx && styles.stepperNumTextActive,
+                    ]}
+                  >
+                    {idx + 1}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.stepperLabel,
+                    activeStep === idx && styles.stepperLabelActive,
+                  ]}
+                >
+                  {step.tabLabel}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Active Step Explainer Card */}
+          <View style={styles.stepExplainerCard}>
+            <Text style={styles.stepDemoLabel}>
+              YOUR {role.toUpperCase()} JOURNEY · {activeStep + 1} OF 4
+            </Text>
+            <Text style={styles.stepExplainerTitle}>
+              {JOURNEYS[role][activeStep].title}
+            </Text>
+            <Text style={styles.stepExplainerDesc}>
+              {JOURNEYS[role][activeStep].desc}
+            </Text>
+
+            <View style={styles.stepItemsList}>
+              {JOURNEYS[role][activeStep].items.map((item, itemIdx) => (
+                <View key={itemIdx} style={styles.stepItemLine}>
+                  <Text style={styles.stepCheckmark}>✓</Text>
+                  <Text style={styles.stepItemText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.stepNextBtn}
+              onPress={() => setActiveStep((activeStep + 1) % 4)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.stepNextBtnText}>
+                {activeStep === 3 ? 'See the journey again ↺' : 'See the next step →'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 7. Categories Section (Mirrors CategoriesSection.js) */}
+        <View style={styles.categoriesSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeading}>
+              Explore Agricultural Categories
+            </Text>
+            <Text style={styles.sectionLead}>
               Discover a wide variety of agricultural produce, all in one marketplace.
             </Text>
           </View>
 
-          <View style={styles.categoryGrid}>
+          <View style={styles.categoriesGrid}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat.id}
-                style={styles.categoryCard}
+                style={styles.catCard}
                 onPress={onNavigateToRegister}
                 activeOpacity={0.88}
               >
                 {cat.image ? (
                   <ImageBackground
                     source={cat.image}
-                    style={styles.categoryImageBg}
+                    style={styles.catImage}
                     resizeMode="cover"
                   >
-                    <View style={styles.categoryImageOverlay}>
-                      <View style={styles.catBadge}>
-                        <Text style={styles.catBadgeText}>{cat.tag}</Text>
-                      </View>
+                    <View style={styles.catTagBadge}>
+                      <Text style={styles.catTagText}>{cat.tag}</Text>
                     </View>
                   </ImageBackground>
                 ) : (
-                  <View style={styles.categoryIconHeader}>
-                    <Text style={styles.catHeaderEmoji}>{cat.icon}</Text>
-                    <View style={styles.catBadge}>
-                      <Text style={styles.catBadgeText}>{cat.tag}</Text>
+                  <View style={styles.catIconFallback}>
+                    <Text style={styles.catEmoji}>{cat.icon}</Text>
+                    <View style={styles.catTagBadge}>
+                      <Text style={styles.catTagText}>{cat.tag}</Text>
                     </View>
                   </View>
                 )}
 
-                <View style={styles.categoryBody}>
+                <View style={styles.catBody}>
                   <View style={styles.catTitleRow}>
-                    <Text style={styles.categoryName}>{cat.name}</Text>
+                    <Text style={styles.catName}>{cat.name}</Text>
                     <Text style={styles.catArrow}>→</Text>
                   </View>
-                  <Text style={styles.categoryDesc}>{cat.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                  <Text style={styles.catDesc}>{cat.description}</Text>
 
-        {/* SECTION: WHO IT'S FOR (AUDIENCE) */}
-        <View style={[styles.sectionContainer, styles.audienceBg]}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>WHO IT&apos;S FOR</Text>
-            <Text style={styles.sectionTitle}>Built for the Agriculture Community</Text>
-            <Text style={styles.sectionSubtitle}>
-              Empowering everyone in the agricultural supply chain across Tamil Nadu.
-            </Text>
-          </View>
-
-          <View style={styles.audienceGrid}>
-            <View style={styles.audienceCard}>
-              <Text style={styles.audienceIcon}>🚜</Text>
-              <Text style={styles.audienceCardTitle}>Farmers & Producers</Text>
-              <Text style={styles.audienceTamil}>விவசாயிகள்</Text>
-              <Text style={styles.audienceCardDesc}>
-                List harvested paddy, coconuts, spices, and fresh vegetables directly to wholesale buyers.
-              </Text>
-            </View>
-
-            <View style={styles.audienceCard}>
-              <Text style={styles.audienceIcon}>🏪</Text>
-              <Text style={styles.audienceCardTitle}>Buyers & Mandis</Text>
-              <Text style={styles.audienceTamil}>மொத்த வணிகர்கள்</Text>
-              <Text style={styles.audienceCardDesc}>
-                Source authentic, farm-fresh produce in bulk quantities with transparent pricing.
-              </Text>
-            </View>
-
-            <View style={styles.audienceCard}>
-              <Text style={styles.audienceIcon}>🏭</Text>
-              <Text style={styles.audienceCardTitle}>Mills & Processors</Text>
-              <Text style={styles.audienceTamil}>உற்பத்தியாளர்கள்</Text>
-              <Text style={styles.audienceCardDesc}>
-                Direct procurement for oil mills, rice mills, and food manufacturing units.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* SECTION: HOW IT WORKS */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>SIMPLE STEPS</Text>
-            <Text style={styles.sectionTitle}>How Ulavan Santhai Works</Text>
-            <Text style={styles.sectionSubtitle}>
-              Looking to buy or ready to sell? See your next steps.
-            </Text>
-          </View>
-
-          {/* Role Switcher Pill */}
-          <View style={styles.roleTabContainer}>
-            <TouchableOpacity
-              style={[
-                styles.roleTabBtn,
-                activeRole === 'buyer' && styles.roleTabBtnActive,
-              ]}
-              onPress={() => setActiveRole('buyer')}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.roleTabText,
-                  activeRole === 'buyer' && styles.roleTabTextActive,
-                ]}
-              >
-                🛒 I want to buy
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.roleTabBtn,
-                activeRole === 'seller' && styles.roleTabBtnActive,
-              ]}
-              onPress={() => setActiveRole('seller')}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.roleTabText,
-                  activeRole === 'seller' && styles.roleTabTextActive,
-                ]}
-              >
-                🌾 I want to sell
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Steps Timeline Cards */}
-          <View style={styles.stepsWrap}>
-            {JOURNEYS[activeRole].map((j, idx) => (
-              <View key={idx} style={styles.stepItemCard}>
-                <View style={styles.stepItemHeader}>
-                  <View style={styles.stepCircle}>
-                    <Text style={styles.stepCircleText}>{j.step}</Text>
+                  <View style={styles.catFooterRow}>
+                    <Text style={styles.catBrowse}>Browse Listings</Text>
+                    <Text style={styles.catExplore}>Explore →</Text>
                   </View>
-                  <Text style={styles.stepBadgeCaption}>{j.caption}</Text>
                 </View>
-                <Text style={styles.stepItemTitle}>{j.title}</Text>
-                <Text style={styles.stepItemSubtitle}>{j.subtitle}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* SECTION: WHY CHOOSE US */}
-        <View style={[styles.sectionContainer, styles.whyBg]}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>WHY ULAVAN SANTHAI</Text>
-            <Text style={styles.sectionTitle}>
-              Bringing Agriculture{'\n'}
-              <Text style={{ color: Colors.accentLeaf }}>Closer to Opportunity</Text>
+        {/* 8. Why Choose Us Section (Mirrors WhyChooseUsSection.js) */}
+        <View style={styles.whySection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeading}>
+              Bringing Agriculture <br />
+              <Text style={{ color: '#729B59' }}>Closer to Opportunity</Text>
             </Text>
-            <Text style={styles.sectionSubtitle}>
-              A dedicated marketplace engineered for Tamil Nadu agriculture.
+            <Text style={styles.sectionLead}>
+              A common marketplace designed to connect agricultural producers, suppliers and businesses.
             </Text>
           </View>
 
-          <View style={styles.featuresList}>
-            {FEATURES.map((f) => (
-              <View key={f.num} style={styles.featureRow}>
-                <View style={styles.featureIconBox}>
-                  <Text style={styles.featureEmoji}>{f.icon}</Text>
+          <View style={styles.whyImageCard}>
+            <Image
+              source={require('../../assets/images/photographs/coconut-harvest-supplied.png')}
+              style={styles.whyImage}
+              resizeMode="cover"
+            />
+            <View style={styles.whyImageCaption}>
+              <Text style={styles.whyCaptionTag}>AGRICULTURE • TRUST • GROWTH</Text>
+              <Text style={styles.whyCaptionTitle}>
+                Connecting Farmers & Bulk Buyers Nationwide
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.whyFeatures}>
+            {WHY_FEATURES.map((feat) => (
+              <View key={feat.num} style={styles.whyFeatureCard}>
+                <View style={styles.whyIconCircle}>
+                  <Text style={styles.whyEmoji}>{feat.icon}</Text>
                 </View>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>{f.title}</Text>
-                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                <View style={styles.whyFeatureTextCol}>
+                  <Text style={styles.whyFeatureTitle}>{feat.title}</Text>
+                  <Text style={styles.whyFeatureDesc}>{feat.desc}</Text>
                 </View>
               </View>
             ))}
           </View>
+
+          <TouchableOpacity
+            style={styles.whyCtaBtn}
+            onPress={onNavigateToRegister}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.whyCtaBtnText}>Create Your Account →</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* SECTION: CLEAR TRANSPARENT PLANS */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderWrap}>
-            <Text style={styles.sectionEyebrow}>TRANSPARENT PRICING</Text>
-            <Text style={styles.sectionTitle}>Clear plans. A simple start.</Text>
-            <Text style={styles.sectionSubtitle}>
-              Choose the access that fits your business journey.
+        {/* 9. Plans & Access (Mirrors ReferencePlans.js) */}
+        <View style={styles.plansSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionHeading}>Clear plans. A simple start.</Text>
+            <Text style={styles.sectionLead}>
+              Choose the access that fits your journey.
             </Text>
           </View>
 
-          <View style={styles.plansColumn}>
-            {/* Buyer Plan */}
-            <View style={styles.planCard}>
-              <View style={styles.planBadge}>
-                <Text style={styles.planBadgeText}>BUYER ACCESS</Text>
-              </View>
-              <Text style={styles.planPrice}>
-                ₹365 <Text style={styles.planPeriod}>/ year</Text>
-              </Text>
-              <Text style={styles.planDesc}>
-                Find verified produce and connect directly with genuine agricultural suppliers.
-              </Text>
-              <View style={styles.planPerks}>
-                <Text style={styles.perkLine}>✓ Access to 10 verified sellers</Text>
-                <Text style={styles.perkLine}>✓ Discover wholesale farm produce</Text>
-                <Text style={styles.perkLine}>✓ Send direct enquiries with phone details</Text>
-                <Text style={styles.perkLine}>✓ ₹10 to unlock additional 10 sellers</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.planBtn}
-                onPress={onNavigateToRegister}
-                activeOpacity={0.85}
+          <View style={styles.plansGrid}>
+            {PLANS.map((plan, pIdx) => (
+              <View
+                key={plan.title}
+                style={[
+                  styles.planArticle,
+                  pIdx === 1 ? styles.planArticleSeller : null,
+                ]}
               >
-                <Text style={styles.planBtnText}>Join as a Buyer →</Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={styles.planTitle}>{plan.title}</Text>
+                <Text style={styles.planDesc}>{plan.desc}</Text>
 
-            {/* Seller Plan */}
-            <View style={[styles.planCard, styles.planCardSeller]}>
-              <View style={[styles.planBadge, styles.planBadgeSeller]}>
-                <Text style={[styles.planBadgeText, { color: Colors.white }]}>
-                  SELLER PLAN
-                </Text>
+                <View style={styles.planPriceRow}>
+                  <Text style={styles.planPriceAmount}>{plan.price}</Text>
+                  {plan.period ? (
+                    <Text style={styles.planPricePeriod}> {plan.period}</Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.planBenefitsList}>
+                  {plan.items.map((b, bIdx) => (
+                    <View key={bIdx} style={styles.benefitRow}>
+                      <Text style={styles.benefitCheck}>✓</Text>
+                      <Text style={styles.benefitText}>{b}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.planExtraBox}>
+                  <Text style={styles.planExtraTitle}>{plan.extraTitle}</Text>
+                  <Text style={styles.planExtraDesc}>{plan.extraDesc}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.planActionBtn}
+                  onPress={onNavigateToRegister}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.planActionBtnText}>{plan.action}</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={[styles.planPrice, { color: Colors.white }]}>
-                ₹365 <Text style={[styles.planPeriod, { color: '#D4EFC3' }]}>/ month</Text>
-              </Text>
-              <Text style={[styles.planDesc, { color: '#E2F3D9' }]}>
-                Showcase your crops and reach verified commercial buyers across Tamil Nadu.
-              </Text>
-              <View style={styles.planPerks}>
-                <Text style={[styles.perkLine, { color: Colors.white }]}>
-                  ✓ Create verified seller business profile
-                </Text>
-                <Text style={[styles.perkLine, { color: Colors.white }]}>
-                  ✓ Submit agricultural products for listing
-                </Text>
-                <Text style={[styles.perkLine, { color: Colors.white }]}>
-                  ✓ Receive incoming buyer inquiries & calls
-                </Text>
-                <Text style={[styles.perkLine, { color: Colors.white }]}>
-                  ✓ Admin review ensures listing authenticity
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.planBtnSeller}
-                onPress={onNavigateToRegister}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.planBtnSellerText}>Join as a Seller →</Text>
-              </TouchableOpacity>
-            </View>
+            ))}
           </View>
-        </View>
 
-        {/* SECTION: FINAL CALL TO ACTION */}
-        <View style={styles.ctaContainer}>
-          <View style={styles.ctaCard}>
-            <Text style={styles.ctaEyebrow}>🌾 JOIN THE NETWORK</Text>
-            <Text style={styles.ctaTitle}>
-              Ready to grow your agricultural connections?
-            </Text>
-            <Text style={styles.ctaSubtitle}>
-              Sign up today and be part of Tamil Nadu’s dedicated farmer-buyer marketplace.
-            </Text>
-
-            <View style={styles.ctaButtons}>
-              <TouchableOpacity
-                style={styles.ctaPrimaryBtn}
-                onPress={onNavigateToRegister}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.ctaPrimaryText}>Create an Account →</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.ctaSecondaryBtn}
-                onPress={onNavigateToLogin}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.ctaSecondaryText}>Sign In to Account</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* FOOTER */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            © 2026 உழவன் சந்தை (Ulavan Santhai). All rights reserved.
+          <Text style={styles.plansNote}>
+            Payment is reviewed by an administrator before access is activated. Seller profiles
+            and product listings require additional approval. The platform connects buyers and sellers
+            through discovery and enquiries.
           </Text>
-          <Text style={styles.footerSubText}>
-            Direct Agricultural Marketplace • Empowering Farmers & Buyers
+        </View>
+
+        {/* 10. Final CTA Section (Mirrors FinalCTASection.js) */}
+        <View style={styles.finalCtaWrap}>
+          <ImageBackground
+            source={require('../../assets/images/harvester-video-poster.jpg')}
+            style={styles.finalCtaBg}
+            resizeMode="cover"
+          >
+            <View style={styles.finalCtaOverlay}>
+              <Text style={styles.finalCtaHeading}>
+                Be Part of a Growing{'\n'}Agricultural Community.
+              </Text>
+
+              <Text style={styles.finalCtaSubtitle}>
+                Join Ulavan Santhai and create new opportunities through agricultural connections.
+              </Text>
+
+              <View style={styles.finalCtaButtons}>
+                <TouchableOpacity
+                  style={styles.finalCtaJoinBtn}
+                  onPress={onNavigateToRegister}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.finalCtaJoinText}>Join Now ↗</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.finalCtaLoginBtn}
+                  onPress={onNavigateToLogin}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.finalCtaLoginText}>Login →</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.finalCtaNote}>
+                One account for buying, selling, or both.
+              </Text>
+            </View>
+          </ImageBackground>
+        </View>
+
+        {/* 11. Footer (Mirrors MarketplaceFooter.js) */}
+        <View style={styles.marketplaceFooter}>
+          <Text style={styles.footerBrand}>ULAVAN SANTHAI</Text>
+          <Text style={styles.footerLead}>
+            One marketplace for growers, suppliers and buyers. Find your next agricultural connection.
           </Text>
+
+          <TouchableOpacity
+            style={styles.footerJoinBtn}
+            onPress={onNavigateToRegister}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.footerJoinText}>Join the community ↗</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footerDivider} />
+
+          <View style={styles.footerBottomRow}>
+            <Text style={styles.footerCopyright}>
+              © 2026 Ulavan Santhai. All rights reserved.
+            </Text>
+            <TouchableOpacity
+              onPress={() => scrollViewRef.current?.scrollTo({ y: 0, animated: true })}
+            >
+              <Text style={styles.footerBackToTop}>Back to top ↑</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -634,350 +864,565 @@ export default function LandingScreen({ onNavigateToLogin, onNavigateToRegister 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
-  navbar: {
+
+  /* NAVBAR */
+  referenceHeader: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#DCE5DB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    zIndex: 20,
+  },
+  referenceNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-    elevation: 2,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    zIndex: 10,
   },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  navLogo: {
-    width: 38,
+  referenceBrandGif: {
+    width: 140,
     height: 38,
-    marginRight: 10,
   },
-  navBrandText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    lineHeight: 18,
-  },
-  navBrandSub: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: Colors.accentLeaf,
-    letterSpacing: 0.8,
-  },
-  navActions: {
+  referenceAuth: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  navLoginBtn: {
+  referenceLoginBtn: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: '#1B5E20',
   },
-  navLoginText: {
-    fontSize: 12,
+  referenceLoginText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: Colors.primary,
+    color: '#1B5E20',
   },
-  navRegisterBtn: {
+  referenceSignUpBtn: {
+    backgroundColor: '#1B5E20',
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  navRegisterText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.white,
+  referenceSignUpText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
+
   scrollContent: {
     flexGrow: 1,
   },
 
-  /* HERO */
-  heroBackground: {
+  /* HERO (GRASS-HERO) */
+  heroWrap: {
+    backgroundColor: '#F5FAF4',
+  },
+  heroGrassVisual: {
     width: '100%',
-    minHeight: 460,
+    height: 260,
   },
-  heroOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(16, 58, 41, 0.82)',
+  grassIntro: {
     paddingHorizontal: 20,
-    paddingVertical: 36,
-    justifyContent: 'center',
+    paddingVertical: 24,
+    backgroundColor: '#FFFFFF',
   },
-  eyebrowBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(224, 248, 207, 0.25)',
-    borderWidth: 1,
-    borderColor: Colors.accentLeafBorder,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 16,
-    marginBottom: 16,
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  eyebrowDash: {
+    width: 18,
+    height: 2,
+    backgroundColor: '#D6A437',
   },
   eyebrowText: {
-    color: Colors.mintPill,
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: '#1B5E20',
+    textTransform: 'uppercase',
   },
-  heroTitle: {
+  heroH1: {
     fontSize: 32,
-    fontWeight: '900',
-    color: Colors.white,
+    fontWeight: '800',
+    color: '#1B5E20',
     lineHeight: 38,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
-  heroTitleItalic: {
+  heroH1Em: {
+    fontWeight: '500',
     fontStyle: 'italic',
-    color: '#D4EFC3',
-  },
-  heroTamilSubtitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#AFD657',
-    marginTop: 10,
-    lineHeight: 22,
+    color: '#795548',
   },
   heroLead: {
-    fontSize: 13.5,
-    color: '#E2E8F0',
+    fontSize: 14,
+    color: '#4D5C53',
     marginTop: 12,
     lineHeight: 21,
-    maxWidth: 380,
   },
-  heroButtonRow: {
+  heroActions: {
     flexDirection: 'column',
-    gap: 12,
-    marginTop: 26,
+    gap: 10,
+    marginTop: 22,
   },
-  heroPrimaryBtn: {
-    backgroundColor: '#20BB56',
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  heroPrimaryBtnText: {
-    color: Colors.white,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  heroSecondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.45)',
+  btnPrimary: {
+    backgroundColor: '#1B5E20',
     paddingVertical: 13,
-    borderRadius: 16,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  heroSecondaryBtnText: {
-    color: Colors.white,
+  btnPrimaryText: {
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
-
-  /* SECTION WRAPPERS */
-  sectionContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 32,
+  btnSecondary: {
+    borderWidth: 1.5,
+    borderColor: '#1B5E20',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  sectionHeaderWrap: {
-    marginBottom: 20,
+  btnSecondaryText: {
+    color: '#1B5E20',
+    fontSize: 14,
+    fontWeight: '700',
   },
-  sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.accentLeaf,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    lineHeight: 28,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 4,
-    lineHeight: 18,
+  grassScroll: {
+    fontSize: 11.5,
+    color: '#1B5E20',
+    fontWeight: '700',
+    marginTop: 18,
   },
 
   /* SOIL STORY */
-  cardsColumn: {
-    gap: 14,
+  soilStory: {
+    backgroundColor: '#24180F',
+    paddingHorizontal: 20,
+    paddingVertical: 32,
   },
-  storyCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+  soilTitle: {
+    marginBottom: 20,
   },
-  storyCardGreen: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primaryDark,
-  },
-  stepNumBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.mintBg,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  stepNumBadgeLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  stepNumText: {
-    fontSize: 10.5,
+  soilEyebrow: {
+    fontSize: 10,
     fontWeight: '800',
-    color: Colors.mintText,
-    letterSpacing: 0.5,
-  },
-  stepNumTextGreen: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#E8F0E3',
-    letterSpacing: 0.5,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: Colors.textBody,
+    letterSpacing: 1.5,
+    color: '#D8C3A5',
     marginBottom: 6,
   },
-  cardTitleGreen: {
-    color: Colors.white,
+  soilH2: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 30,
   },
-  cardDesc: {
+  soilSubtitle: {
     fontSize: 13,
-    color: Colors.textMuted,
-    lineHeight: 19,
+    color: '#D8C3A5',
+    marginTop: 6,
+    lineHeight: 18,
   },
-  cardDescGreen: {
-    color: '#D4EFC3',
+  soilStepsList: {
+    gap: 14,
+    marginTop: 10,
+  },
+  soilStepItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(216, 195, 165, 0.25)',
+  },
+  soilStepNumber: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: '#D6A437',
+    marginBottom: 4,
+  },
+  soilStepH3: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  soilStepP: {
+    fontSize: 12.5,
+    color: '#D8C3A5',
+    lineHeight: 18,
   },
 
   /* ABOUT SECTION */
-  aboutBg: {
-    backgroundColor: '#F5F7F3',
-    borderTopWidth: 1,
+  aboutSection: {
+    backgroundColor: '#F5F5EB',
+    paddingHorizontal: 20,
+    paddingVertical: 34,
     borderBottomWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderBottomColor: '#E2E8E0',
   },
-  aboutPillarsGrid: {
-    gap: 14,
+  sectionHeader: {
+    marginBottom: 20,
   },
-  pillarCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
+  greenEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: '#174B35',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  sectionHeading: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#174B35',
+    lineHeight: 30,
+    letterSpacing: -0.5,
+  },
+  sectionLead: {
+    fontSize: 14,
+    color: '#263329',
+    marginTop: 10,
+    lineHeight: 21,
+  },
+  sectionSubLead: {
+    fontSize: 12.5,
+    color: '#68746A',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  aboutPillars: {
+    gap: 12,
+    marginTop: 8,
+  },
+  toneCard: {
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: '#E8F0E3',
   },
-  pillarCardGreen: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primaryDark,
+  toneWhite: {
+    backgroundColor: '#FFFFFF',
   },
-  pillarIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.mintBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+  toneGreen: {
+    backgroundColor: '#E8F0E3',
   },
-  pillarIconBoxLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  pillarEmoji: {
+  pillarIcon: {
     fontSize: 22,
+    marginBottom: 8,
   },
   pillarTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: Colors.primary,
+    color: '#174B35',
     marginBottom: 4,
   },
   pillarDesc: {
     fontSize: 12.5,
-    color: Colors.textMuted,
+    color: '#68746A',
     lineHeight: 18,
   },
-
-  /* CATEGORIES */
-  categoryGrid: {
-    gap: 14,
+  aboutPhotosWrap: {
+    marginTop: 20,
+    gap: 12,
   },
-  categoryCard: {
-    backgroundColor: Colors.white,
+  aboutPhotoPrimary: {
+    width: '100%',
+    height: 190,
     borderRadius: 18,
+  },
+  aboutPhotoSecondary: {
+    width: '85%',
+    height: 160,
+    borderRadius: 16,
+    alignSelf: 'flex-end',
+    marginTop: -40,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+
+  /* AUDIENCE SECTION */
+  audienceSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 34,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8E0',
+  },
+  audienceList: {
+    gap: 16,
+  },
+  audienceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: '#E8F0E3',
     overflow: 'hidden',
-    shadowColor: Colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
-  categoryImageBg: {
+  audienceCardAlt: {
+    backgroundColor: '#F8FAF6',
+  },
+  audiencePhoto: {
+    width: '100%',
+    height: 180,
+  },
+  audienceContent: {
+    padding: 18,
+  },
+  audienceBadge: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#729B59',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  audienceTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#174B35',
+    marginBottom: 6,
+  },
+  audienceDesc: {
+    fontSize: 13,
+    color: '#4D5C53',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  audienceDetails: {
+    gap: 6,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  checkIcon: {
+    color: '#1B5E20',
+    fontWeight: '800',
+    fontSize: 12,
+    marginTop: 1,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#56655B',
+    flex: 1,
+    lineHeight: 16,
+  },
+  audienceBtn: {
+    backgroundColor: '#174B35',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  audienceBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  /* HOW IT WORKS */
+  worksSection: {
+    backgroundColor: '#F5FAF4',
+    paddingHorizontal: 20,
+    paddingVertical: 34,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8E0',
+  },
+  worksSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#E8F0E3',
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 14,
+    gap: 6,
+  },
+  worksSwitchBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  worksSwitchBtnActive: {
+    backgroundColor: '#174B35',
+  },
+  worksSwitchText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#174B35',
+  },
+  worksSwitchTextActive: {
+    color: '#FFFFFF',
+  },
+  worksAccountNote: {
+    fontSize: 11.5,
+    color: '#68746A',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  stepperTabs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    marginBottom: 14,
+  },
+  stepperTab: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepperTabActive: {},
+  stepperNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E8F0E3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  stepperNumActive: {
+    backgroundColor: '#174B35',
+  },
+  stepperNumText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#174B35',
+  },
+  stepperNumTextActive: {
+    color: '#FFFFFF',
+  },
+  stepperLabel: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#68746A',
+  },
+  stepperLabelActive: {
+    color: '#174B35',
+    fontWeight: '800',
+  },
+  stepExplainerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E8F0E3',
+  },
+  stepDemoLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: '#729B59',
+    marginBottom: 4,
+  },
+  stepExplainerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#174B35',
+    marginBottom: 6,
+  },
+  stepExplainerDesc: {
+    fontSize: 13,
+    color: '#4D5C53',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  stepItemsList: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  stepItemLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepCheckmark: {
+    color: '#1B5E20',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  stepItemText: {
+    fontSize: 12.5,
+    color: '#263329',
+  },
+  stepNextBtn: {
+    backgroundColor: '#E8F0E3',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  stepNextBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#174B35',
+  },
+
+  /* CATEGORIES */
+  categoriesSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 34,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8E0',
+  },
+  categoriesGrid: {
+    gap: 14,
+  },
+  catCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8E0',
+    overflow: 'hidden',
+  },
+  catImage: {
     width: '100%',
     height: 120,
-  },
-  categoryImageOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
     padding: 10,
     justifyContent: 'flex-start',
   },
-  categoryIconHeader: {
-    backgroundColor: '#F0F6EE',
-    padding: 16,
+  catIconFallback: {
+    height: 100,
+    backgroundColor: '#F5FAF4',
+    padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  catHeaderEmoji: {
-    fontSize: 32,
+  catEmoji: {
+    fontSize: 34,
   },
-  catBadge: {
+  catTagBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  catBadgeText: {
+  catTagText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.white,
+    color: '#FFFFFF',
   },
-  categoryBody: {
+  catBody: {
     padding: 14,
   },
   catTitleRow: {
@@ -985,352 +1430,342 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  categoryName: {
-    fontSize: 16,
+  catName: {
+    fontSize: 17,
     fontWeight: '800',
-    color: Colors.primary,
+    color: '#174B35',
   },
   catArrow: {
     fontSize: 16,
+    color: '#729B59',
     fontWeight: '800',
-    color: Colors.accentLeaf,
   },
-  categoryDesc: {
+  catDesc: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#68746A',
     marginTop: 4,
     lineHeight: 17,
   },
-
-  /* AUDIENCE */
-  audienceBg: {
-    backgroundColor: '#EEF3EA',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  audienceGrid: {
-    gap: 14,
-  },
-  audienceCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  audienceIcon: {
-    fontSize: 30,
-    marginBottom: 8,
-  },
-  audienceCardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  audienceTamil: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.accentLeaf,
-    marginBottom: 6,
-  },
-  audienceCardDesc: {
-    fontSize: 12.5,
-    color: Colors.textMuted,
-    lineHeight: 18,
-  },
-
-  /* HOW IT WORKS */
-  roleTabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#E7EFE3',
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 18,
-    gap: 6,
-  },
-  roleTabBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  roleTabBtnActive: {
-    backgroundColor: Colors.primary,
-  },
-  roleTabText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  roleTabTextActive: {
-    color: Colors.white,
-  },
-  stepsWrap: {
-    gap: 12,
-  },
-  stepItemCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  stepItemHeader: {
+  catFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.mintBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCircleText: {
+  catBrowse: {
     fontSize: 11,
-    fontWeight: '900',
-    color: Colors.mintText,
+    fontWeight: '600',
+    color: '#68746A',
   },
-  stepBadgeCaption: {
-    fontSize: 10.5,
+  catExplore: {
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.accentLeaf,
-  },
-  stepItemTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  stepItemSubtitle: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    lineHeight: 17,
+    color: '#174B35',
   },
 
   /* WHY CHOOSE US */
-  whyBg: {
+  whySection: {
     backgroundColor: '#F5F5EB',
-    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 34,
     borderBottomWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderBottomColor: '#E2E8E0',
   },
-  featuresList: {
-    gap: 12,
+  whyImageCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
-  featureRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
+  whyImage: {
+    width: '100%',
+    height: 200,
+  },
+  whyImageCaption: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+  },
+  whyCaptionTag: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#729B59',
+    letterSpacing: 0.8,
+  },
+  whyCaptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#174B35',
+    marginTop: 2,
+  },
+  whyFeatures: {
+    gap: 10,
+    marginBottom: 20,
+  },
+  whyFeatureCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     padding: 14,
-    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: Colors.border,
     gap: 12,
+    borderWidth: 1,
+    borderColor: '#E8F0E3',
   },
-  featureIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: Colors.mintBg,
+  whyIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#E8F0E3',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  featureEmoji: {
+  whyEmoji: {
     fontSize: 18,
   },
-  featureContent: {
+  whyFeatureTextCol: {
     flex: 1,
   },
-  featureTitle: {
+  whyFeatureTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: Colors.primary,
+    color: '#174B35',
   },
-  featureDesc: {
+  whyFeatureDesc: {
     fontSize: 11.5,
-    color: Colors.textMuted,
+    color: '#68746A',
     marginTop: 2,
     lineHeight: 16,
   },
-
-  /* PLANS */
-  plansColumn: {
-    gap: 16,
-  },
-  planCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 22,
-    padding: 22,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  planCardSeller: {
-    backgroundColor: Colors.primaryDark,
-    borderColor: Colors.primaryDark,
-  },
-  planBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.mintBg,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  planBadgeSeller: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  planBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.mintText,
-    letterSpacing: 0.8,
-  },
-  planPrice: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-  },
-  planPeriod: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  planDesc: {
-    fontSize: 12.5,
-    color: Colors.textMuted,
-    marginTop: 6,
-    marginBottom: 14,
-    lineHeight: 18,
-  },
-  planPerks: {
-    gap: 8,
-    marginBottom: 18,
-  },
-  perkLine: {
-    fontSize: 12,
-    color: Colors.textBody,
-    fontWeight: '600',
-  },
-  planBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
+  whyCtaBtn: {
+    backgroundColor: '#174B35',
+    paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
-  planBtnText: {
-    color: Colors.white,
-    fontSize: 13.5,
-    fontWeight: '800',
-  },
-  planBtnSeller: {
-    backgroundColor: '#20BB56',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  planBtnSellerText: {
-    color: Colors.white,
-    fontSize: 13.5,
-    fontWeight: '800',
-  },
-
-  /* CTA */
-  ctaContainer: {
-    padding: 20,
-  },
-  ctaCard: {
-    backgroundColor: Colors.primaryDark,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  ctaEyebrow: {
-    color: Colors.accentLeafMint,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  ctaTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: Colors.white,
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 8,
-  },
-  ctaSubtitle: {
-    fontSize: 13,
-    color: '#D1D5DB',
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 20,
-    maxWidth: 320,
-  },
-  ctaButtons: {
-    width: '100%',
-    gap: 10,
-  },
-  ctaPrimaryBtn: {
-    backgroundColor: '#20BB56',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  ctaPrimaryText: {
-    color: Colors.white,
+  whyCtaBtnText: {
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
   },
-  ctaSecondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+
+  /* PLANS */
+  plansSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 34,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8E0',
+  },
+  plansGrid: {
+    gap: 16,
+  },
+  planArticle: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#E2E8E0',
+  },
+  planArticleSeller: {
+    backgroundColor: '#F8FAF6',
+    borderColor: '#174B35',
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#174B35',
+    marginBottom: 4,
+  },
+  planDesc: {
+    fontSize: 12.5,
+    color: '#68746A',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  planPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 14,
+  },
+  planPriceAmount: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#174B35',
+  },
+  planPricePeriod: {
+    fontSize: 13,
+    color: '#68746A',
+    fontWeight: '600',
+  },
+  planBenefitsList: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  benefitCheck: {
+    color: '#1B5E20',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  benefitText: {
+    fontSize: 12.5,
+    color: '#263329',
+  },
+  planExtraBox: {
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderColor: '#E8F0E3',
+    marginBottom: 16,
+  },
+  planExtraTitle: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#174B35',
+  },
+  planExtraDesc: {
+    fontSize: 11,
+    color: '#68746A',
+    marginTop: 2,
+  },
+  planActionBtn: {
+    backgroundColor: '#174B35',
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  ctaSecondaryText: {
-    color: Colors.white,
+  planActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  plansNote: {
+    fontSize: 11,
+    color: '#8A998E',
+    marginTop: 16,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+
+  /* FINAL CTA */
+  finalCtaWrap: {
+    backgroundColor: '#001F2B',
+  },
+  finalCtaBg: {
+    width: '100%',
+    minHeight: 320,
+  },
+  finalCtaOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 31, 43, 0.72)',
+    paddingHorizontal: 20,
+    paddingVertical: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  finalCtaHeading: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  finalCtaSubtitle: {
+    fontSize: 13,
+    color: '#DCE9E6',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+    maxWidth: 320,
+  },
+  finalCtaButtons: {
+    width: '100%',
+    gap: 10,
+    marginTop: 22,
+  },
+  finalCtaJoinBtn: {
+    backgroundColor: '#C5F340',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  finalCtaJoinText: {
+    color: '#10251B',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  finalCtaLoginBtn: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  finalCtaLoginText: {
+    color: '#FFFFFF',
     fontSize: 13.5,
     fontWeight: '700',
   },
+  finalCtaNote: {
+    fontSize: 11.5,
+    color: '#A2BCB5',
+    marginTop: 16,
+  },
 
   /* FOOTER */
-  footer: {
-    paddingVertical: 24,
+  marketplaceFooter: {
+    backgroundColor: '#F5F5EB',
     paddingHorizontal: 20,
+    paddingVertical: 30,
+  },
+  footerBrand: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#174B35',
+    letterSpacing: 0.5,
+  },
+  footerLead: {
+    fontSize: 12.5,
+    color: '#68746A',
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  footerJoinBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  footerJoinText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#174B35',
+  },
+  footerDivider: {
+    height: 1,
+    backgroundColor: '#E2E8E0',
+    marginVertical: 20,
+  },
+  footerBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
-    backgroundColor: Colors.white,
   },
-  footerText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    textAlign: 'center',
+  footerCopyright: {
+    fontSize: 11,
+    color: '#8A998E',
   },
-  footerSubText: {
-    fontSize: 10.5,
-    color: '#9CA3AF',
-    marginTop: 4,
-    textAlign: 'center',
+  footerBackToTop: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#174B35',
   },
 });
