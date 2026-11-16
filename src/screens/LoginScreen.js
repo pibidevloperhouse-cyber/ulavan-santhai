@@ -20,6 +20,7 @@ import { getBaseUrl } from '../config/api';
 
 export default function LoginScreen({
   onNavigateToRegister,
+  onNavigateToLanding,
   onLoginSuccess,
   registeredParam = false,
   prefilledEmail = '',
@@ -117,6 +118,17 @@ export default function LoginScreen({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {/* Top Navigation Back to Landing Page */}
+            {onNavigateToLanding ? (
+              <TouchableOpacity
+                style={styles.backHomeBtn}
+                onPress={onNavigateToLanding}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.backHomeText}>← Marketplace Home</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {/* Main Form Container Card */}
             <View style={styles.card}>
               {/* Registration Success Banner */}
@@ -289,6 +301,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 32,
+  },
+  backHomeBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 14,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backHomeText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   card: {
     backgroundColor: Colors.surfaceTranslucent,
