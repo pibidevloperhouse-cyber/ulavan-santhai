@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, Platform, View } from 'react-native';
+import { registerRootComponent } from 'expo';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -90,3 +91,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+registerRootComponent(App);
