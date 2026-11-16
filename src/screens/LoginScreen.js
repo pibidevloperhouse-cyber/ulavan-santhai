@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   StyleSheet,
-  ImageBackground,
+  Image,
 } from 'react-native';
 import Colors from '../theme/colors';
 import AuthHeader from '../components/AuthHeader';
@@ -162,11 +162,12 @@ export default function LoginScreen({
   };
 
   return (
-    <ImageBackground
-      source={require('../../assets/images/login-paddy-distant-farmer.webp')}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
+    <View style={styles.mainContainer}>
+      <Image
+        source={require('../../assets/images/login-paddy-distant-farmer.webp')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
       <View style={styles.overlayLayer}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -338,13 +339,17 @@ export default function LoginScreen({
         isLoading={isVerifyingOtp}
         errorMessage={otpError}
       />
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
+  mainContainer: {
     flex: 1,
+    position: 'relative',
+  },
+  backgroundImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
   },

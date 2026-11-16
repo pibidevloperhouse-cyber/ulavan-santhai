@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Platform, View } from 'react-native';
+import { View, StatusBar, StyleSheet, Platform } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -46,7 +46,7 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <StatusBar
         barStyle="dark-content"
         backgroundColor={Colors.background}
@@ -76,7 +76,7 @@ export default function App() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
