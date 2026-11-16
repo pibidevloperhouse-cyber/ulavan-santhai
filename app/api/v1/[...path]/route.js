@@ -5,6 +5,11 @@ function getBackendBase() {
   return url ? url.trim().replace(/\/+$/, "") : "";
 }
 
+/**
+ * Proxy handler for all /api/v1/* routes
+ * Forwards requests for seller, products, enquiries, onboarding, payments, and document uploads
+ * directly to the backend service.
+ */
 async function proxyV1Request(request, { params }) {
   const backendBase = getBackendBase();
 
@@ -35,9 +40,12 @@ async function proxyV1Request(request, { params }) {
   let body = undefined;
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
     try {
-      body = await request.text();
+      const buffer = await request.arrayBuffer();
+      if (buffer && buffer.byteLength > 0) {
+        body = Buffer.from(buffer);
+      }
     } catch {
-      // body empty or unreadable
+      // Body empty or unreadable
     }
   }
 
@@ -50,7 +58,7 @@ async function proxyV1Request(request, { params }) {
       cache: "no-store",
     });
 
-    const responseData = await res.text();
+    const responseData = await res.arrayBuffer();
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       const lower = key.toLowerCase();
@@ -81,4 +89,3 @@ export const PUT = proxyV1Request;
 export const PATCH = proxyV1Request;
 export const DELETE = proxyV1Request;
 export const OPTIONS = proxyV1Request;
-

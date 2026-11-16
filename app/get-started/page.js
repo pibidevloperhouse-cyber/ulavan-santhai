@@ -80,7 +80,7 @@ export default function GetStartedPage() {
     : Boolean(sessionUser?.buyerOnboarded || sessionUser?.buyerPaid);
 
   // 4. Role Selection Redirection Handler
-  const handleSelectRole = (role) => {
+  const handleSelectRole = (role, forceEdit = false) => {
     try {
       const stored =
         sessionStorage.getItem("ulavan_user") ||
@@ -97,7 +97,7 @@ export default function GetStartedPage() {
       localStorage.setItem("ulavan_registered_user", JSON.stringify(currentUser));
 
       if (role === "seller") {
-        if (isSellerOnboarded) {
+        if (isSellerOnboarded && !forceEdit) {
           router.push("/seller/dashboard");
         } else {
           router.push("/onboarding?role=seller&step=1");
@@ -106,8 +106,8 @@ export default function GetStartedPage() {
       }
 
       if (role === "buyer") {
-        if (isBuyerOnboarded) {
-          router.push("/marketplace");
+        if (isBuyerOnboarded && !forceEdit) {
+          router.push("/onboarding/status");
         } else {
           router.push("/onboarding?role=buyer&step=1");
         }
@@ -134,7 +134,7 @@ export default function GetStartedPage() {
       ],
       isOnboarded: isBuyerOnboarded,
       popularBadge: isBuyerOnboarded ? "Active Plan" : "Step 1 to 4 Required",
-      buttonText: isBuyerOnboarded ? "Open Buyer Workspace" : "Complete Buyer Form (4 Steps)",
+      buttonText: isBuyerOnboarded ? "View Buyer Receipt & Status" : "Complete Buyer Form (4 Steps)",
       buttonBg: "bg-[#174B35] hover:bg-[#103A29] text-white",
       borderAccent: "hover:border-[#174B35]",
     },
@@ -153,7 +153,7 @@ export default function GetStartedPage() {
       ],
       isOnboarded: isSellerOnboarded,
       popularBadge: isSellerOnboarded ? "Active Plan" : "Step 1 to 4 Required",
-      buttonText: isSellerOnboarded ? "Open Seller Workspace" : "Complete Seller Form (4 Steps)",
+      buttonText: isSellerOnboarded ? "Open Seller Dashboard" : "Complete Seller Form (4 Steps)",
       buttonBg: "bg-[#174B35] hover:bg-[#103A29] text-white",
       borderAccent: "hover:border-[#174B35]",
     },

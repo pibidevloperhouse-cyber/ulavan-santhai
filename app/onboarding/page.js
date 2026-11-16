@@ -4,10 +4,10 @@ import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import Stepper from "@/components/onboarding/Stepper";
-import FormInput from "@/components/onboarding/FormInput";
-import FormSelect from "@/components/onboarding/FormSelect";
-import DocumentUploader from "@/components/onboarding/DocumentUploader";
+import Stepper from "@/components/forms/Stepper";
+import FormInput from "@/components/forms/FormInput";
+import FormSelect from "@/components/forms/FormSelect";
+import DocumentUploader from "@/components/forms/DocumentUploader";
 import { submitApplication } from "@/services/onboardingApi";
 import { submitRolePayment } from "@/services/paymentApi";
 import { useSessionUser } from "@/services/sessionAuth";
@@ -2196,10 +2196,10 @@ function OnboardingContent() {
                       View Status
                     </Link>
                     <Link
-                      href={`/dashboard?role=${role}&paid=true`}
+                      href={role === "seller" ? "/seller/dashboard" : "/onboarding/status"}
                       className="flex-1 sm:flex-initial px-7 py-3 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-2"
                     >
-                      <span>Go to Dashboard</span>
+                      <span>{role === "seller" ? "Open Seller Dashboard" : "View Application & Receipt"}</span>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
