@@ -1,0 +1,459 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  StyleSheet,
+  ImageBackground,
+} from 'react-native';
+import Colors from '../theme/colors';
+import AuthHeader from '../components/AuthHeader';
+import FeedbackModal from '../components/FeedbackModal';
+import { loginUser } from '../services/authService';
+
+export default function LoginScreen({
+  onNavigateToRegister,
+  onLoginSuccess,
+  registeredParam = false,
+  prefilledEmail = '',
+}) {
+  const [identifier, setIdentifier] = useState(prefilledEmail || '');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Popup Modal state
+  const [popup, setPopup] = useState({
+    visible: false,
+    type: 'info', // 'success' | 'error' | 'info'
+    title: '',
+    message: '',
+  });
+
+  const handleLogin = async () => {
+    if (!identifier.trim() || !password) {
+      setPopup({
+        visible: true,
+        type: 'error',
+        title: 'Required Fields',
+        message: 'Please enter your email address or mobile number and your password.',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await loginUser({
+        identifier: identifier.trim(),
+        password,
+      });
+
+      if (!result.success) {
+        setPopup({
+          visible: true,
+          type: 'error',
+          title: 'Login Failed',
+          message: result.message,
+        });
+        return;
+      }
+
+      setPopup({
+        visible: true,
+        type: 'success',
+        title: 'Welcome Back',
+        message: 'Login successful! Continuing to marketplace dashboard...',
+      });
+
+      setTimeout(() => {
+        setPopup((prev) => ({ ...prev, visible: false }));
+        onLoginSuccess(result.user, result.token);
+      }, 1200);
+    } catch {
+      setPopup({
+        visible: true,
+        type: 'error',
+        title: 'Login Error',
+        message: 'An unexpected connection error occurred. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = () => {
+    setPopup({
+      visible: true,
+      type: 'info',
+      title: 'Password Recovery',
+      message: 'Please contact Ulavan Santhai support or use your registered mobile OTP to reset your password.',
+    });
+  };
+
+  return (
+    <ImageBackground
+      source={require('../../assets/images/login-paddy-distant-farmer.webp')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlayLayer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Main Form Container Card */}
+            <View style={styles.card}>
+              {/* Registration Success Banner */}
+              {registeredParam ? (
+                <View style={styles.registeredBanner}>
+                  <Text style={styles.bannerIcon}>✓</Text>
+                  <View style={styles.bannerTextCol}>
+                    <Text style={styles.bannerTitle}>Registration Complete!</Text>
+                    <Text style={styles.bannerDesc}>
+                      Please enter your password below to sign in and enter the marketplace.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Branding Header */}
+              <AuthHeader
+                badgeText="🌱 Sign In to Your Account"
+                title="Welcome Back"
+                subtitle="Empowering Farmers & Buyers Across Tamil Nadu"
+              />
+
+              {/* Identifier Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Email Address or Mobile Number <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.fieldIcon}>✉</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 9876543210 or ramesh@example.com"
+                    placeholderTextColor={Colors.textPlaceholder}
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>
+                    Password <Text style={styles.required}>*</Text>
+                  </Text>
+                  <TouchableOpacity onPress={handleForgotPassword}>
+                    <Text style={styles.forgotText}>Forgot password?</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.fieldIcon}>🔒</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor={Colors.textPlaceholder}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.eyeIcon}>{showPassword ? '👁' : '👁‍🗨'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Remember Me Toggle */}
+              <TouchableOpacity
+                style={styles.rememberRow}
+                onPress={() => setRememberMe(!rememberMe)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe ? <Text style={styles.checkmark}>✓</Text> : null}
+                </View>
+                <Text style={styles.rememberText}>Remember me on this device</Text>
+              </TouchableOpacity>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator color={Colors.white} size="small" />
+                    <Text style={styles.submitButtonText}>Signing In...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.loadingRow}>
+                    <Text style={styles.submitButtonText}>Sign In</Text>
+                    <Text style={styles.arrowIcon}>→</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Register Link */}
+              <View style={styles.registerPrompt}>
+                <Text style={styles.registerPromptText}>Don&apos;t have an account yet? </Text>
+                <TouchableOpacity onPress={onNavigateToRegister}>
+                  <Text style={styles.registerLink}>Create an Account →</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+
+      {/* Modal Alert Popup */}
+      <FeedbackModal
+        visible={popup.visible}
+        type={popup.type}
+        title={popup.title}
+        message={popup.message}
+        onClose={() => setPopup((prev) => ({ ...prev, visible: false }))}
+      />
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlayLayer: {
+    flex: 1,
+    backgroundColor: 'rgba(235, 245, 238, 0.72)',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+  },
+  card: {
+    backgroundColor: Colors.surfaceTranslucent,
+    borderRadius: 28,
+    padding: 24,
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  registeredBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: Colors.successBg,
+    borderColor: Colors.successBorder,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+  },
+  bannerIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.success,
+    color: Colors.white,
+    textAlign: 'center',
+    lineHeight: 22,
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  bannerTextCol: {
+    flex: 1,
+  },
+  bannerTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#064E3B',
+  },
+  bannerDesc: {
+    fontSize: 11,
+    color: '#065F46',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  label: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: Colors.textBody,
+    marginBottom: 6,
+  },
+  required: {
+    color: Colors.error,
+  },
+  forgotText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.inputBg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    paddingHorizontal: 12,
+  },
+  fieldIcon: {
+    fontSize: 15,
+    marginRight: 8,
+    color: Colors.primary,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    fontSize: 14,
+    color: Colors.textBody,
+  },
+  eyeButton: {
+    padding: 6,
+  },
+  eyeIcon: {
+    fontSize: 16,
+    color: Colors.primary,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    backgroundColor: Colors.white,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+  },
+  checkmark: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  rememberText: {
+    fontSize: 12.5,
+    color: Colors.textBody,
+    fontWeight: '500',
+  },
+  submitButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    opacity: 0.65,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  submitButtonText: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  arrowIcon: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.divider,
+  },
+  dividerText: {
+    paddingHorizontal: 10,
+    fontSize: 12,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  registerPrompt: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  registerPromptText: {
+    fontSize: 12.5,
+    color: Colors.textMuted,
+  },
+  registerLink: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+});

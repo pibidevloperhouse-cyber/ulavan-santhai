@@ -1,0 +1,428 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  TextInput,
+  Modal,
+} from 'react-native';
+import Colors from '../theme/colors';
+import AuthHeader from '../components/AuthHeader';
+import { getBaseUrl, setCustomBaseUrl } from '../config/api';
+import { clearSessionCache } from '../services/authService';
+
+export default function HomeScreen({ user, token, onLogout }) {
+  const [selectedRole, setSelectedRole] = useState(
+    user?.role === 'SELLER' ? 'seller' : 'buyer'
+  );
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [apiUrl, setApiUrl] = useState(getBaseUrl());
+
+  const handleSaveApiUrl = () => {
+    if (apiUrl.trim()) {
+      setCustomBaseUrl(apiUrl.trim());
+      setShowConfigModal(false);
+      Alert.alert('Configuration Saved', `Backend URL set to: ${apiUrl.trim()}`);
+    }
+  };
+
+  const handleLogoutPress = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out of Ulavan Santhai?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          clearSessionCache();
+          onLogout();
+        },
+      },
+    ]);
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <AuthHeader
+          badgeText="🌾 ULAVAN SANTHAI DASHBOARD"
+          title={`வணக்கம், ${user?.name || 'Farmer'}!`}
+          subtitle="Direct Agricultural Marketplace"
+        />
+
+        {/* User Status Card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user?.name || 'U').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.avatarDetails}>
+              <Text style={styles.userName}>{user?.name || 'Authorized Member'}</Text>
+              <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+              {user?.mobile ? (
+                <Text style={styles.userMobile}>📞 +91 {user.mobile}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.badgeRow}>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>✓ Account Verified</Text>
+            </View>
+            <View style={[styles.statusBadge, styles.roleBadge]}>
+              <Text style={styles.roleBadgeText}>
+                {selectedRole === 'seller' ? '🌱 Farmer / Seller' : '🛒 Buyer'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Role Selection / Switcher */}
+        <Text style={styles.sectionHeader}>Choose Your Operating Mode</Text>
+
+        <View style={styles.roleOptions}>
+          {/* Farmer / Seller Card */}
+          <TouchableOpacity
+            style={[
+              styles.roleCard,
+              selectedRole === 'seller' && styles.roleCardActive,
+            ]}
+            onPress={() => setSelectedRole('seller')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.roleIconWrapper}>
+              <Text style={styles.roleIcon}>🚜</Text>
+            </View>
+            <Text style={styles.roleTitle}>Farmer / Seller</Text>
+            <Text style={styles.roleTamil}>உழவர் / விற்பனையாளர்</Text>
+            <Text style={styles.roleDesc}>
+              List fresh farm produce, grains, and vegetables directly to buyers.
+            </Text>
+          </TouchableOpacity>
+
+          {/* Buyer Card */}
+          <TouchableOpacity
+            style={[
+              styles.roleCard,
+              selectedRole === 'buyer' && styles.roleCardActive,
+            ]}
+            onPress={() => setSelectedRole('buyer')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.roleIconWrapper}>
+              <Text style={styles.roleIcon}>🏪</Text>
+            </View>
+            <Text style={styles.roleTitle}>Buyer / Wholesaler</Text>
+            <Text style={styles.roleTamil}>வாங்குபவர்</Text>
+            <Text style={styles.roleDesc}>
+              Browse produce, place inquiries, and purchase directly from verified farmers.
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Connection Diagnostics Pill */}
+        <TouchableOpacity
+          style={styles.configPill}
+          onPress={() => setShowConfigModal(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.configPillText}>
+            ⚙ Backend Server: <Text style={styles.boldIp}>{getBaseUrl()}</Text>
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogoutPress}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.logoutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Backend IP Config Modal */}
+      <Modal
+        visible={showConfigModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfigModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Backend Server Connection</Text>
+            <Text style={styles.modalDesc}>
+              Enter your backend API URL (IP address of the laptop running backend branch):
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={apiUrl}
+              onChangeText={setApiUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="http://192.168.1.50:5000"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setShowConfigModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSave}
+                onPress={handleSaveApiUrl}
+              >
+                <Text style={styles.modalSaveText}>Save URL</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 36,
+    paddingBottom: 40,
+  },
+  userCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.mintBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  avatarText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: Colors.primary,
+  },
+  avatarDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textBody,
+  },
+  userEmail: {
+    fontSize: 12.5,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  userMobile: {
+    fontSize: 12,
+    color: Colors.primary,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusBadge: {
+    backgroundColor: Colors.successBg,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.success,
+  },
+  roleBadge: {
+    backgroundColor: Colors.mintPill,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  roleOptions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  roleCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  roleCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F7FCF8',
+  },
+  roleIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.mintBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  roleIcon: {
+    fontSize: 22,
+  },
+  roleTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textBody,
+  },
+  roleTamil: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  roleDesc: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    lineHeight: 17,
+  },
+  configPill: {
+    backgroundColor: '#EAEFE9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  configPillText: {
+    fontSize: 11.5,
+    color: Colors.textMuted,
+  },
+  boldIp: {
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  logoutButton: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#DC2626',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 22,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textBody,
+    marginBottom: 6,
+  },
+  modalDesc: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 14,
+    lineHeight: 18,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    fontSize: 13,
+    backgroundColor: Colors.inputBg,
+    color: Colors.textBody,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  modalCancelText: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  modalSave: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+  modalSaveText: {
+    fontSize: 13,
+    color: Colors.white,
+    fontWeight: '700',
+  },
+});
