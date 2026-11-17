@@ -38,11 +38,12 @@ function AddProductFormContent() {
   const [productDescription, setProductDescription] = useState("");
 
   // Product Images State
-  const [images, setImages] = useState([
-    { id: "img-1", isPrimary: true },
-    { id: "img-2", isPrimary: false },
-    { id: "img-3", isPrimary: false },
-  ]);
+  const [images, setImages] = useState(() => {
+    if (editProduct?.images && editProduct.images.length > 0) {
+      return editProduct.images;
+    }
+    return [];
+  });
 
   // Origin & Location State
   const [placeOfOrigin, setPlaceOfOrigin] = useState(
@@ -158,6 +159,22 @@ function AddProductFormContent() {
   };
 
   // Image handlers
+  const handleAddImages = (newImgs) => {
+    setImages((prev) => {
+      const combined = [...prev, ...newImgs];
+      if (!combined.some((img) => img.isPrimary) && combined.length > 0) {
+        combined[0].isPrimary = true;
+      }
+      return combined;
+    });
+  };
+
+  const handleReplaceImage = (id, newImg) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...newImg, isPrimary: img.isPrimary } : img))
+    );
+  };
+
   const handleSetPrimaryImage = (id) => {
     setImages((prev) =>
       prev.map((img) => ({ ...img, isPrimary: img.id === id }))
@@ -165,7 +182,13 @@ function AddProductFormContent() {
   };
 
   const handleDeleteImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+    setImages((prev) => {
+      const remaining = prev.filter((img) => img.id !== id);
+      if (remaining.length > 0 && !remaining.some((img) => img.isPrimary)) {
+        remaining[0].isPrimary = true;
+      }
+      return remaining;
+    });
   };
 
   const handleSubmit = (type) => {
@@ -262,6 +285,8 @@ function AddProductFormContent() {
           {/* Section 2: Product Images */}
           <ProductImagesSection
             images={images}
+            onAddImages={handleAddImages}
+            onReplaceImage={handleReplaceImage}
             onSetPrimary={handleSetPrimaryImage}
             onDeleteImage={handleDeleteImage}
           />
