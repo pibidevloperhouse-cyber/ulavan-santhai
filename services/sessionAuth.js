@@ -5,10 +5,10 @@ import { useSyncExternalStore } from "react";
 const emptySubscribe = () => () => {};
 
 export const defaultSessionUser = {
-  name: "Farmer Ramesh Kumar",
-  username: "ramesh_kumar",
-  email: "ramesh@example.com",
-  mobile: "9876543210",
+  name: "",
+  username: "",
+  email: "",
+  mobile: "",
   role: "unassigned",
   activeRole: "unassigned",
   isPaid: false,

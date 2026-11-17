@@ -5,7 +5,11 @@ function getBackendBase() {
   return url ? url.trim().replace(/\/+$/, "") : "";
 }
 
-async function proxyRequest(request, { params }) {
+/**
+ * Proxy handler for all /api/auth/* routes
+ * Handles login, registration, email verification, and auth token lifecycle.
+ */
+async function proxyAuthRequest(request, { params }) {
   const backendBase = getBackendBase();
 
   if (!backendBase) {
@@ -26,7 +30,6 @@ async function proxyRequest(request, { params }) {
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
-    // Avoid forwarding host or content-length that might conflict
     const lower = key.toLowerCase();
     if (!["host", "connection", "content-length"].includes(lower)) {
       headers.set(key, value);
@@ -36,9 +39,12 @@ async function proxyRequest(request, { params }) {
   let body = undefined;
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
     try {
-      body = await request.text();
+      const buffer = await request.arrayBuffer();
+      if (buffer && buffer.byteLength > 0) {
+        body = Buffer.from(buffer);
+      }
     } catch {
-      // body empty or unreadable
+      // Body empty or unreadable
     }
   }
 
@@ -51,7 +57,7 @@ async function proxyRequest(request, { params }) {
       cache: "no-store",
     });
 
-    const responseData = await res.text();
+    const responseData = await res.arrayBuffer();
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
       const lower = key.toLowerCase();
@@ -77,9 +83,9 @@ async function proxyRequest(request, { params }) {
   }
 }
 
-export const GET = proxyRequest;
-export const POST = proxyRequest;
-export const PUT = proxyRequest;
-export const PATCH = proxyRequest;
-export const DELETE = proxyRequest;
-export const OPTIONS = proxyRequest;
+export const GET = proxyAuthRequest;
+export const POST = proxyAuthRequest;
+export const PUT = proxyAuthRequest;
+export const PATCH = proxyAuthRequest;
+export const DELETE = proxyAuthRequest;
+export const OPTIONS = proxyAuthRequest;

@@ -1,14 +1,14 @@
-import ReferenceContent from "@/components/reference-home/ReferenceContent";
+import ReferenceContent from "@/components/landing/ReferenceContent";
 import AboutSection from "@/components/landing/AboutSection";
 import AudienceSection from "@/components/landing/AudienceSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import CategoriesSection from "@/components/landing/CategoriesSection";
 import WhyChooseUsSection from "@/components/landing/WhyChooseUsSection";
-import ReferencePlans from "@/components/reference-home/ReferencePlans";
+import ReferencePlans from "@/components/landing/ReferencePlans";
 import FinalCTASection from "@/components/landing/FinalCTASection";
 import MarketplaceFooter from "@/components/landing/MarketplaceFooter";
-import "@/components/reference-home/reference.css";
-import "@/components/reference-home/navbar.css";
+import "@/components/landing/reference.css";
+import "@/components/landing/navbar.css";
 
 export const metadata = {
  title:"Ulavan Santhai — From seed to opportunity",

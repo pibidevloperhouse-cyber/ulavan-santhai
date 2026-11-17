@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import AuthLayout from "../../components/AuthLayout";
+import AuthLayout from "@/components/auth/AuthLayout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import FormInput from "@/components/onboarding/FormInput";
+import FormInput from "@/components/forms/FormInput";
 
 export default function BasicRegistrationPage() {
   const router = useRouter();

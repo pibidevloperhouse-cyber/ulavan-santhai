@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import AuthLayout from "../../components/AuthLayout";
+import AuthLayout from "@/components/auth/AuthLayout";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 

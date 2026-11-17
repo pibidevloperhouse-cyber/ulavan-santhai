@@ -358,18 +358,18 @@ function ApplicationStatusContent() {
           </button>
 
           <Link
-            href={`/dashboard?id=${encodeURIComponent(appId)}`}
+            href={statusData?.role === "seller" ? "/seller/dashboard" : "/"}
             className="px-5 py-2.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white font-semibold text-xs sm:text-sm shadow-md transition-colors inline-flex items-center gap-1.5"
           >
-            <span>Open Dashboard</span>
+            <span>{statusData?.role === "seller" ? "Open Seller Dashboard" : "Return to Home"}</span>
             <span>&rarr;</span>
           </Link>
 
           <Link
-            href="/"
+            href="/get-started"
             className="px-4 py-2.5 rounded-xl border border-emerald-600 text-emerald-800 hover:bg-emerald-50 font-semibold text-xs sm:text-sm transition-colors inline-flex items-center gap-1.5"
           >
-            <span>Marketplace</span>
+            <span>Switch Role</span>
           </Link>
         </div>
       </div>
