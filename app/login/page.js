@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import HandshakeLoader from "@/components/ui/HandshakeLoader";
 
 function LoginContent() {
   const router = useRouter();
@@ -36,7 +37,7 @@ function LoginContent() {
         isOpen: true,
         type: "error",
         title: "Required Fields",
-        message: "Please enter your email address or mobile number and your password.",
+        message: "Please enter your email address and your password.",
         targetUrl: "",
       });
       return;
@@ -75,6 +76,7 @@ function LoginContent() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data || data.success === false) {
+        setIsLoading(false);
         setPopup({
           isOpen: true,
           type: "error",
@@ -85,7 +87,6 @@ function LoginContent() {
             "Unable to log in. Please verify your credentials and ensure the backend service is reachable.",
           targetUrl: "",
         });
-        setIsLoading(false);
         return;
       }
 
@@ -96,7 +97,6 @@ function LoginContent() {
       };
       const token = data.token;
 
-      // Check where user should be directed:
       // Always direct user to role selection / switching screen (/get-started)
       // so they can choose or switch between Buyer and Seller anytime (even after payment)
       const targetRoute = "/get-started";
@@ -115,18 +115,12 @@ function LoginContent() {
         // ignore
       }
 
-      setPopup({
-        isOpen: true,
-        type: "success",
-        title: "Welcome Back",
-        message: "Login successful! Continuing to role selection...",
-        targetUrl: targetRoute,
-      });
-
+      // Keep handshake animation visible until page loads
       setTimeout(() => {
         router.push(targetRoute);
-      }, 1100);
+      }, 750);
     } catch {
+      setIsLoading(false);
       setPopup({
         isOpen: true,
         type: "error",
@@ -134,62 +128,57 @@ function LoginContent() {
         message: "An unexpected error occurred. Please try again.",
         targetUrl: "",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const closePopup = () => {
-    const url = popup.targetUrl;
     setPopup((prev) => ({ ...prev, isOpen: false }));
-    if (popup.type === "success" && url) {
-      router.push(url);
-    }
   };
 
   return (
     <AuthLayout titleId="login-title" overlay={
-      popup.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
-            <div
-              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 ${
-                popup.type === "success"
-                  ? "bg-[#E8F0E3] text-[#174B35]"
-                  : popup.type === "info"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-red-100 text-red-600"
-              }`}
-            >
-              {popup.type === "success" ? (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : popup.type === "info" ? (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
+      <>
+        {/* Handshake Loading Overlay - active during backend auth and page transition */}
+        {isLoading && <HandshakeLoader />}
+
+        {/* Error / Information Modal */}
+        {!isLoading && popup.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-150">
+              <div
+                className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 ${
+                  popup.type === "info"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-red-100 text-red-600"
+                }`}
+              >
+                {popup.type === "info" ? (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-900 mb-1">{popup.title}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
+                {popup.message}
+              </p>
+
+              <button
+                type="button"
+                onClick={closePopup}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs sm:text-sm font-bold shadow-xs cursor-pointer transition-colors"
+              >
+                Dismiss
+              </button>
             </div>
-
-            <h3 className="text-lg font-bold text-gray-900 mb-1">{popup.title}</h3>
-            <p className="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
-              {popup.message}
-            </p>
-
-            <button
-              onClick={closePopup}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs sm:text-sm font-bold shadow-xs cursor-pointer"
-            >
-              {popup.type === "success" ? "Continue" : "Dismiss"}
-            </button>
           </div>
-        </div>
-      )
+        )}
+      </>
     }>
           {/* Notification if redirected from Registration */}
           {registeredSuccess && (
@@ -221,13 +210,13 @@ function LoginContent() {
 
           {/* Standard Universal Login Form */}
           <form onSubmit={handleLogin} className="login-form space-y-4">
-            {/* Email Address or Mobile Number */}
+            {/* Email Address */}
             <div>
               <label
                 htmlFor="identifier"
                 className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5"
               >
-                Email Address or Mobile Number <span className="text-red-500">*</span>
+                Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <svg aria-hidden="true" className="login-field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -235,48 +224,25 @@ function LoginContent() {
                 </svg>
                 <input
                   id="identifier"
-                  autoComplete="username"
-                  type="text"
+                  autoComplete="email"
+                  type="email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="e.g. 9876543210 or ramesh@example.com"
-                  className="w-full pl-11 pr-11 py-3 rounded-xl border border-[#d5ddeb] bg-[#e8effc] focus:outline-none focus:ring-2 focus:ring-[#174B35] focus:border-transparent text-gray-900 text-sm transition-all"
+                  placeholder="example@gmail.com"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#d5ddeb] bg-[#e8effc] focus:outline-none focus:ring-2 focus:ring-[#174B35] focus:border-transparent text-gray-900 text-sm transition-all"
                   required
                 />
-                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#174B35]">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
               </div>
             </div>
 
             {/* Password Field */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  htmlFor="password"
-                  className="block text-xs sm:text-sm font-bold text-gray-700"
-                >
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <a
-                  href="#forgot"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setPopup({
-                      isOpen: true,
-                      type: "info",
-                      title: "Password Recovery",
-                      message: "Use your registered mobile number OTP or contact support to reset your password.",
-                      targetUrl: "",
-                    });
-                  }}
-                  className="text-xs font-semibold text-[#174B35] hover:underline"
-                >
-                  Forgot password?
-                </a>
-              </div>
+              <label
+                htmlFor="password"
+                className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5"
+              >
+                Password <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <svg aria-hidden="true" className="login-field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2" />
@@ -309,6 +275,24 @@ function LoginContent() {
                   )}
                 </button>
               </div>
+              <div className="flex justify-end pt-1.5">
+                <a
+                  href="#forgot"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPopup({
+                      isOpen: true,
+                      type: "info",
+                      title: "Password Recovery",
+                      message: "Please check your registered email or contact support to reset your password.",
+                      targetUrl: "",
+                    });
+                  }}
+                  className="text-xs font-semibold text-[#174B35] hover:underline"
+                >
+                  Forgot password?
+                </a>
+              </div>
             </div>
 
             {/* Remember Me Checkbox */}
@@ -321,7 +305,7 @@ function LoginContent() {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="h-4 w-4 text-[#174B35] focus:ring-[#174B35] border-gray-300 rounded cursor-pointer accent-[#174B35]"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-700 font-medium cursor-pointer">
+              <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-900 font-semibold cursor-pointer">
                 Remember me on this browser
               </label>
             </div>
@@ -353,12 +337,12 @@ function LoginContent() {
 
           {/* Link to Register */}
           <div className="login-register mt-6 text-center">
-            <div className="login-divider">or</div>
-            <p className="text-xs sm:text-sm text-gray-600">
-              Don&apos;t have an account yet?{" "}
+            <div className="login-divider font-semibold text-gray-700">or</div>
+            <p className="text-xs sm:text-sm text-gray-900 font-medium">
+              <span className="text-gray-900 font-bold">Don&apos;t have an account yet?</span>{" "}
               <Link
                 href="/register"
-                className="font-bold text-[#174B35] hover:text-[#103A29] hover:underline transition-colors"
+                className="font-extrabold text-[#104b30] hover:text-[#0b331c] underline decoration-[#104b30]/50 transition-colors"
               >
                 Create an Account &rarr;
               </Link>

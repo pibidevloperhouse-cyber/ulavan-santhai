@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { submitRolePayment } from "@/services/paymentApi";
+import BrandLogo from "@/components/ui/BrandLogo";
+import HandshakeLoader from "@/components/ui/HandshakeLoader";
 
 export default function PaymentView({
   role = "buyer",
@@ -248,6 +250,15 @@ export default function PaymentView({
     }
   };
 
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.clear();
+      localStorage.removeItem("ulavan_auth_token");
+      localStorage.removeItem("ulavan_registered_user");
+    }
+    router.push("/login");
+  };
+
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-center items-center py-6 sm:py-12 px-4 selection:bg-[#1F4D36] selection:text-white">
       {/* Scenic Agricultural Farm Background with Soft Blur */}
@@ -262,50 +273,31 @@ export default function PaymentView({
 
       {/* Main Payment Container Card */}
       <div className="relative z-10 w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-9 space-y-6">
-        {/* Top Header: Brand Logo & Home Link */}
+        {/* Top Header: Brand Logo, Home & Logout */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 text-[#1F4D36] flex items-center justify-center">
-              <svg className="w-7 h-7 text-[#204732]" viewBox="0 0 32 32" fill="currentColor">
-                <path d="M8 24C6 16 12 8 24 6C24 16 18 24 8 24Z" />
-                <path d="M10 24C12 18 18 14 26 13C24 20 18 25 10 24Z" opacity="0.75" />
-                <path
-                  d="M6 26C10 22 14 18 22 14"
-                  stroke="#153826"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <span className="text-xl sm:text-2xl font-black text-[#1F4D36] tracking-tight">
-              UlavanSanthai
-            </span>
-          </Link>
+          <BrandLogo width={155} priority />
 
-          <div className="flex items-center gap-4">
-            {/* Quick role toggle button for testing */}
-            <button
-              type="button"
-              onClick={() => handleRoleToggle(currentRole === "buyer" ? "seller" : "buyer")}
-              className="text-[11px] font-semibold text-[#1F4D36] hover:underline bg-[#F4F7F2] px-2.5 py-1 rounded-lg border border-gray-200"
-            >
-              View {currentRole === "buyer" ? "Seller" : "Buyer"} Screen
-            </button>
-
+          <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 hover:text-[#1F4D36] transition-colors"
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span>Home</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </button>
           </div>
         </div>
 
@@ -655,6 +647,8 @@ export default function PaymentView({
             </div>
           </div>
         )}
+        {/* Handshake Loader while payment/backend processes */}
+        {processingState && <HandshakeLoader />}
       </div>
     </div>
   );
