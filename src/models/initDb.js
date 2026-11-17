@@ -188,6 +188,51 @@ export const initAllTables = async () => {
         END IF;
       END $$;
 
+      CREATE TABLE IF NOT EXISTS public.product_categories (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS public.products (
+        id VARCHAR(64) PRIMARY KEY,
+        seller_id VARCHAR(64) NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        product_type VARCHAR(100),
+        variety VARCHAR(100),
+        quality_grade VARCHAR(50),
+        size VARCHAR(100),
+        description TEXT NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+        origin_location JSONB NOT NULL DEFAULT '{}',
+        moq JSONB NOT NULL DEFAULT '{}',
+        processing JSONB NOT NULL DEFAULT '{}',
+        specifications JSONB NOT NULL DEFAULT '[]',
+        other_attributes JSONB NOT NULL DEFAULT '[]',
+        images JSONB NOT NULL DEFAULT '[]',
+        certifications JSONB NOT NULL DEFAULT '[]',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+
+      -- Seed default categories if none exist
+      INSERT INTO public.product_categories (id, name, description)
+      VALUES 
+        ('cat_grains', 'Grains & Cereals', 'Paddy, rice, wheat, corn, millets and other whole grain staples.'),
+        ('cat_millets', 'Millets & Superfoods', 'Ragi, thinai, kuthiraivali, samai, varagu and pearl millet.'),
+        ('cat_pulses', 'Pulses & Legumes', 'Toor dal, urad dal, moong dal, chana, green gram, cowpea.'),
+        ('cat_flours', 'Flours & Mixes', 'Millet flour, rice flour, atta, maida, custom health mixes.'),
+        ('cat_spices', 'Spices & Condiments', 'Turmeric, black pepper, cardamom, cloves, red chilli, coriander seeds.'),
+        ('cat_vegetables', 'Fresh Vegetables', 'Daily farm fresh country vegetables, greens, roots and tubers.'),
+        ('cat_fruits', 'Fresh Fruits', 'Bananas, mangoes, papayas, guavas, pomegranates, citrus fruits.'),
+        ('cat_oils', 'Cold-Pressed Oils', 'Traditional wood-pressed gingelly, coconut, groundnut and mustard oils.'),
+        ('cat_dairy', 'Dairy & Livestock Produce', 'Country cow milk, pure ghee, paneer, butter, organic honey.'),
+        ('cat_organic', 'Certified Organic Produce', 'NPOP/PGS-India certified organic grains, fruits and processed goods.')
+      ON CONFLICT (name) DO NOTHING;
+
       CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
       CREATE INDEX IF NOT EXISTS idx_users_mobile ON public.users(mobile);
       CREATE INDEX IF NOT EXISTS idx_buyer_profiles_district ON public.buyer_profiles(district);
@@ -196,6 +241,10 @@ export const initAllTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_district ON public.seller_profiles(district);
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_type ON public.seller_profiles(seller_type);
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_bname ON public.seller_profiles(business_name);
+      CREATE INDEX IF NOT EXISTS idx_products_seller_id ON public.products(seller_id);
+      CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
+      CREATE INDEX IF NOT EXISTS idx_products_status ON public.products(status);
+      CREATE INDEX IF NOT EXISTS idx_products_name ON public.products(name);
     `);
 
     console.log('[DATABASE] Migration completed successfully in Supabase.');

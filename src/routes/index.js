@@ -7,6 +7,7 @@ import paymentRoutes from './payment.routes.js';
 import userRoutes from './user.routes.js';
 import sellerRoutes from './seller.routes.js';
 import buyerRoutes from './buyer.routes.js';
+import productRoutes from './product.routes.js';
 
 const router = Router();
 
@@ -18,6 +19,8 @@ v1Router.use('/onboarding', onboardingRoutes);
 v1Router.use('/applications', applicationRoutes);
 v1Router.use('/payments', paymentRoutes);
 v1Router.use('/payment', paymentRoutes); // Supports singular /api/v1/payment
+v1Router.use('/seller/products', productRoutes); // Dedicated: /api/v1/seller/products
+v1Router.use('/products', productRoutes);        // Direct: /api/v1/products
 v1Router.use('/seller', sellerRoutes);
 v1Router.use('/buyer', buyerRoutes);
 v1Router.use('/documents', documentRoutes);
@@ -32,6 +35,8 @@ router.use('/onboarding', onboardingRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/payment', paymentRoutes); // Supports singular /api/payment
+router.use('/seller/products', productRoutes); // Dedicated: /api/seller/products
+router.use('/products', productRoutes);        // Direct: /api/products
 router.use('/seller', sellerRoutes);
 router.use('/buyer', buyerRoutes);
 router.use('/documents', documentRoutes);
