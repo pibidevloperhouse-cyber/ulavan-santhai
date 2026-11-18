@@ -266,6 +266,46 @@ async function runProductTests() {
       throw new Error('TEST 8 FAILED: Product update did not reflect.');
     }
 
+    // =========================================================================
+    // TEST 9: Admin Review & Approval (Set status to 'APPROVED')
+    // =========================================================================
+    console.log('\n--- TEST 9: Admin Approve Product ---');
+    const approveRes = await fetch(`${baseUrl}/api/v1/seller/products/${createdProductId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: 'APPROVED',
+        adminComments: 'Verified and approved for public marketplace listing.',
+      }),
+    });
+
+    const approveJson = await approveRes.json();
+    console.log(`[TEST 9] Status: ${approveRes.status}, Product Approved Status: ${approveJson.product?.status}`);
+    console.log('  Admin Comments:', approveJson.product?.adminComments);
+    if (approveRes.status !== 200 || approveJson.product?.status !== 'APPROVED') {
+      throw new Error('TEST 9 FAILED: Admin approval did not succeed.');
+    }
+
+    // =========================================================================
+    // TEST 10: Public Marketplace Listing (STRICT: Only Approved/Published)
+    // =========================================================================
+    console.log('\n--- TEST 10: Public Marketplace Products Listing ---');
+    const publicRes = await fetch(`${baseUrl}/api/v1/seller/products/public`);
+    const publicJson = await publicRes.json();
+    console.log(`[TEST 10] Public products found: ${publicJson.count}`);
+    if (publicRes.status !== 200 || !Array.isArray(publicJson.products)) {
+      throw new Error('TEST 10 FAILED: Public marketplace products failed.');
+    }
+
+    const unapprovedFound = publicJson.products.find(p => p.status !== 'APPROVED' && p.status !== 'PUBLISHED');
+    if (unapprovedFound) {
+      throw new Error(`CRITICAL: Public marketplace returned unapproved product with status ${unapprovedFound.status}!`);
+    }
+    console.log('  Confirmed: 100% of public products are Approved/Published.');
+
     console.log('\n=============================================================');
     console.log('[SUCCESS] All Seller Product Tests Passed Flawlessly!');
     console.log('=============================================================\n');

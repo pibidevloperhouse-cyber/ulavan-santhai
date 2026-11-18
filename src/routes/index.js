@@ -20,6 +20,8 @@ v1Router.use('/applications', applicationRoutes);
 v1Router.use('/payments', paymentRoutes);
 v1Router.use('/payment', paymentRoutes); // Supports singular /api/v1/payment
 v1Router.use('/seller/products', productRoutes); // Dedicated: /api/v1/seller/products
+v1Router.use('/admin/products', productRoutes);  // Admin Approval: /api/v1/admin/products/:id/status
+v1Router.use('/marketplace/products', productRoutes); // Marketplace: /api/v1/marketplace/products
 v1Router.use('/products', productRoutes);        // Direct: /api/v1/products
 v1Router.use('/seller', sellerRoutes);
 v1Router.use('/buyer', buyerRoutes);

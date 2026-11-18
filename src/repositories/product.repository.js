@@ -122,6 +122,85 @@ export const deleteById = async (id, sellerId) => {
 };
 
 /**
+ * Update product status (e.g. Approved/Published by Admin, or Inactive by Seller)
+ * @param {string} id
+ * @param {object} statusData
+ * @param {string} [sellerId] - Optional seller ownership check
+ * @returns {Promise<object|null>}
+ */
+export const updateStatus = async (id, statusData = {}, sellerId = null) => {
+  const now = new Date();
+  const updatePayload = {
+    status: statusData.status,
+    updatedAt: now,
+  };
+
+  if (statusData.adminComments !== undefined) {
+    updatePayload.adminComments = statusData.adminComments;
+  }
+
+  if (statusData.status === 'APPROVED' || statusData.status === 'PUBLISHED') {
+    updatePayload.reviewedAt = now;
+  }
+
+  const conditions = [eq(products.id, id)];
+  if (sellerId) {
+    conditions.push(eq(products.sellerId, sellerId));
+  }
+
+  const [updated] = await db
+    .update(products)
+    .set(updatePayload)
+    .where(and(...conditions))
+    .returning();
+
+  return updated || null;
+};
+
+/**
+ * Public Marketplace Listing: Fetch ONLY Approved / Published products
+ * @param {object} [filters]
+ * @returns {Promise<Array<object>>}
+ */
+export const findPublicApproved = async (filters = {}) => {
+  const conditions = [
+    or(eq(products.status, 'APPROVED'), eq(products.status, 'PUBLISHED'))
+  ];
+
+  if (filters.category && filters.category !== 'All' && filters.category !== 'All categories') {
+    conditions.push(eq(products.category, filters.category));
+  }
+
+  if (filters.search && filters.search.trim()) {
+    const term = `%${filters.search.trim()}%`;
+    conditions.push(
+      or(
+        ilike(products.name, term),
+        ilike(products.productType, term),
+        ilike(products.variety, term)
+      )
+    );
+  }
+
+  const query = db
+    .select()
+    .from(products)
+    .where(and(...conditions))
+    .orderBy(desc(products.createdAt));
+
+  const results = await query;
+
+  if (filters.availability && filters.availability !== 'All') {
+    return results.filter((p) => {
+      const avail = p.moq?.availability || '';
+      return avail.toLowerCase() === filters.availability.toLowerCase();
+    });
+  }
+
+  return results;
+};
+
+/**
  * Fetch all active product categories from DB
  * @returns {Promise<Array<object>>}
  */

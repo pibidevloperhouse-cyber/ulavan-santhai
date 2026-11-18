@@ -201,6 +201,10 @@ export const products = pgTable('products', {
   // Section 7: Certifications & Compliance Documents
   certifications: jsonb('certifications').default([]).notNull(),
 
+  // Admin Review & Approval
+  adminComments: text('admin_comments'),
+  reviewedAt: timestamp('reviewed_at'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

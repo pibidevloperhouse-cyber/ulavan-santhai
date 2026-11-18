@@ -214,9 +214,15 @@ export const initAllTables = async () => {
         other_attributes JSONB NOT NULL DEFAULT '[]',
         images JSONB NOT NULL DEFAULT '[]',
         certifications JSONB NOT NULL DEFAULT '[]',
+        admin_comments TEXT,
+        reviewed_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       );
+
+      ALTER TABLE public.products
+      ADD COLUMN IF NOT EXISTS admin_comments TEXT,
+      ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE;
 
       -- Seed default categories if none exist
       INSERT INTO public.product_categories (id, name, description)

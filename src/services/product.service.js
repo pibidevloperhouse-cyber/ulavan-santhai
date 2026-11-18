@@ -255,6 +255,87 @@ export const deleteProductService = async (id, sellerId) => {
 };
 
 /**
+ * Service: Update product status (Admin review/approval OR Seller activation/deactivation)
+ * @param {string} id
+ * @param {object} input
+ * @param {string} input.status - e.g. 'APPROVED', 'PUBLISHED', 'REJECTED', 'INACTIVE', 'UNDER_REVIEW'
+ * @param {string} [input.adminComments]
+ * @param {string} [input.reason]
+ * @param {object} [user] - Authenticated user context
+ * @returns {Promise<object>}
+ */
+export const updateProductStatusService = async (id, { status, adminComments, reason } = {}, user = null) => {
+  if (!id) {
+    const error = new Error('Product ID is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!status) {
+    const error = new Error('Status is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Normalize status synonyms
+  let normalizedStatus = String(status).trim().toUpperCase();
+  if (normalizedStatus === 'PENDING') normalizedStatus = 'SUBMITTED';
+  if (normalizedStatus === 'ACTIVE') normalizedStatus = 'PUBLISHED';
+
+  const allowedStatuses = [
+    'DRAFT',
+    'SUBMITTED',
+    'UNDER_REVIEW',
+    'APPROVED',
+    'PUBLISHED',
+    'REJECTED',
+    'INACTIVE',
+  ];
+
+  if (!allowedStatuses.includes(normalizedStatus)) {
+    const error = new Error(`Invalid status "${status}". Allowed values: ${allowedStatuses.join(', ')}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existing = await productRepository.findById(id);
+  if (!existing) {
+    const error = new Error('Product not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const comments = adminComments || reason || existing.adminComments;
+  const updated = await productRepository.updateStatus(id, {
+    status: normalizedStatus,
+    adminComments: comments,
+  });
+
+  console.log(`[PRODUCT STATUS] Product ${id} status updated to ${normalizedStatus}`);
+
+  return {
+    success: true,
+    message: `Product status successfully updated to ${normalizedStatus}.`,
+    product: updated,
+  };
+};
+
+/**
+ * Service: Fetch Public Approved Marketplace Products
+ * STRICT RULE: Only returns products with status 'APPROVED' or 'PUBLISHED'.
+ * @param {object} query
+ * @returns {Promise<object>}
+ */
+export const getPublicMarketplaceProductsService = async (query = {}) => {
+  const products = await productRepository.findPublicApproved(query);
+  return {
+    success: true,
+    count: products.length,
+    products,
+  };
+};
+
+/**
  * Service: Upload Product Image to Supabase Storage bucket 'product_images'
  * @param {object} input
  * @param {Express.Multer.File} input.file

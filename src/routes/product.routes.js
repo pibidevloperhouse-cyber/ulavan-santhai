@@ -10,6 +10,8 @@ import {
   uploadProductImage,
   uploadProductCertificate,
   getCategories,
+  updateProductStatus,
+  getPublicMarketplaceProducts,
 } from '../controllers/product.controller.js';
 
 const router = Router();
@@ -18,7 +20,11 @@ const router = Router();
 // Endpoint: GET /api/v1/seller/products/categories
 router.get('/categories', getCategories);
 
-// 2. Upload Product Image to 'product_images' bucket
+// 2. Fetch Public Approved Products (Only APPROVED or PUBLISHED)
+// Endpoint: GET /api/v1/seller/products/public
+router.get('/public', getPublicMarketplaceProducts);
+
+// 3. Upload Product Image to 'product_images' bucket
 // Endpoint: POST /api/v1/seller/products/upload-image
 router.post(
   '/upload-image',
@@ -27,7 +33,7 @@ router.post(
   uploadProductImage
 );
 
-// 3. Upload Certificate Document to 'product_certificates' bucket
+// 4. Upload Certificate Document to 'product_certificates' bucket
 // Endpoint: POST /api/v1/seller/products/upload-certificate
 router.post(
   '/upload-certificate',
@@ -36,23 +42,28 @@ router.post(
   uploadProductCertificate
 );
 
-// 4. Create Product Listing (Draft or Submitted)
+// 5. Admin Approval & Product Status Toggle
+// Endpoints: PATCH & PUT /api/v1/seller/products/:id/status
+router.patch('/:id/status', optionalVerifyToken, updateProductStatus);
+router.put('/:id/status', optionalVerifyToken, updateProductStatus);
+
+// 6. Create Product Listing (Draft or Submitted)
 // Endpoint: POST /api/v1/seller/products
 router.post('/', optionalVerifyToken, createProduct);
 
-// 5. List All Seller Products (supports search, category, status, availability filters)
+// 7. List All Seller Products (supports search, category, status, availability filters)
 // Endpoint: GET /api/v1/seller/products
 router.get('/', optionalVerifyToken, getSellerProducts);
 
-// 6. Get Single Product by ID
+// 8. Get Single Product by ID
 // Endpoint: GET /api/v1/seller/products/:id
 router.get('/:id', optionalVerifyToken, getProductById);
 
-// 7. Update Product Listing
+// 9. Update Product Listing
 // Endpoint: PUT /api/v1/seller/products/:id
 router.put('/:id', optionalVerifyToken, updateProduct);
 
-// 8. Delete Product Listing
+// 10. Delete Product Listing
 // Endpoint: DELETE /api/v1/seller/products/:id
 router.delete('/:id', optionalVerifyToken, deleteProduct);
 
