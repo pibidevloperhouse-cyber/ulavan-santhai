@@ -196,3 +196,61 @@ export const membershipPlans = pgTable('membership_plans', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+/**
+ * 7. Product Categories Table
+ * Dynamic categories loaded from the database so Admins can add or update them.
+ */
+export const productCategories = pgTable('product_categories', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: text('description'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/**
+ * 8. Products Table
+ * Full agricultural product listings created by verified Sellers.
+ * Supports complete lifecycle (Draft, Submitted, Under Review, Approved, Published, etc.),
+ * multi-image gallery with primary selection, origin, MOQ, processing, dynamic attributes & certifications.
+ */
+export const products = pgTable('products', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  sellerId: varchar('seller_id', { length: 64 }).references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  productType: varchar('product_type', { length: 100 }),
+  variety: varchar('variety', { length: 100 }),
+  qualityGrade: varchar('quality_grade', { length: 50 }),
+  size: varchar('size', { length: 100 }),
+  description: text('description').notNull(),
+  status: varchar('status', { length: 30 }).default('DRAFT').notNull(),
+
+  // Section 3: Origin and Location Snapshot
+  originLocation: jsonb('origin_location').default({}).notNull(),
+
+  // Section 4: Minimum Order Quantity & Availability
+  moq: jsonb('moq').default({}).notNull(),
+
+  // Section 5: Processing, Manufacturing and Packaging
+  processing: jsonb('processing').default({}).notNull(),
+
+  // Section 6: Dynamic Specifications and Other Attributes
+  specifications: jsonb('specifications').default([]).notNull(),
+  otherAttributes: jsonb('other_attributes').default([]).notNull(),
+
+  // Section 2: Product Images Gallery
+  images: jsonb('images').default([]).notNull(),
+
+  // Section 7: Certifications & Compliance Documents
+  certifications: jsonb('certifications').default([]).notNull(),
+
+  // Admin Review & Approval
+  adminComments: text('admin_comments'),
+  reviewedAt: timestamp('reviewed_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
