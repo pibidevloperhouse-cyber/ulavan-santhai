@@ -105,12 +105,11 @@ function LoginContent() {
       try {
         if (token) {
           sessionStorage.setItem("ulavan_auth_token", token);
+          localStorage.setItem("ulavan_auth_token", token);
         }
         sessionStorage.setItem("ulavan_user", JSON.stringify(userData));
         sessionStorage.setItem("ulavan_registered_user", JSON.stringify(userData));
-        if (rememberMe) {
-          localStorage.setItem("ulavan_registered_user", JSON.stringify(userData));
-        }
+        localStorage.setItem("ulavan_registered_user", JSON.stringify(userData));
       } catch {
         // ignore
       }
