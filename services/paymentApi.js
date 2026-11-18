@@ -1,17 +1,20 @@
 /**
- * Ulavan Santhai - Payment & Admin Review API Service
+ * Ulavan Santhai - Payment API Service
  * Strictly communicates with backend API (/api/v1/payments).
- * No mock data, no static fallback arrays.
+ * Implements real 2-step Razorpay Order Creation and Cryptographic Verification.
+ * No mock data, no static dummy fallback arrays.
  */
 
 import { apiFetch } from "./apiConfig";
 
 /**
  * Configurable Role-Based Pricing Plans (metadata for UI display)
+ * Note: Actual transaction amounts are strictly governed by backend database.
  */
 export const PRICING_PLANS = {
   BUYER: {
-    id: "plan_buyer_base",
+    id: "BUYER_ANNUAL",
+    legacyId: "plan_buyer_base",
     role: "BUYER",
     name: "Buyer Verified Access Plan",
     basePrice: 365,
@@ -32,15 +35,16 @@ export const PRICING_PLANS = {
     ],
   },
   SELLER: {
-    id: "plan_seller_monthly",
+    id: "SELLER_ANNUAL",
+    legacyId: "plan_seller_monthly",
     role: "SELLER",
     name: "Seller Platform Membership",
     basePrice: 365,
     taxAmount: 0,
     totalAmount: 365,
     currency: "INR",
-    billingCycle: "Per Month",
-    renewalPeriodDays: 30,
+    billingCycle: "Annual Access",
+    renewalPeriodDays: 365,
     description: "Showcase agricultural harvest lots, receive verified commercial buyer enquiries, and access fair-trade market tools.",
     benefits: [
       "List and showcase unlimited agricultural crop lots",
@@ -53,37 +57,40 @@ export const PRICING_PLANS = {
 };
 
 /**
- * Record a payment checkout transaction strictly on backend
+ * Step 1: Create payment order on backend
+ * Calls POST /api/v1/payments/create-order with { planId }
+ * Backend fetches price from database, creates Razorpay order, returns { orderId, amount, currency, keyId, plan }
  */
-export async function recordPaymentCheckout(checkoutData) {
-  const role = checkoutData.role || "BUYER";
-  const plan = PRICING_PLANS[role] || PRICING_PLANS.BUYER;
-  const txId = checkoutData.transactionId || `TXN_US_${Date.now()}`;
-
-  const payload = {
-    transactionId: txId,
-    role,
-    amount: plan.totalAmount,
-    paymentMethod: checkoutData.paymentMethod || "UPI",
-    paymentDetails: checkoutData.paymentDetails || {},
-    planName: plan.name,
-  };
-
-  return apiFetch("/api/v1/payments", {
+export async function createRazorpayOrder(planId) {
+  return apiFetch("/api/v1/payments/create-order", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ planId }),
   });
 }
 
 /**
- * Submit role payment helper (alias for recordPaymentCheckout)
+ * Step 2: Verify payment signatures on backend
+ * Calls POST /api/v1/payments/verify with { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentMethod }
+ * Backend performs HMAC-SHA256 verification and activates user account in database.
  */
-export async function submitRolePayment(role, paymentDetails = {}) {
-  return recordPaymentCheckout({ role, ...paymentDetails });
+export async function verifyRazorpayPayment(verificationData) {
+  return apiFetch("/api/v1/payments/verify", {
+    method: "POST",
+    body: JSON.stringify(verificationData),
+  });
 }
 
 /**
- * Get user payment history strictly from backend
+ * Backward-compatible helper for legacy components
+ */
+export async function submitRolePayment(checkoutData) {
+  const role = (checkoutData.role || "BUYER").toUpperCase();
+  const plan = PRICING_PLANS[role] || PRICING_PLANS.BUYER;
+  return createRazorpayOrder(plan.id);
+}
+
+/**
+ * Fetch authenticated user's payment history from backend
  */
 export async function getPaymentHistory() {
   const res = await apiFetch("/api/v1/payments/history", { method: "GET" });
@@ -98,58 +105,4 @@ export async function getPaymentHistory() {
     data: [],
     error: res.error || "Failed to fetch payment history.",
   };
-}
-
-/**
- * Get pending payments for admin review strictly from backend
- */
-export async function getAdminPendingPayments() {
-  const res = await apiFetch("/api/v1/admin/payments/review", { method: "GET" });
-  if (res.success && Array.isArray(res.data)) {
-    return {
-      success: true,
-      data: res.data,
-    };
-  }
-  return {
-    success: false,
-    data: [],
-    error: res.error || "Failed to fetch pending reviews.",
-  };
-}
-
-/**
- * Admin approves payment strictly on backend
- */
-export async function adminApprovePayment(paymentId, reviewDetails = {}) {
-  return apiFetch(`/api/v1/admin/payments/${encodeURIComponent(paymentId)}/approve`, {
-    method: "POST",
-    body: JSON.stringify(reviewDetails),
-  });
-}
-
-/**
- * Admin rejects payment strictly on backend
- */
-export async function adminRejectPayment(paymentId, rejectionDetails = {}) {
-  return apiFetch(`/api/v1/admin/payments/${encodeURIComponent(paymentId)}/reject`, {
-    method: "POST",
-    body: JSON.stringify(rejectionDetails),
-  });
-}
-
-/**
- * Verify payment status strictly on backend
- */
-export async function verifyPayment(paymentId) {
-  return apiFetch(`/api/v1/payments/${encodeURIComponent(paymentId)}/verify`, {
-    method: "GET",
-  });
-}
-
-/**
- * Local stored payments helper
- */
-export function getLocalStoredPayments() {
-  return [];
 }
