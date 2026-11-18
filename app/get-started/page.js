@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSessionUser } from "@/services/sessionAuth";
+import BrandLogo from "@/components/ui/BrandLogo";
 
 export default function GetStartedPage() {
   const router = useRouter();
@@ -159,56 +160,45 @@ export default function GetStartedPage() {
     },
   ];
 
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.clear();
+      localStorage.removeItem("ulavan_auth_token");
+      localStorage.removeItem("ulavan_registered_user");
+    }
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5EB] flex flex-col font-sans selection:bg-[#174B35] selection:text-white">
       {/* Top Brand Bar */}
       <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo with 2x sharp emblem */}
-          <Link href="/" className="flex items-center gap-3.5 group">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#F5F5EB] flex items-center justify-center relative shrink-0 shadow-sm border border-gray-200 group-hover:scale-105 transition-transform">
-              <Image
-                src="/images/ulavan-santhai-emblem@2x.png"
-                alt="Ulavan Santhai Logo"
-                fill
-                sizes="48px"
-                className="object-cover"
-                priority
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl sm:text-2xl font-black text-[#174B35] tracking-tight leading-tight">
-                Ulavan Santhai
-              </span>
-              <span className="text-[11px] tracking-wider uppercase font-extrabold text-[#729B59]">
-                Agricultural Marketplace
-              </span>
-            </div>
-          </Link>
+          {/* Animated Brand Logo */}
+          <BrandLogo width={165} priority />
 
-          {/* Quick Links */}
-          <div className="flex items-center gap-4">
-            {userName ? (
-              <div
-                suppressHydrationWarning
-                className="hidden sm:flex items-center gap-2 text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>
-                  Signed in as: <strong className="text-[#174B35]">{userName}</strong>
-                </span>
-              </div>
-            ) : (
-              <span className="hidden sm:inline text-xs text-gray-500 font-medium">
-                Already have an account?
-              </span>
-            )}
+          {/* Quick Links, Home & Logout */}
+          <div className="flex items-center gap-3">
             <Link
-              href="/login"
-              className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] border border-[#174B35]/30 hover:bg-[#E8F0E3] transition-all duration-200"
+              href="/"
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              Sign In
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span>Home</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </header>
@@ -217,19 +207,19 @@ export default function GetStartedPage() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col justify-center">
         {/* Page Title & Subtitle */}
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold tracking-wide uppercase mb-4 border border-[#729B59]/30">
-            <span className="w-2 h-2 rounded-full bg-[#729B59]" />
-            <span>Step 2: Choose Your Marketplace Role</span>
-          </div>
           <h1
             suppressHydrationWarning
             className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#174B35] tracking-tight leading-tight"
           >
-            {userName ? `Welcome back, ${userName}!` : "Choose Your Marketplace Role"}
+            {userName ? `Welcome back, ${userName}!` : "Welcome to Ulavan Santhai!"}
           </h1>
           <p className="mt-3 text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
             Switch between your Buyer and Seller workspaces anytime, or complete your tailored profile to start trading with zero middleman margin.
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold tracking-wide uppercase border border-[#729B59]/30">
+            <span className="w-2 h-2 rounded-full bg-[#729B59]" />
+            <span>Choose Your Marketplace Role</span>
+          </div>
         </div>
 
         {/* 2 Large Image Cards Grid: Buyer and Seller */}

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 function getBackendBase() {
-  const url = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-  return url ? url.trim().replace(/\/+$/, "") : "";
+  const url = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  return url ? url.trim().replace(/\/+$/, "") : "http://localhost:5000";
 }
 
 /**

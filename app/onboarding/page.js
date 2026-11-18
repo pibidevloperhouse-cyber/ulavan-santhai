@@ -12,6 +12,7 @@ import { submitApplication } from "@/services/onboardingApi";
 import { submitRolePayment } from "@/services/paymentApi";
 import { useSessionUser } from "@/services/sessionAuth";
 import PaymentView from "@/components/onboarding/PaymentView";
+import BrandLogo from "@/components/ui/BrandLogo";
 
 export const BUYER_TYPES = [
   "Individual",
@@ -335,11 +336,19 @@ function OnboardingContent() {
   const handleNextFromStep2 = () => {
     setFormError("");
     if (!uploadedDocs["ID_PROOF"]) {
-      setFormError("Please upload your Government Identity Proof (Aadhaar / PAN / Voter ID) to continue.");
+      setFormError(
+        role === "buyer" && buyerType === "Individual"
+          ? "Please upload your Aadhaar Card / ID Proof to continue."
+          : "Please upload your Government Identity Proof (Aadhaar / PAN / Voter ID) to continue."
+      );
       return;
     }
     if (role === "seller" && !uploadedDocs["BANK_PASSBOOK"]) {
       setFormError("Bank Account Proof / Passbook is required for direct farm-gate settlement.");
+      return;
+    }
+    if (isGstProvided && !uploadedDocs["GST_CERTIFICATE"]) {
+      setFormError("Please upload your GST Registration Certificate (Form REG-06) to continue.");
       return;
     }
     setCurrentStep(3);
@@ -389,10 +398,22 @@ function OnboardingContent() {
   };
 
   // Determine which documents are required based on active type
+  // When buyerType is "Individual", GST certificate is NEVER required or shown.
   const isGstProvided =
     role === "buyer"
-      ? buyerData.businessIsGst === "Yes" || buyerData.mfgIsGst === "Yes" || buyerData.procIsGst === "Yes"
-      : sellerData.rawIsGst === "Yes" || sellerData.mfgIsGst === "Yes" || sellerData.vaIsGst === "Yes";
+      ? buyerType !== "Individual" &&
+        ((buyerType === "Business" && buyerData.businessIsGst === "Yes") ||
+          (buyerType === "Manufacturer" && buyerData.mfgIsGst === "Yes") ||
+          (buyerType === "Food Processor" && buyerData.procIsGst === "Yes") ||
+          (buyerType === "Bakery or Food Business" && buyerData.bakeryIsGst === "Yes") ||
+          (buyerType === "Reseller" && buyerData.resellerIsGst === "Yes") ||
+          (buyerType === "Other" && buyerData.otherIsGst === "Yes"))
+      : (sellerType === "Agricultural Producer" && sellerData.fpoIsGst === "Yes") ||
+        (sellerType === "Raw-Material Provider" && sellerData.rawIsGst === "Yes") ||
+        (sellerType === "Ingredient Producer" && sellerData.ingIsGst === "Yes") ||
+        (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes") ||
+        (sellerType === "Value-Added Manufacturer" && sellerData.vaIsGst === "Yes") ||
+        (sellerType === "Other" && sellerData.otherIsGst === "Yes");
 
   const isFssaiRequired =
     role === "buyer"
@@ -419,63 +440,44 @@ function OnboardingContent() {
     );
   }
 
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.clear();
+      localStorage.removeItem("ulavan_auth_token");
+      localStorage.removeItem("ulavan_registered_user");
+    }
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5EB] flex flex-col font-sans selection:bg-[#174B35] selection:text-white pb-16">
       {/* Top Brand Navbar */}
       <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* High-res 2x emblem and clear typography */}
-          <Link href="/" className="flex items-center gap-3.5 group">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden bg-[#F5F5EB] flex items-center justify-center relative shrink-0 shadow-sm border border-gray-200 group-hover:scale-105 transition-transform">
-              <Image
-                src="/images/ulavan-santhai-emblem@2x.png"
-                alt="Ulavan Santhai Logo"
-                fill
-                sizes="48px"
-                className="object-cover"
-                priority
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl sm:text-2xl font-black text-[#174B35] tracking-tight leading-tight">
-                Ulavan Santhai
-              </span>
-              <span className="text-[11px] tracking-wider uppercase font-extrabold text-[#729B59]">
-                Agricultural Marketplace
-              </span>
-            </div>
-          </Link>
+          {/* Animated Brand Logo */}
+          <BrandLogo width={165} priority />
 
-          {/* User Status Bar & Role Switcher */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          {/* Home & Logout Actions */}
+          <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 hover:text-[#174B35] transition-colors"
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span>Home</span>
             </Link>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 hidden md:inline">Registered Account:</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-[#174B35] text-xs font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span suppressHydrationWarning className="truncate max-w-[130px] sm:max-w-none">{userAuth.name}</span>
-              </span>
-            </div>
-
             <button
               type="button"
-              onClick={() => {
-                const nextRole = role === "buyer" ? "seller" : "buyer";
-                setRole(nextRole);
-                router.replace(`/onboarding?role=${nextRole}`);
-              }}
-              className="text-xs font-bold px-3 py-1.5 rounded-xl border border-gray-300 hover:border-[#174B35] bg-white text-gray-700 hover:text-[#174B35] transition-all cursor-pointer"
+              onClick={handleLogout}
+              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              Switch to {role === "buyer" ? "Seller" : "Buyer"}
+              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
             </button>
           </div>
         </div>
@@ -483,28 +485,6 @@ function OnboardingContent() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-10">
-        {/* Banner: Logged in credentials (shown during steps 1 to 3) */}
-        {currentStep !== 4 && (
-          <div className="mb-6 p-4 rounded-2xl bg-white border border-gray-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#E8F0E3] text-[#174B35] flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 font-medium">Logged in credentials:</div>
-                <div suppressHydrationWarning className="text-sm font-bold text-gray-900">
-                  {userAuth.name} <span className="text-gray-400 font-normal">({userAuth.email} • +91 {userAuth.mobile})</span>
-                </div>
-              </div>
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#174B35] text-white text-xs font-bold uppercase tracking-wider self-start sm:self-center">
-              <span>{role === "buyer" ? "Buyer Lane" : "Seller Lane"}</span>
-            </div>
-          </div>
-        )}
-
         {/* Stepper Component (3 Steps - shown during steps 1 to 3) */}
         {currentStep !== 4 && (
           <Stepper
@@ -533,9 +513,6 @@ function OnboardingContent() {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200/90 p-6 sm:p-8 space-y-8 animate-in fade-in duration-200">
             {/* Header */}
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold uppercase tracking-wider mb-2">
-                <span>Step 1 of 4</span>
-              </div>
               <h2 className="text-2xl font-black text-[#174B35] tracking-tight">
                 {role === "buyer" ? "Select Your Buyer Type & Details" : "Select Your Seller Type & Details"}
               </h2>
@@ -577,61 +554,6 @@ function OnboardingContent() {
                     })}
                   </div>
                 </div>
-
-                {/* Sub-form 1: Individual */}
-                {buyerType === "Individual" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Individual Household Buyer Form</span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-800 mb-1.5">
-                        Commodities Needed for Household <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {COMMON_COMMODITIES.map((c) => {
-                          const sel = buyerData.individualCommodities.includes(c);
-                          return (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => handleToggleArray(setBuyerData, "individualCommodities", c)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                                sel ? "bg-[#174B35] text-white border-[#174B35]" : "bg-white text-gray-700 border-gray-200"
-                              }`}
-                            >
-                              {sel ? `✓ ${c}` : `+ ${c}`}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <FormSelect
-                        label="Monthly Consumption"
-                        value={buyerData.individualVolume}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, individualVolume: e.target.value }))}
-                        options={["Under 25 kg / month", "25 - 50 kg / month", "50 - 100 kg / month", "100+ kg / month"]}
-                      />
-                      <FormSelect
-                        label="Purchase Frequency"
-                        value={buyerData.individualFrequency}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, individualFrequency: e.target.value }))}
-                        options={["Weekly", "Bi-weekly", "Monthly", "On-Demand"]}
-                      />
-                      <FormSelect
-                        label="Payment Preference"
-                        value={buyerData.individualPayment}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, individualPayment: e.target.value }))}
-                        options={["UPI Instant", "Cash on Delivery"]}
-                      />
-                    </div>
-                    <div className="text-[11px] text-gray-500 italic">
-                      ✓ No GSTIN or commercial licenses required for individual consumers.
-                    </div>
-                  </div>
-                )}
 
                 {/* Sub-form 2: Business */}
                 {buyerType === "Business" && (
@@ -903,9 +825,15 @@ function OnboardingContent() {
                 )}
 
                 {/* Common Location Details for Buyer */}
-                <div className="pt-4 border-t border-gray-100">
-                  <h3 className="text-sm font-bold text-gray-900 mb-3">Operating &amp; Delivery Location</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className="pt-4 border-t border-gray-100 space-y-4">
+                  <h3 className="text-sm font-bold text-gray-900">Operating &amp; Delivery Location</h3>
+                  <FormInput
+                    label="Full Delivery / Operating Street Address"
+                    placeholder="e.g. Shop No. 12, Main Bazaar Road, Near Bus Stand"
+                    value={buyerData.address}
+                    onChange={(e) => setBuyerData((p) => ({ ...p, address: e.target.value }))}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormSelect
                       label="District"
                       required
@@ -927,12 +855,6 @@ function OnboardingContent() {
                       onChange={(e) => setBuyerData((p) => ({ ...p, pinCode: e.target.value }))}
                     />
                   </div>
-                  <FormInput
-                    label="Full Delivery / Operating Street Address"
-                    placeholder="e.g. Shop No. 12, Main Bazaar Road, Near Bus Stand"
-                    value={buyerData.address}
-                    onChange={(e) => setBuyerData((p) => ({ ...p, address: e.target.value }))}
-                  />
                 </div>
               </div>
             )}
@@ -1332,9 +1254,15 @@ function OnboardingContent() {
                 )}
 
                 {/* Common Location Details for Seller */}
-                <div className="pt-4 border-t border-gray-100">
-                  <h3 className="text-sm font-bold text-gray-900 mb-3">Farm Gate / Collection Point Location</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className="pt-4 border-t border-gray-100 space-y-4">
+                  <h3 className="text-sm font-bold text-gray-900">Farm Gate / Collection Point Location</h3>
+                  <FormInput
+                    label="Farm Gate / Dispatch Point Address"
+                    placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
+                    value={sellerData.farmAddress}
+                    onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormSelect
                       label="District"
                       required
@@ -1356,12 +1284,6 @@ function OnboardingContent() {
                       onChange={(e) => setSellerData((p) => ({ ...p, pinCode: e.target.value }))}
                     />
                   </div>
-                  <FormInput
-                    label="Farm Gate / Dispatch Point Address"
-                    placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
-                    value={sellerData.farmAddress}
-                    onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
-                  />
                 </div>
               </div>
             )}
@@ -1394,9 +1316,6 @@ function OnboardingContent() {
         {currentStep === 2 && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200/90 p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold uppercase tracking-wider mb-2">
-                <span>Step 2 of 4</span>
-              </div>
               <h2 className="text-2xl font-black text-[#174B35] tracking-tight">
                 Required Verification Documents
               </h2>
@@ -1410,8 +1329,16 @@ function OnboardingContent() {
               {/* Common: Aadhaar / Government ID */}
               <DocumentUploader
                 documentType="ID_PROOF"
-                title="Identity Proof (Aadhaar Card / Voter ID / PAN)"
-                description="Government identity proof of the account owner or registered farmer."
+                title={
+                  role === "buyer" && buyerType === "Individual"
+                    ? "Aadhaar Card / Government Identity Proof"
+                    : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
+                }
+                description={
+                  role === "buyer" && buyerType === "Individual"
+                    ? "Upload your Aadhaar Card (Front & Back) or valid Government ID proof."
+                    : "Government identity proof of the account owner or registered farmer."
+                }
                 required
                 uploadedDoc={uploadedDocs["ID_PROOF"]}
                 onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ID_PROOF: doc }))}
@@ -1568,9 +1495,6 @@ function OnboardingContent() {
         {currentStep === 3 && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200/90 p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold uppercase tracking-wider mb-2">
-                <span>Step 3 of 4</span>
-              </div>
               <h2 className="text-2xl font-black text-[#174B35] tracking-tight">
                 Review &amp; Finalize Registration
               </h2>
@@ -1610,16 +1534,10 @@ function OnboardingContent() {
                 {role === "buyer" ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     {buyerType === "Individual" && (
-                      <>
-                        <div>
-                          <span className="text-gray-500 block text-xs">Commodities Needed:</span>
-                          <strong className="text-[#174B35]">{buyerData.individualCommodities.join(", ")}</strong>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 block text-xs">Consumption &amp; Frequency:</span>
-                          <strong className="text-gray-900">{buyerData.individualVolume} • {buyerData.individualFrequency}</strong>
-                        </div>
-                      </>
+                      <div>
+                        <span className="text-gray-500 block text-xs">Account Category:</span>
+                        <strong className="text-[#174B35]">Individual Direct Consumer</strong>
+                      </div>
                     )}
                     {buyerType === "Business" && (
                       <>

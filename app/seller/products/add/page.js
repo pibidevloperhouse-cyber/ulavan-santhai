@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BasicInfoSection from "@/components/seller/products/add/BasicInfoSection";
@@ -11,60 +11,42 @@ import ProcessingPackagingSection from "@/components/seller/products/add/Process
 import SpecificationsSection from "@/components/seller/products/add/SpecificationsSection";
 import CertificationsSection from "@/components/seller/products/add/CertificationsSection";
 import ListingStatusSidebar from "@/components/seller/products/add/ListingStatusSidebar";
-import { INITIAL_PRODUCTS } from "@/data/sellerPortalData";
+import {
+  createSellerProduct,
+  updateSellerProduct,
+  getSellerProductById,
+  getProductCategories,
+} from "@/services/productApi";
 
 function AddProductFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
   const isEditing = Boolean(editId);
-  const editProduct = editId
-    ? INITIAL_PRODUCTS.find((p) => p.id === editId)
-    : null;
 
   // Basic Information State
-  const [productName, setProductName] = useState(
-    () => editProduct?.name || ""
-  );
-  const [productCategory, setProductCategory] = useState(
-    () => editProduct?.category || ""
-  );
-  const [productType, setProductType] = useState(
-    () => editProduct?.type || ""
-  );
+  const [productName, setProductName] = useState("");
+  const [productCategory, setProductCategory] = useState("");
+  const [productType, setProductType] = useState("");
   const [variety, setVariety] = useState("");
   const [qualityGrade, setQualityGrade] = useState("Select grade");
   const [size, setSize] = useState("");
   const [productDescription, setProductDescription] = useState("");
 
   // Product Images State
-  const [images, setImages] = useState([
-    { id: "img-1", isPrimary: true },
-    { id: "img-2", isPrimary: false },
-    { id: "img-3", isPrimary: false },
-  ]);
+  const [images, setImages] = useState([]);
 
   // Origin & Location State
-  const [placeOfOrigin, setPlaceOfOrigin] = useState(
-    () => editProduct?.origin || ""
-  );
+  const [placeOfOrigin, setPlaceOfOrigin] = useState("");
   const [productionLocation, setProductionLocation] = useState("");
   const [processingLocation, setProcessingLocation] = useState("");
   const [manufacturingLocation, setManufacturingLocation] = useState("");
 
   // MOQ & Availability State
-  const [moqQty, setMoqQty] = useState(() => {
-    if (!editProduct?.moq) return "";
-    return editProduct.moq.split(" ")[0] || "";
-  });
-  const [moqUnit, setMoqUnit] = useState(() => {
-    if (!editProduct?.moq) return "kg";
-    return editProduct.moq.split(" ")[1] || "kg";
-  });
+  const [moqQty, setMoqQty] = useState("");
+  const [moqUnit, setMoqUnit] = useState("kg");
   const [moqVariesBy, setMoqVariesBy] = useState("Not specified");
-  const [availability, setAvailability] = useState(
-    () => editProduct?.availability || "Available"
-  );
+  const [availability, setAvailability] = useState("Available");
 
   // Processing, Manufacturing & Packaging State
   const [processingDetails, setProcessingDetails] = useState("");
@@ -94,6 +76,52 @@ function AddProductFormContent() {
   ]);
 
   const [statusMessage, setStatusMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load existing product if editing
+  useEffect(() => {
+    if (editId) {
+      getSellerProductById(editId).then((res) => {
+        if (res.success && res.data?.product) {
+          const p = res.data.product;
+          setProductName(p.name || "");
+          setProductCategory(p.category || "");
+          setProductType(p.productType || "");
+          setVariety(p.variety || "");
+          setQualityGrade(p.qualityGrade || "Select grade");
+          setSize(p.size || "");
+          setProductDescription(p.description || "");
+          if (Array.isArray(p.images)) setImages(p.images);
+          if (p.originLocation) {
+            setPlaceOfOrigin(p.originLocation.placeOfOrigin || "");
+            setProductionLocation(p.originLocation.productionLocation || "");
+            setProcessingLocation(p.originLocation.processingLocation || "");
+            setManufacturingLocation(p.originLocation.manufacturingLocation || "");
+          }
+          if (p.moq) {
+            setMoqQty(p.moq.quantity ? String(p.moq.quantity) : "");
+            setMoqUnit(p.moq.unit || "kg");
+            setMoqVariesBy(p.moq.variesBy || "Not specified");
+            setAvailability(p.moq.availability || "Available");
+          }
+          if (p.processing) {
+            setProcessingDetails(p.processing.processingDetails || "");
+            setManufacturingDetails(p.processing.manufacturingDetails || "");
+            setPackagingDetails(p.processing.packagingDetails || "");
+          }
+          if (Array.isArray(p.specifications) && p.specifications.length > 0) {
+            setSpecifications(p.specifications);
+          }
+          if (Array.isArray(p.otherAttributes) && p.otherAttributes.length > 0) {
+            setOtherAttributes(p.otherAttributes);
+          }
+          if (Array.isArray(p.certifications) && p.certifications.length > 0) {
+            setCertifications(p.certifications);
+          }
+        }
+      });
+    }
+  }, [editId]);
 
   // Dynamic Specifications Handlers
   const handleAddSpecification = () => {
@@ -158,6 +186,22 @@ function AddProductFormContent() {
   };
 
   // Image handlers
+  const handleAddImages = (newImgs) => {
+    setImages((prev) => {
+      const combined = [...prev, ...newImgs];
+      if (!combined.some((img) => img.isPrimary) && combined.length > 0) {
+        combined[0].isPrimary = true;
+      }
+      return combined;
+    });
+  };
+
+  const handleReplaceImage = (id, newImg) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...newImg, isPrimary: img.isPrimary } : img))
+    );
+  };
+
   const handleSetPrimaryImage = (id) => {
     setImages((prev) =>
       prev.map((img) => ({ ...img, isPrimary: img.id === id }))
@@ -165,22 +209,85 @@ function AddProductFormContent() {
   };
 
   const handleDeleteImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+    setImages((prev) => {
+      const remaining = prev.filter((img) => img.id !== id);
+      if (remaining.length > 0 && !remaining.some((img) => img.isPrimary)) {
+        remaining[0].isPrimary = true;
+      }
+      return remaining;
+    });
   };
 
-  const handleSubmit = (type) => {
+  const handleSubmit = async (type) => {
+    if (!productName.trim()) {
+      setStatusMessage("Error: Product name is mandatory.");
+      return;
+    }
+    if (!productCategory || productCategory === "Select a category") {
+      setStatusMessage("Error: Please select a product category.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const isDraft = type === "draft";
+
     setStatusMessage(
-      type === "draft"
-        ? isEditing
-          ? "Product changes saved as draft."
-          : "Product draft saved successfully."
-        : isEditing
-        ? "Product updates submitted for Admin review."
-        : "Product listing submitted for review by Admin."
+      isDraft
+        ? "Saving product as draft..."
+        : "Uploading assets and submitting for Admin review..."
     );
-    setTimeout(() => {
-      router.push("/seller/products");
-    }, 1500);
+
+    try {
+      const formData = {
+        productName,
+        productCategory,
+        productType,
+        variety,
+        qualityGrade,
+        size,
+        productDescription,
+        images,
+        placeOfOrigin,
+        productionLocation,
+        processingLocation,
+        manufacturingLocation,
+        moqQty,
+        moqUnit,
+        moqVariesBy,
+        availability,
+        processingDetails,
+        manufacturingDetails,
+        packagingDetails,
+        specifications,
+        otherAttributes,
+        certifications,
+      };
+
+      let res;
+      if (isEditing && editId) {
+        res = await updateSellerProduct(editId, formData);
+      } else {
+        res = await createSellerProduct(formData, isDraft);
+      }
+
+      if (res.success) {
+        setStatusMessage(
+          isDraft
+            ? "Product saved as draft successfully!"
+            : "Product submitted for Admin review successfully!"
+        );
+        setTimeout(() => {
+          router.push("/seller/products");
+        }, 1200);
+      } else {
+        setStatusMessage(`Error: ${res.error || res.message || "Failed to save product"}`);
+      }
+    } catch (err) {
+      console.error("Save product error:", err);
+      setStatusMessage(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -262,6 +369,8 @@ function AddProductFormContent() {
           {/* Section 2: Product Images */}
           <ProductImagesSection
             images={images}
+            onAddImages={handleAddImages}
+            onReplaceImage={handleReplaceImage}
             onSetPrimary={handleSetPrimaryImage}
             onDeleteImage={handleDeleteImage}
           />
