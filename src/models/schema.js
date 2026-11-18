@@ -143,11 +143,56 @@ export const applications = pgTable('applications', {
 export const payments = pgTable('payments', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).notNull(),
-  transactionId: varchar('transaction_id', { length: 100 }).notNull().unique(),
+  orderId: varchar('order_id', { length: 100 }).unique(),
+  transactionId: varchar('transaction_id', { length: 100 }).unique(),
   amount: numeric('amount', { precision: 10, scale: 2 }).default('365.00').notNull(),
-  role: varchar('role', { length: 30 }).default('BUYER').notNull(),
+  amountPaise: integer('amount_paise'),
+  currency: varchar('currency', { length: 10 }).default('INR').notNull(),
+  role: varchar('role', { length: 30 }).default('SELLER').notNull(),
   paymentMethod: varchar('payment_method', { length: 50 }).default('UPI').notNull(),
   plan: varchar('plan', { length: 100 }).notNull(),
-  status: varchar('status', { length: 30 }).default('CONFIRMED').notNull(),
-  paidAt: timestamp('paid_at').defaultNow().notNull(),
+  planId: varchar('plan_id', { length: 50 }).default('SELLER_ANNUAL'),
+  signature: text('signature'),
+  status: varchar('status', { length: 30 }).default('CREATED').notNull(),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/**
+ * 7. OTP Verifications Table
+ * Tracks email verification OTPs, SHA-256 hashes, expiration, and rate-limiting attempts.
+ */
+export const otpVerifications = pgTable('otp_verifications', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 64 }).references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  otpHash: varchar('otp_hash', { length: 255 }).notNull(),
+  otpType: varchar('otp_type', { length: 50 }).default('EMAIL_VERIFICATION').notNull(),
+  resendAttempts: integer('resend_attempts').default(0).notNull(),
+  lastResentAt: timestamp('last_resent_at').defaultNow().notNull(),
+  verificationAttempts: integer('verification_attempts').default(0).notNull(),
+  lastAttemptAt: timestamp('last_attempt_at'),
+  status: varchar('status', { length: 30 }).default('PENDING').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/**
+ * 8. Membership Plans Table
+ * Stores authoritative subscription and membership pricing tiers dynamically in Supabase PostgreSQL.
+ */
+export const membershipPlans = pgTable('membership_plans', {
+  id: varchar('id', { length: 50 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  role: varchar('role', { length: 30 }).default('SELLER').notNull(),
+  priceInPaise: integer('price_in_paise').notNull(),
+  currency: varchar('currency', { length: 10 }).default('INR').notNull(),
+  durationDays: integer('duration_days').default(365).notNull(),
+  description: text('description'),
+  features: jsonb('features').default([]).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

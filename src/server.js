@@ -46,7 +46,11 @@ app.use((req, res, next) => {
 });
 
 // 3. Body Parsers
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // 4. Request Logger

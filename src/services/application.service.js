@@ -5,6 +5,33 @@ import * as userRepository from '../repositories/user.repository.js';
 import * as documentRepository from '../repositories/document.repository.js';
 
 /**
+ * 8 Dynamic Seller Classification Categories
+ */
+export const SELLER_TYPES = Object.freeze({
+  FARMER: 'Farmer',
+  AGRICULTURAL_PRODUCER: 'Agricultural Producer',
+  ORGANIC_PRODUCER: 'Organic Producer',
+  RAW_MATERIAL_PROVIDER: 'Raw-Material Provider',
+  INGREDIENT_PRODUCER: 'Ingredient Producer',
+  MANUFACTURER: 'Manufacturer',
+  VALUE_ADDED_MANUFACTURER: 'Value-Added Manufacturer',
+  OTHER: 'Other',
+});
+
+/**
+ * 7 Dynamic Buyer Classification Categories
+ */
+export const BUYER_TYPES = Object.freeze({
+  INDIVIDUAL: 'Individual',
+  BUSINESS: 'Business',
+  MANUFACTURER: 'Manufacturer',
+  FOOD_PROCESSOR: 'Food Processor',
+  BAKERY_OR_FOOD_BUSINESS: 'Bakery or Food Business',
+  RESELLER: 'Reseller',
+  OTHER: 'Other',
+});
+
+/**
  * Helper: Extract unified search attributes and category-specific details
  * across all 8 dynamic seller classifications with zero data loss.
  * @param {string} subType
@@ -12,7 +39,7 @@ import * as documentRepository from '../repositories/document.repository.js';
  * @returns {object}
  */
 export const extractSellerProfile = (subType, profile = {}) => {
-  const sellerType = String(subType || profile.sellerType || 'Farmer').trim();
+  const sellerType = String(subType || profile.sellerType || SELLER_TYPES.FARMER).trim();
 
   const district = profile.district || null;
   const village = profile.village || null;
@@ -28,7 +55,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
   const categoryDetails = {};
 
   switch (sellerType) {
-    case 'Farmer': {
+    case SELLER_TYPES.FARMER: {
       businessName = profile.farmerFarmName || profile.farmName || 'Farmer Cultivator';
       const crops = Array.isArray(profile.farmerCrops) ? profile.farmerCrops : (profile.crops || []);
       primaryProducts = crops.join(', ');
@@ -48,7 +75,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Agricultural Producer': {
+    case SELLER_TYPES.AGRICULTURAL_PRODUCER: {
       businessName = profile.fpoName || 'FPO Producer Company';
       const crops = Array.isArray(profile.fpoCrops) ? profile.fpoCrops : [];
       primaryProducts = crops.join(', ');
@@ -69,7 +96,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Organic Producer': {
+    case SELLER_TYPES.ORGANIC_PRODUCER: {
       businessName = profile.organicFarmName || 'Organic Producer Farm';
       const crops = Array.isArray(profile.organicCrops) ? profile.organicCrops : [];
       primaryProducts = crops.join(', ');
@@ -89,7 +116,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Raw-Material Provider': {
+    case SELLER_TYPES.RAW_MATERIAL_PROVIDER: {
       businessName = profile.rawProviderName || 'Raw Material Provider';
       const comms = Array.isArray(profile.rawCommodities)
         ? profile.rawCommodities
@@ -111,7 +138,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Ingredient Producer': {
+    case SELLER_TYPES.INGREDIENT_PRODUCER: {
       businessName = profile.ingProducerName || 'Agri Ingredient Producer';
       primaryProducts = profile.ingProducts || '';
       capacity = profile.ingCapacity || null;
@@ -130,7 +157,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Manufacturer': {
+    case SELLER_TYPES.MANUFACTURER: {
       businessName = profile.mfgSellerName || 'Agro Manufacturer';
       primaryProducts = profile.mfgProductsOffered || '';
       capacity = profile.mfgCapacity || null;
@@ -150,7 +177,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Value-Added Manufacturer': {
+    case SELLER_TYPES.VALUE_ADDED_MANUFACTURER: {
       businessName = profile.vaBrandName || 'Value-Added Enterprise';
       primaryProducts = profile.vaProducts || '';
       capacity = profile.vaMonthlyCapacity || null;
@@ -169,7 +196,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Other':
+    case SELLER_TYPES.OTHER:
     default: {
       businessName = profile.otherSellerName || profile.businessName || profile.farmName || 'Specialized Farm Enterprise';
       primaryProducts = profile.otherProducts || '';
@@ -212,7 +239,7 @@ export const extractSellerProfile = (subType, profile = {}) => {
  * @returns {object}
  */
 export const extractBuyerProfile = (subType, profile = {}) => {
-  const buyerType = String(subType || profile.buyerType || 'Individual').trim();
+  const buyerType = String(subType || profile.buyerType || BUYER_TYPES.INDIVIDUAL).trim();
 
   const district = profile.district || null;
   const city = profile.city || null;
@@ -228,7 +255,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
   const categoryDetails = {};
 
   switch (buyerType) {
-    case 'Individual': {
+    case BUYER_TYPES.INDIVIDUAL: {
       businessName = profile.userName || profile.name || profile.businessName || 'Individual Household Buyer';
       const comms = Array.isArray(profile.individualCommodities)
         ? profile.individualCommodities
@@ -246,7 +273,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Business': {
+    case BUYER_TYPES.BUSINESS: {
       businessName = profile.businessName || 'Commercial Agro Business';
       const comms = Array.isArray(profile.businessCommodities)
         ? profile.businessCommodities
@@ -268,7 +295,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Manufacturer': {
+    case BUYER_TYPES.MANUFACTURER: {
       businessName = profile.mfgCompanyName || profile.companyName || profile.businessName || 'Industrial Agro Manufacturer';
       targetCommodities = profile.mfgRawMaterials || profile.rawMaterials || '';
       procurementVolume = profile.mfgVolume || profile.volume || null;
@@ -288,7 +315,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Food Processor': {
+    case BUYER_TYPES.FOOD_PROCESSOR: {
       businessName = profile.procBusinessName || profile.businessName || 'Agro Food Processor';
       targetCommodities = profile.procRawCommodities || profile.rawMaterials || '';
       procurementVolume = profile.procCapacity || profile.capacity || null;
@@ -307,7 +334,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Bakery or Food Business': {
+    case BUYER_TYPES.BAKERY_OR_FOOD_BUSINESS: {
       businessName = profile.bakeryName || profile.businessName || 'Commercial Bakery & Food Business';
       targetCommodities = profile.bakeryIngredients || '';
       procurementVolume = profile.bakeryFrequency || null;
@@ -326,7 +353,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Reseller': {
+    case BUYER_TYPES.RESELLER: {
       businessName = profile.resellerShopName || profile.shopName || profile.businessName || 'Wholesale Mandi Merchant';
       const comms = Array.isArray(profile.resellerCategories)
         ? profile.resellerCategories
@@ -347,7 +374,7 @@ export const extractBuyerProfile = (subType, profile = {}) => {
       break;
     }
 
-    case 'Other':
+    case BUYER_TYPES.OTHER:
     default: {
       businessName = profile.otherOrgName || profile.businessName || 'Institutional Food Buyer';
       targetCommodities = profile.otherItemsNeeded || '';
@@ -395,8 +422,9 @@ export const submitApplicationService = async ({
   documents = {},
   account = {},
   user,
+  userId: directUserId,
 } = {}) => {
-  const userId = user?.id;
+  const userId = user?.id || directUserId;
 
   if (!userId) {
     const error = new Error('User authentication required. Unverified credentials rejected.');
@@ -405,7 +433,9 @@ export const submitApplicationService = async ({
   }
 
   const normalizedRole = String(role || account?.activeRole || 'BUYER').trim().toUpperCase();
-  const cleanSubType = String(subType || 'Individual').trim();
+  const cleanSubType = String(
+    subType || (normalizedRole === 'BUYER' ? BUYER_TYPES.INDIVIDUAL : SELLER_TYPES.FARMER)
+  ).trim();
   const finalAppId = String(applicationId || `US_${normalizedRole}_${crypto.randomInt(100000, 999999)}`).trim();
   const now = new Date();
 

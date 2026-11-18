@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { onboardSeller, onboardBuyer } from '../controllers/onboarding.controller.js';
-import { processPayment } from '../controllers/payment.controller.js';
+import {
+  processPayment,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+} from '../controllers/payment.controller.js';
 
 const router = Router();
 
@@ -13,8 +17,10 @@ router.post('/seller', verifyToken, onboardSeller);
 // Endpoints: POST /api/v1/onboarding/buyer & POST /api/onboarding/buyer
 router.post('/buyer', verifyToken, onboardBuyer);
 
-// Route 3: Membership Payment (if called via /onboarding/payment) - Gate 1 Protected
+// Route 3: Membership Payment - Gate 1 Protected
 // Endpoints: POST /api/v1/onboarding/payment & POST /api/onboarding/payment
 router.post('/payment', verifyToken, processPayment);
+router.post('/payment/create-order', verifyToken, createRazorpayOrder);
+router.post('/payment/verify', verifyToken, verifyRazorpayPayment);
 
 export default router;

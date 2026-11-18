@@ -4,7 +4,10 @@ import * as userRepository from '../repositories/user.repository.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ulavan_santhai_jwt_super_secret_key_2026_secure_token';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('[SECURITY FATAL] JWT_SECRET is not configured in environment variables.');
+}
 
 /**
  * Custom Error: 401 Unauthorized

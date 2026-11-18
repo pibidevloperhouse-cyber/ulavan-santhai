@@ -20,10 +20,17 @@ export const requestLogger = (req, res, next) => {
   console.log(`   Client IP: ${clientIp}`);
   console.log(`   Origin:    ${origin}`);
 
-  if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+  if (process.env.NODE_ENV !== 'production' && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
     if (req.body && Object.keys(req.body).length > 0) {
-      const sanitized = { ...req.body };
-      if (sanitized.password) sanitized.password = '********';
+      const sensitiveKeys = new Set([
+        'password', 'confirmPassword', 'otp', 'cleanOtp', 
+        'accountNumber', 'ifscCode', 'gstin', 'panNumber', 'aadhaarNumber'
+      ]);
+      
+      const sanitized = {};
+      for (const [key, value] of Object.entries(req.body)) {
+        sanitized[key] = sensitiveKeys.has(key) ? '********' : value;
+      }
       console.log(`   Payload:   ${JSON.stringify(sanitized)}`);
     }
   }

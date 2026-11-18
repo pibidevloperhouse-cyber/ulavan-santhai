@@ -157,3 +157,21 @@ export const updateBuyerOnboarding = async (userId) => {
     .returning();
   return updatedUser;
 };
+
+/**
+ * Update verification status of a user
+ * @param {string} userId
+ * @param {boolean} [isVerified=true]
+ * @returns {Promise<object>}
+ */
+export const updateVerificationStatus = async (userId, isVerified = true) => {
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      isVerified,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+  return updatedUser;
+};

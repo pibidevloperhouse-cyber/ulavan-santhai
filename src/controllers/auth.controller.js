@@ -28,6 +28,11 @@ export const verifyEmailOtp = async (req, res, next) => {
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'OTP verification failed.',
+      ...(err.code && { code: err.code }),
+      ...(err.locked !== undefined && { locked: err.locked }),
+      ...(err.remainingHours !== undefined && { remainingHours: err.remainingHours }),
+      ...(err.remainingMinutes !== undefined && { remainingMinutes: err.remainingMinutes }),
+      ...(err.remainingAttempts !== undefined && { remainingAttempts: err.remainingAttempts }),
     });
   }
 };
@@ -44,6 +49,10 @@ export const resendEmailOtp = async (req, res, next) => {
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Resending verification code failed.',
+      ...(err.code && { code: err.code }),
+      ...(err.locked !== undefined && { locked: err.locked }),
+      ...(err.remainingHours !== undefined && { remainingHours: err.remainingHours }),
+      ...(err.remainingMinutes !== undefined && { remainingMinutes: err.remainingMinutes }),
     });
   }
 };

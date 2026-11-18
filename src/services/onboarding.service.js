@@ -1,6 +1,11 @@
 import * as userRepository from '../repositories/user.repository.js';
 import * as profileRepository from '../repositories/profile.repository.js';
-import { extractSellerProfile, extractBuyerProfile } from './application.service.js';
+import {
+  extractSellerProfile,
+  extractBuyerProfile,
+  SELLER_TYPES,
+  BUYER_TYPES,
+} from './application.service.js';
 
 /**
  * Service: Live check of current user onboarding status
@@ -57,7 +62,12 @@ export const onboardSellerService = async (userId, sellerData = {}) => {
   }
 
   // Normalize seller profile fields using clean 8-category extractor
-  const subType = sellerData.sellerType || sellerData.classification || sellerData.sellerClassification || sellerData.subType || 'Farmer';
+  const subType =
+    sellerData.sellerType ||
+    sellerData.classification ||
+    sellerData.sellerClassification ||
+    sellerData.subType ||
+    SELLER_TYPES.FARMER;
   const sellerPayload = extractSellerProfile(subType, sellerData);
 
   // 1. Upsert seller profile via profileRepository
@@ -105,7 +115,12 @@ export const onboardBuyerService = async (userId, buyerData = {}) => {
   }
 
   // Normalize buyer profile fields using clean 7-category extractor
-  const subType = buyerData.buyerType || buyerData.classification || buyerData.buyerClassification || buyerData.subType || 'Individual';
+  const subType =
+    buyerData.buyerType ||
+    buyerData.classification ||
+    buyerData.buyerClassification ||
+    buyerData.subType ||
+    BUYER_TYPES.INDIVIDUAL;
   const buyerPayload = extractBuyerProfile(subType, buyerData);
 
   // 1. Upsert buyer profile via profileRepository

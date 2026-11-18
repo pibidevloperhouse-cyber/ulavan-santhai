@@ -44,13 +44,20 @@ export const initAllTables = async () => {
       CREATE TABLE IF NOT EXISTS public.payments (
         id VARCHAR(64) PRIMARY KEY,
         user_id VARCHAR(64) NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-        transaction_id VARCHAR(100) NOT NULL UNIQUE,
+        order_id VARCHAR(100) UNIQUE,
+        transaction_id VARCHAR(100) UNIQUE,
         amount NUMERIC(10, 2) NOT NULL DEFAULT 365.00,
+        amount_paise INTEGER,
+        currency VARCHAR(10) NOT NULL DEFAULT 'INR',
         role VARCHAR(30) NOT NULL DEFAULT 'SELLER',
         payment_method VARCHAR(50) NOT NULL DEFAULT 'UPI',
         plan VARCHAR(100) NOT NULL,
-        status VARCHAR(30) NOT NULL DEFAULT 'CONFIRMED',
-        paid_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+        plan_id VARCHAR(50) DEFAULT 'SELLER_ANNUAL',
+        signature TEXT,
+        status VARCHAR(30) NOT NULL DEFAULT 'CREATED',
+        paid_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS public.buyer_profiles (
@@ -196,6 +203,113 @@ export const initAllTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_district ON public.seller_profiles(district);
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_type ON public.seller_profiles(seller_type);
       CREATE INDEX IF NOT EXISTS idx_seller_profiles_bname ON public.seller_profiles(business_name);
+
+      CREATE TABLE IF NOT EXISTS public.otp_verifications (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        otp_hash VARCHAR(255) NOT NULL,
+        otp_type VARCHAR(50) NOT NULL DEFAULT 'EMAIL_VERIFICATION',
+        resend_attempts INTEGER NOT NULL DEFAULT 0,
+        last_resent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        verification_attempts INTEGER NOT NULL DEFAULT 0,
+        last_attempt_at TIMESTAMP WITH TIME ZONE,
+        status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+
+      ALTER TABLE public.otp_verifications
+      ADD COLUMN IF NOT EXISTS verification_attempts INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_attempt_at TIMESTAMP WITH TIME ZONE;
+
+      -- Payments table schema migration for Razorpay order lifecycle
+      ALTER TABLE public.payments
+      ADD COLUMN IF NOT EXISTS order_id VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS amount_paise INTEGER,
+      ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+      ADD COLUMN IF NOT EXISTS plan_id VARCHAR(50) DEFAULT 'SELLER_ANNUAL',
+      ADD COLUMN IF NOT EXISTS signature TEXT,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+      DO $$
+      BEGIN
+        ALTER TABLE public.payments ALTER COLUMN transaction_id DROP NOT NULL;
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
+
+      DO $$
+      BEGIN
+        ALTER TABLE public.payments ALTER COLUMN paid_at DROP NOT NULL;
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
+
+      DO $$
+      BEGIN
+        ALTER TABLE public.payments ALTER COLUMN status SET DEFAULT 'CREATED';
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_order_id ON public.payments(order_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_user_id ON public.payments(user_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
+
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_user_id ON public.otp_verifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_email ON public.otp_verifications(email);
+      CREATE INDEX IF NOT EXISTS idx_otp_verifications_status ON public.otp_verifications(status);
+
+      -- 8. Membership Plans Table: Dynamic plans stored in Supabase
+      CREATE TABLE IF NOT EXISTS public.membership_plans (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        role VARCHAR(30) NOT NULL DEFAULT 'SELLER',
+        price_in_paise INTEGER NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+        duration_days INTEGER NOT NULL DEFAULT 365,
+        description TEXT,
+        features JSONB NOT NULL DEFAULT '[]'::jsonb,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_membership_plans_role ON public.membership_plans(role);
+      CREATE INDEX IF NOT EXISTS idx_membership_plans_active ON public.membership_plans(is_active);
+
+      -- Seed authoritative Verified Seller Annual Membership plan into Supabase
+      INSERT INTO public.membership_plans (
+        id,
+        name,
+        role,
+        price_in_paise,
+        currency,
+        duration_days,
+        description,
+        features,
+        is_active
+      )
+      VALUES (
+        'SELLER_ANNUAL',
+        'Verified Seller Annual Membership',
+        'SELLER',
+        36500,
+        'INR',
+        365,
+        'Full 1-year verified access to list agricultural produce on Ulavan Santhai.',
+        '["Verified Farmer / Merchant badge", "Unlimited produce listings", "Direct buyer inquiries access", "Priority market visibility"]'::jsonb,
+        TRUE
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        price_in_paise = EXCLUDED.price_in_paise,
+        currency = EXCLUDED.currency,
+        duration_days = EXCLUDED.duration_days,
+        description = EXCLUDED.description,
+        features = EXCLUDED.features,
+        is_active = EXCLUDED.is_active,
+        updated_at = NOW();
     `);
 
     console.log('[DATABASE] Migration completed successfully in Supabase.');
