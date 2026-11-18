@@ -36,8 +36,26 @@ export default function MyProductsPage() {
   }, []);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    let isMounted = true;
+    async function init() {
+      try {
+        const res = await getSellerProducts();
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setProducts(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load products:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    init();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Dynamic filter processing
   const filteredProducts = useMemo(() => {
