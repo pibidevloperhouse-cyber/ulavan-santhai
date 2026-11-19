@@ -69,15 +69,24 @@ export default function DocumentUploader({
       clearInterval(progressTimer);
       setUploadProgress(100);
 
+      let previewUrl = result.data?.url || "";
+      if (!previewUrl && typeof window !== "undefined" && file) {
+        try {
+          previewUrl = URL.createObjectURL(file);
+        } catch {
+          // ignore
+        }
+      }
+
       setTimeout(() => {
         setIsUploading(false);
         setUploadProgress(0);
         onUploadSuccess({
-          documentId: result.documentId,
+          documentId: result.documentId || `doc_${Date.now()}`,
           documentType,
           fileName: file.name,
           fileSize: file.size,
-          url: result.data?.url || "",
+          url: previewUrl,
         });
       }, 300);
     } catch (err) {
@@ -140,6 +149,24 @@ export default function DocumentUploader({
           </div>
 
           <div className="flex items-center gap-2">
+            {uploadedDoc.url && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.open(uploadedDoc.url, "_blank");
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-[#174B35] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                title="View document"
+              >
+                <svg className="w-3.5 h-3.5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>View</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
