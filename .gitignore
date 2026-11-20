@@ -20,3 +20,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# Tests (keep local, do not push to remote)
+tests/
+
+tests/
+
+tests/
