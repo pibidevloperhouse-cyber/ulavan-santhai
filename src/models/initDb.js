@@ -19,6 +19,8 @@ export const initAllTables = async () => {
         application_id VARCHAR(64),
         seller_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
         buyer_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
+        seller_paid BOOLEAN NOT NULL DEFAULT FALSE,
+        buyer_paid BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
       );
@@ -26,7 +28,9 @@ export const initAllTables = async () => {
       -- Ensure new columns are added if users table already exists
       ALTER TABLE public.users 
       ADD COLUMN IF NOT EXISTS seller_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS buyer_onboarded BOOLEAN NOT NULL DEFAULT FALSE;
+      ADD COLUMN IF NOT EXISTS buyer_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS seller_paid BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS buyer_paid BOOLEAN NOT NULL DEFAULT FALSE;
 
       CREATE TABLE IF NOT EXISTS public.documents (
         id VARCHAR(64) PRIMARY KEY,
@@ -245,6 +249,57 @@ export const initAllTables = async () => {
         ('cat_dairy', 'Dairy & Livestock Produce', 'Country cow milk, pure ghee, paneer, butter, organic honey.'),
         ('cat_organic', 'Certified Organic Produce', 'NPOP/PGS-India certified organic grains, fruits and processed goods.')
       ON CONFLICT (name) DO NOTHING;
+
+      -- Membership Plans Table & Seeding
+      CREATE TABLE IF NOT EXISTS public.membership_plans (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        role VARCHAR(30) NOT NULL DEFAULT 'SELLER',
+        price_in_paise INTEGER NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+        duration_days INTEGER NOT NULL DEFAULT 365,
+        description TEXT,
+        features JSONB NOT NULL DEFAULT '[]',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+
+      INSERT INTO public.membership_plans (
+        id, name, role, price_in_paise, currency, duration_days, description, features, is_active
+      ) VALUES 
+        (
+          'SELLER_ANNUAL',
+          'Verified Seller Annual Membership',
+          'SELLER',
+          36500,
+          'INR',
+          365,
+          'Full 1-year verified access to list agricultural produce on Ulavan Santhai.',
+          '["Verified Farmer / Merchant badge", "Unlimited produce listings", "Direct buyer inquiries access", "Priority market visibility"]'::jsonb,
+          TRUE
+        ),
+        (
+          'BUYER_ANNUAL',
+          'Buyer Verified Access Plan',
+          'BUYER',
+          36500,
+          'INR',
+          365,
+          'Annual verified access for agricultural produce buyers, wholesalers, and procurement enterprises.',
+          '["Verified Buyer / Procurement Badge", "Direct access to farmer produce listings", "Direct contact with verified farmers", "Create procurement requests and RFQs", "Priority seller response support"]'::jsonb,
+          TRUE
+        )
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        role = EXCLUDED.role,
+        price_in_paise = EXCLUDED.price_in_paise,
+        currency = EXCLUDED.currency,
+        duration_days = EXCLUDED.duration_days,
+        description = EXCLUDED.description,
+        features = EXCLUDED.features,
+        is_active = EXCLUDED.is_active,
+        updated_at = NOW();
 
       CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
       CREATE INDEX IF NOT EXISTS idx_users_mobile ON public.users(mobile);

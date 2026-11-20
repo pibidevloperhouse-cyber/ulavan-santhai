@@ -38,7 +38,10 @@ export const createRazorpayOrder = async (req, res) => {
   } catch (err) {
     return res.status(err.statusCode || 500).json({
       success: false,
-      message: err.message || 'Order creation failed.',
+      ...(err.code && { code: err.code }),
+      message: process.env.NODE_ENV === 'production' && (!err.statusCode || err.statusCode >= 500)
+        ? 'Failed to initialize payment gateway order. Please try again.'
+        : (err.message || 'Order creation failed.'),
     });
   }
 };
@@ -85,7 +88,9 @@ export const verifyRazorpayPayment = async (req, res) => {
     return res.status(err.statusCode || 500).json({
       success: false,
       code: err.code || 'PAYMENT_VERIFICATION_FAILED',
-      message: err.message || 'Payment verification failed.',
+      message: process.env.NODE_ENV === 'production' && (!err.statusCode || err.statusCode >= 500)
+        ? 'Payment verification failed. Please contact support.'
+        : (err.message || 'Payment verification failed.'),
     });
   }
 };

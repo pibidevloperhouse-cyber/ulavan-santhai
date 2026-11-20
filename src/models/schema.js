@@ -24,9 +24,11 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 30 }).default('USER').notNull(),
   onboarded: boolean('onboarded').default(false).notNull(),
 
-  // Independent Dual-Role Onboarding Flags
+  // Independent Dual-Role Onboarding & Payment Flags
   sellerOnboarded: boolean('seller_onboarded').default(false).notNull(),
   buyerOnboarded: boolean('buyer_onboarded').default(false).notNull(),
+  sellerPaid: boolean('seller_paid').default(false).notNull(),
+  buyerPaid: boolean('buyer_paid').default(false).notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

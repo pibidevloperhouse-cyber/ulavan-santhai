@@ -24,7 +24,8 @@ export const requestLogger = (req, res, next) => {
     if (req.body && Object.keys(req.body).length > 0) {
       const sensitiveKeys = new Set([
         'password', 'confirmPassword', 'otp', 'cleanOtp', 
-        'accountNumber', 'ifscCode', 'gstin', 'panNumber', 'aadhaarNumber'
+        'accountNumber', 'ifscCode', 'gstin', 'panNumber', 'aadhaarNumber',
+        'razorpay_signature', 'signature', 'razorpay_payment_id', 'paymentId', 'token'
       ]);
       
       const sanitized = {};

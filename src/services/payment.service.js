@@ -3,6 +3,10 @@ import { razorpayClient, getRazorpayKeyId } from '../config/razorpay.js';
 import * as planRepository from '../repositories/plan.repository.js';
 import * as paymentRepository from '../repositories/payment.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
+import {
+  verifyRazorpayPaymentSignature,
+  verifyRazorpayWebhookSignature,
+} from '../utils/cryptoSecurity.js';
 
 /**
  * Format paise into decimal Rupee string (e.g. 36500 -> "365.00")
@@ -61,6 +65,29 @@ export const createRazorpayOrderService = async ({ userId, planId }) => {
     throw error;
   }
 
+  // 2. Duplicate Active Subscription Defense (Double-Paying Prevention)
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    const error = new Error('User account not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const planRole = String(plan.role || '').toUpperCase();
+  if (planRole === 'BUYER' && user.buyerPaid) {
+    const error = new Error('You already have an active Buyer membership. Duplicate payment rejected.');
+    error.statusCode = 409;
+    error.code = 'MEMBERSHIP_ALREADY_ACTIVE';
+    throw error;
+  }
+
+  if (planRole === 'SELLER' && user.sellerPaid) {
+    const error = new Error('You already have an active Seller membership. Duplicate payment rejected.');
+    error.statusCode = 409;
+    error.code = 'MEMBERSHIP_ALREADY_ACTIVE';
+    throw error;
+  }
+
   const receipt = `rcpt_${userId.slice(0, 8)}_${Date.now()}`;
 
   // 2. Call Razorpay API to generate order with database-governed price
@@ -79,7 +106,7 @@ export const createRazorpayOrderService = async ({ userId, planId }) => {
     });
   } catch (rzpErr) {
     console.error('[RAZORPAY ERROR] Failed to create order:', rzpErr?.error?.description || rzpErr.message);
-    const error = new Error(rzpErr?.error?.description || 'Failed to initialize payment gateway order.');
+    const error = new Error('Failed to initialize payment gateway order. Please try again.');
     error.statusCode = 502;
     throw error;
   }
@@ -111,6 +138,8 @@ export const createRazorpayOrderService = async ({ userId, planId }) => {
     plan: {
       id: plan.id,
       name: plan.name,
+      amount: Math.round(plan.priceInPaise / 100),
+      amountRupees: formatRupees(plan.priceInPaise),
       description: plan.description,
     },
   };
@@ -189,26 +218,21 @@ export const verifyRazorpayPaymentService = async ({
     throw error;
   }
 
-  // 5. Timing-safe cryptographic HMAC-SHA256 signature verification
-  const secret = process.env.RAZORPAY_KEY_SECRET || '';
-  const payload = `${razorpayOrderId}|${razorpayPaymentId}`;
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-
-  let isMatch = false;
-  try {
-    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
-    const providedBuffer = Buffer.from(razorpaySignature, 'utf8');
-    if (expectedBuffer.length === providedBuffer.length) {
-      isMatch = crypto.timingSafeEqual(expectedBuffer, providedBuffer);
-    }
-  } catch (err) {
-    isMatch = false;
+  // 5. Strict Constant-Time Cryptographic HMAC-SHA256 Signature Verification
+  // Pre-hashed comparison eliminates timing side-channels and buffer length discrepancies
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) {
+    throw new Error('[SECURITY FATAL] RAZORPAY_KEY_SECRET is not configured in environment variables.');
   }
 
-  if (!isMatch) {
+  const isAuthentic = verifyRazorpayPaymentSignature({
+    orderId: razorpayOrderId,
+    paymentId: razorpayPaymentId,
+    signature: razorpaySignature,
+    secret,
+  });
+
+  if (!isAuthentic) {
     console.warn(`[PAYMENT SECURITY] Invalid signature submitted for order ${razorpayOrderId}`);
     await paymentRepository.markPaymentFailed(razorpayOrderId, { failureReason: 'INVALID_SIGNATURE' });
     const error = new Error('Invalid payment signature. Verification failed.');
@@ -223,20 +247,36 @@ export const verifyRazorpayPaymentService = async ({
     paymentMethod: paymentMethod || 'UPI',
   });
 
-  // 6. Update user's onboarded state if role is SELLER
+  // 6. Update user's onboarded and paid state based on plan role
   try {
-    if (paymentRecord.role === 'SELLER') {
-      await userRepository.update(userId, { sellerOnboarded: true });
+    if (paymentRecord.role === 'BUYER') {
+      await userRepository.update(userId, {
+        buyerOnboarded: true,
+        buyerPaid: true,
+      });
+      console.log(`[PAYMENT] Activated BUYER account for user ${userId}. (buyerPaid=true, buyerOnboarded=true)`);
+    } else if (paymentRecord.role === 'SELLER') {
+      await userRepository.update(userId, {
+        sellerOnboarded: true,
+        sellerPaid: true,
+      });
+      console.log(`[PAYMENT] Activated SELLER account for user ${userId}. (sellerPaid=true, sellerOnboarded=true)`);
     }
   } catch (userErr) {
-    console.warn(`[PAYMENT] Note: Failed to flag sellerOnboarded on user ${userId}:`, userErr.message);
+    console.warn(`[PAYMENT] Failed to update onboarding status for user ${userId}:`, userErr.message);
   }
 
   console.log(`[PAYMENT] Confirmed payment ${confirmedPayment.id} for user ${userId}. Txn: ${razorpayPaymentId}`);
 
+  const invoiceNumber = `INV-US-${new Date().getFullYear()}-${confirmedPayment.id.slice(-6).toUpperCase()}`;
+
   return {
     success: true,
-    message: 'Payment verified and membership confirmed successfully.',
+    message: paymentRecord.role === 'BUYER'
+      ? 'Payment verified successfully. Buyer account activated.'
+      : 'Payment verified and membership confirmed successfully.',
+    invoiceNumber,
+    paymentId: razorpayPaymentId,
     payment: {
       id: confirmedPayment.id,
       orderId: confirmedPayment.orderId,
@@ -265,25 +305,19 @@ export const processRazorpayWebhookService = async ({ rawBody, signature, body }
     throw error;
   }
 
-  // 1. Cryptographic Webhook Signature Verification
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET || '';
-  const expectedSignature = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(rawBody || '')
-    .digest('hex');
-
-  let isMatch = false;
-  try {
-    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
-    const providedBuffer = Buffer.from(signature, 'utf8');
-    if (expectedBuffer.length === providedBuffer.length) {
-      isMatch = crypto.timingSafeEqual(expectedBuffer, providedBuffer);
-    }
-  } catch (err) {
-    isMatch = false;
+  // 1. Strict Constant-Time Cryptographic Webhook Signature Verification
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  if (!webhookSecret) {
+    throw new Error('[SECURITY FATAL] Razorpay webhook secret is not configured in environment variables.');
   }
 
-  if (!isMatch) {
+  const isAuthentic = verifyRazorpayWebhookSignature({
+    rawBody,
+    signature,
+    secret: webhookSecret,
+  });
+
+  if (!isAuthentic) {
     console.warn('[WEBHOOK SECURITY] Invalid webhook signature received from remote server.');
     const error = new Error('Invalid webhook signature. Request rejected.');
     error.statusCode = 400;
@@ -328,14 +362,23 @@ export const processRazorpayWebhookService = async ({ rawBody, signature, body }
       paymentMethod: method,
     });
 
-    // Auto-activate seller onboarding
-    if (paymentRecord.role === 'SELLER') {
-      try {
-        await userRepository.update(paymentRecord.userId, { sellerOnboarded: true });
+    // Auto-activate buyer or seller onboarding and payment status via webhook
+    try {
+      if (paymentRecord.role === 'BUYER') {
+        await userRepository.update(paymentRecord.userId, {
+          buyerOnboarded: true,
+          buyerPaid: true,
+        });
+        console.log(`[WEBHOOK] Buyer account ${paymentRecord.userId} auto-activated via webhook.`);
+      } else if (paymentRecord.role === 'SELLER') {
+        await userRepository.update(paymentRecord.userId, {
+          sellerOnboarded: true,
+          sellerPaid: true,
+        });
         console.log(`[WEBHOOK] Seller account ${paymentRecord.userId} auto-activated via webhook.`);
-      } catch (userErr) {
-        console.warn(`[WEBHOOK] Failed to update sellerOnboarded for ${paymentRecord.userId}:`, userErr.message);
       }
+    } catch (userErr) {
+      console.warn(`[WEBHOOK] Failed to update onboarding status for ${paymentRecord.userId}:`, userErr.message);
     }
 
     return {

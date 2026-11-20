@@ -26,16 +26,21 @@ export const getUserStatusService = async (userId) => {
     throw error;
   }
 
+  const statusPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    mobile: user.mobile,
+    sellerOnboarded: Boolean(user.sellerOnboarded),
+    buyerOnboarded: Boolean(user.buyerOnboarded),
+    sellerPaid: Boolean(user.sellerPaid),
+    buyerPaid: Boolean(user.buyerPaid),
+  };
+
   return {
     success: true,
-    data: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile: user.mobile,
-      sellerOnboarded: Boolean(user.sellerOnboarded),
-      buyerOnboarded: Boolean(user.buyerOnboarded),
-    },
+    user: statusPayload,
+    data: statusPayload,
   };
 };
 
