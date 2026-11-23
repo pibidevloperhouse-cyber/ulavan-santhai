@@ -25,11 +25,19 @@ function ApplicationStatusContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const isBuyerApp = appId?.toUpperCase().includes("BUYER");
+
+  useEffect(() => {
+    if (isBuyerApp) {
+      router.replace("/");
+    }
+  }, [isBuyerApp, router]);
+
   useEffect(() => {
     let isSubscribed = true;
 
     async function loadStatus() {
-      if (!appId) {
+      if (!appId || isBuyerApp) {
         setIsLoading(false);
         return;
       }
@@ -37,6 +45,11 @@ function ApplicationStatusContent() {
         const res = await getApplicationStatus(appId);
         if (isSubscribed) {
           if (res.success && res.data) {
+            const loadedRole = res.data?.payload?.role || (res.data?.sellerStatus ? "SELLER" : "BUYER");
+            if (loadedRole === "BUYER") {
+              router.replace("/");
+              return;
+            }
             setStatusData(res.data);
           } else {
             setErrorMessage("Unable to locate application details.");
@@ -59,7 +72,7 @@ function ApplicationStatusContent() {
     return () => {
       isSubscribed = false;
     };
-  }, [appId]);
+  }, [appId, isBuyerApp, router]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -87,6 +100,10 @@ function ApplicationStatusContent() {
     }
   };
 
+  if (isBuyerApp) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
@@ -98,6 +115,12 @@ function ApplicationStatusContent() {
   }
 
   const role = statusData?.payload?.role || (statusData?.buyerStatus && statusData?.sellerStatus ? "BOTH" : statusData?.sellerStatus ? "SELLER" : "BUYER");
+  if (role === "BUYER") {
+    if (typeof window !== "undefined") {
+      router.replace("/");
+    }
+    return null;
+  }
   const isBoth = role === "BOTH";
 
   const handleLogout = () => {

@@ -108,7 +108,7 @@ export default function GetStartedPage() {
 
       if (role === "buyer") {
         if (isBuyerOnboarded && !forceEdit) {
-          router.push("/onboarding/status");
+          router.push("/");
         } else {
           router.push("/onboarding?role=buyer&step=1");
         }
@@ -135,7 +135,7 @@ export default function GetStartedPage() {
       ],
       isOnboarded: isBuyerOnboarded,
       popularBadge: isBuyerOnboarded ? "Active Plan" : "Step 1 to 4 Required",
-      buttonText: isBuyerOnboarded ? "View Buyer Receipt & Status" : "Complete Buyer Form (4 Steps)",
+      buttonText: isBuyerOnboarded ? "Explore Marketplace" : "Complete Buyer Form (4 Steps)",
       buttonBg: "bg-[#174B35] hover:bg-[#103A29] text-white",
       borderAccent: "hover:border-[#174B35]",
     },
@@ -327,19 +327,6 @@ export default function GetStartedPage() {
                       />
                     </svg>
                   </button>
-
-                  {card.isOnboarded && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectRole(card.role, true);
-                      }}
-                      className="w-full text-center text-xs font-semibold text-gray-500 hover:text-[#174B35] py-1 cursor-pointer hover:underline transition-colors"
-                    >
-                      Edit {card.title} Details / Re-fill Form
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
