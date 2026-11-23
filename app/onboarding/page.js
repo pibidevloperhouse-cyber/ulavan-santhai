@@ -246,7 +246,6 @@ function OnboardingContent() {
   const [termsAgreed, setTermsAgreed] = useState(true);
 
   // Stage 4: Razorpay Payment States
-  const [addonBlocks, setAddonBlocks] = useState(0); // blocks of 10 sellers at ₹10 each for Buyer
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentResult, setPaymentResult] = useState(null);
 

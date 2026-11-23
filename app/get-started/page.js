@@ -73,11 +73,11 @@ export default function GetStartedPage() {
 
   // 3. Flags derived with live database priority
   const isSellerOnboarded = liveUser
-    ? Boolean(liveUser.sellerOnboarded)
+    ? Boolean(liveUser.sellerOnboarded || liveUser.sellerPaid)
     : Boolean(sessionUser?.sellerOnboarded || sessionUser?.sellerPaid);
 
   const isBuyerOnboarded = liveUser
-    ? Boolean(liveUser.buyerOnboarded)
+    ? Boolean(liveUser.buyerOnboarded || liveUser.buyerPaid)
     : Boolean(sessionUser?.buyerOnboarded || sessionUser?.buyerPaid);
 
   // 4. Role Selection Redirection Handler

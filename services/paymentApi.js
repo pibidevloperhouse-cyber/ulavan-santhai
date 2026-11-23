@@ -16,22 +16,19 @@ export const PRICING_PLANS = {
     id: "BUYER_ANNUAL",
     legacyId: "plan_buyer_base",
     role: "BUYER",
-    name: "Buyer Verified Access Plan",
+    name: "Buyer Verified Plan",
     basePrice: 365,
     taxAmount: 0,
     totalAmount: 365,
     currency: "INR",
-    billingCycle: "Annual Access",
-    initialContactLimit: 10,
-    topUpRate: 10,
-    topUpBlock: 10,
-    description: "Unlock up to 10 verified agricultural producers with direct contact details. Additional unlocks at ₹10 for 10 producers.",
+    billingCycle: "Annual Access (₹1.00/day)",
+    description: "Full 1-year verified access to connect directly with agricultural cultivators, farmers, and FPOs.",
     benefits: [
-      "View up to 10 verified farmer/seller contacts",
-      "Direct call and WhatsApp access to cultivators",
-      "Send unlimited direct purchase enquiries",
-      "Zero middleman brokerage or procurement commission",
-      "Top-up anytime at ₹10 per 10 additional producers",
+      "100% Verified Buyer & Procurement Badge",
+      "Direct access to farmer harvest & produce listings",
+      "Direct phone and WhatsApp contact with verified farmers",
+      "Create bulk procurement requests & RFQs",
+      "Zero middleman brokerage & zero trade commission",
     ],
   },
   SELLER: {
@@ -43,7 +40,7 @@ export const PRICING_PLANS = {
     taxAmount: 0,
     totalAmount: 365,
     currency: "INR",
-    billingCycle: "Annual Access",
+    billingCycle: "Annual Access (₹1.00/day)",
     renewalPeriodDays: 365,
     description: "Showcase agricultural harvest lots, receive verified commercial buyer enquiries, and access fair-trade market tools.",
     benefits: [
@@ -90,8 +87,24 @@ export async function submitRolePayment(checkoutData) {
 }
 
 /**
- * Fetch authenticated user's payment history from backend
+ * Fetch live authenticated user profile from backend (/api/v1/user/me)
+ * Used to immediately synchronize Supabase database states (buyerPaid, buyerOnboarded, etc.)
  */
+export async function fetchCurrentUserProfile() {
+  const res = await apiFetch("/api/v1/user/me", { method: "GET" });
+  if (res.success && res.data) {
+    const userObj = res.data?.user || res.data?.data || res.data;
+    return {
+      success: true,
+      user: userObj,
+    };
+  }
+  return {
+    success: false,
+    user: null,
+    error: res.error || "Unable to fetch live user profile.",
+  };
+}
 export async function getPaymentHistory() {
   const res = await apiFetch("/api/v1/payments/history", { method: "GET" });
   if (res.success && Array.isArray(res.data)) {
