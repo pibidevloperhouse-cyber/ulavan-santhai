@@ -430,12 +430,12 @@ export default function PaymentView({
                     <Link
                       href={
                         (activeResult?.role?.toLowerCase().includes("buyer") || activeResult?.planName?.toLowerCase().includes("buyer"))
-                          ? "/onboarding/status"
+                          ? "/"
                           : "/seller/dashboard"
                       }
                       className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#204732] hover:bg-[#153423] text-white text-xs font-bold shadow-md transition-colors text-center"
                     >
-                      {(activeResult?.role?.toLowerCase().includes("buyer") || activeResult?.planName?.toLowerCase().includes("buyer")) ? "View Application & Receipt" : "Open Seller Dashboard"} &rarr;
+                      {(activeResult?.role?.toLowerCase().includes("buyer") || activeResult?.planName?.toLowerCase().includes("buyer")) ? "Explore Marketplace" : "Open Seller Dashboard"} &rarr;
                     </Link>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, Suspense } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,8 +18,6 @@ export const BUYER_TYPES = [
   "Individual",
   "Business",
   "Manufacturer",
-  "Food Processor",
-  "Bakery or Food Business",
   "Reseller",
   "Other",
 ];
@@ -56,12 +54,177 @@ const COMMON_CROPS = [
   "Turmeric", "Millets", "Groundnut", "Sugarcane", "Spices", "Vegetables", "Flowers"
 ];
 
-function OnboardingContent() {
+const createInitialBuyerData = () => ({
+  // Common location
+  district: "",
+  city: "",
+  pinCode: "",
+  address: "",
+
+  // 1. Individual
+  individualCommodities: [],
+  individualVolume: "",
+  individualFrequency: "",
+  individualPayment: "",
+
+  // 2. Business
+  businessName: "",
+  businessConstitution: "Proprietorship",
+  businessDesignation: "",
+  businessIsGst: "No",
+  businessGstin: "",
+  businessCommodities: [],
+  businessVolume: "",
+  businessPaymentTerms: "",
+
+  // 3. Manufacturer
+  mfgCompanyName: "",
+  mfgConstitution: "Private Limited",
+  mfgDesignation: "",
+  mfgCategory: "",
+  mfgRawMaterials: "",
+  mfgVolume: "",
+  mfgIsGst: "No",
+  mfgGstin: "",
+  mfgPaymentTerms: "",
+
+  // 4. Food Processor
+  procBusinessName: "",
+  procActivity: "",
+  procRawCommodities: "",
+  procCapacity: "",
+  procFssaiNumber: "",
+  procIsGst: "No",
+  procGstin: "",
+  procPaymentTerms: "",
+
+  // 5. Bakery or Food Business
+  bakeryName: "",
+  bakeryType: "",
+  bakeryDesignation: "",
+  bakeryIngredients: "",
+  bakeryFrequency: "",
+  bakeryFssaiNumber: "",
+  bakeryIsGst: "No",
+  bakeryGstin: "",
+
+  // 6. Reseller
+  resellerShopName: "",
+  resellerType: "",
+  resellerCategories: [],
+  resellerDailyVolume: "",
+  resellerIsGst: "No",
+  resellerGstin: "",
+  resellerPaymentPreference: "",
+
+  // 7. Other
+  otherOrgName: "",
+  otherCategory: "",
+  otherPurpose: "",
+  otherItemsNeeded: "",
+  otherIsGst: "No",
+  otherGstin: "",
+});
+
+const createInitialSellerData = () => ({
+  // Common location
+  district: "",
+  village: "",
+  pinCode: "",
+  farmAddress: "",
+
+  // 1. Farmer
+  farmerFarmName: "",
+  farmerLandSize: "",
+  farmerCategory: "Landowner Farmer",
+  farmerCrops: [],
+  farmerAvailableQty: "",
+  farmerHarvestMonths: "",
+  farmerPriceExpectation: "",
+  farmerMethod: "Conventional Farming",
+
+  // 2. Agricultural Producer (FPO / Society)
+  fpoName: "",
+  fpoStructure: "Farmer Producer Company (FPC)",
+  fpoIsRegistered: "No",
+  fpoRegNumber: "",
+  fpoMemberCount: "",
+  fpoCombinedAcreage: "",
+  fpoCrops: [],
+  fpoCapacity: "",
+  fpoIsGst: "No",
+  fpoGstin: "",
+
+  // 3. Organic Producer
+  organicFarmName: "",
+  organicAcreage: "",
+  organicCertStatus: "Certified Organic (NPOP)",
+  organicCertAgency: "",
+  organicHasLicense: "No",
+  organicScopeNumber: "",
+  organicCrops: [],
+  organicCapacity: "",
+  organicMethod: "",
+
+  // 4. Raw-Material Provider
+  rawProviderName: "",
+  rawConstitution: "Proprietorship",
+  rawCommodities: [],
+  rawSource: "",
+  rawStockCapacity: "",
+  rawMoq: "",
+  rawIsGst: "No",
+  rawGstin: "",
+
+  // 5. Ingredient Producer
+  ingProducerName: "",
+  ingHasFssai: "No",
+  ingProducts: "",
+  ingCapacity: "",
+  ingTechnology: "",
+  ingFssaiNumber: "",
+  ingPackaging: "",
+  ingIsGst: "No",
+  ingGstin: "",
+
+  // 6. Manufacturer
+  mfgSellerName: "",
+  mfgSellerConstitution: "Private Limited",
+  mfgCategory: "",
+  mfgProductsOffered: "",
+  mfgRawMaterialsUsed: "",
+  mfgCapacity: "",
+  mfgHasFssai: "No",
+  mfgFssaiNumber: "",
+  mfgIsGst: "No",
+  mfgGstin: "",
+
+  // 7. Value-Added Manufacturer
+  vaBrandName: "",
+  vaHasFssai: "No",
+  vaProducts: "",
+  vaAgriInputs: "",
+  vaMonthlyCapacity: "",
+  vaPackagingFormat: "",
+  vaFssaiNumber: "",
+  vaIsGst: "No",
+  vaGstin: "",
+
+  // 8. Other
+  otherSellerName: "",
+  otherActivity: "",
+  otherProducts: "",
+  otherStockQty: "",
+  otherIsGst: "No",
+  otherGstin: "",
+});
+
+function OnboardingContent({ initialRole }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Active role from query: "buyer" or "seller"
-  const roleParam = (searchParams.get("role") || "buyer").toLowerCase();
+  const roleParam = (searchParams.get("role") || initialRole || "buyer").toLowerCase();
   const [role, setRole] = useState(roleParam === "seller" ? "seller" : "buyer");
 
   // Stepper: 1. Profile Details -> 2. Document Upload -> 3. Review & Submit -> 4. Payment
@@ -86,167 +249,11 @@ function OnboardingContent() {
   const [buyerType, setBuyerType] = useState("Individual");
   const [sellerType, setSellerType] = useState("Farmer");
 
-  // Dynamic Buyer Form State
-  const [buyerData, setBuyerData] = useState({
-    // Common location
-    district: "Coimbatore",
-    city: "Pollachi",
-    pinCode: "642001",
-    address: "",
+  // Dynamic Buyer Form State - initialized clean
+  const [buyerData, setBuyerData] = useState(createInitialBuyerData);
 
-    // 1. Individual
-    individualCommodities: ["Fresh Vegetables", "Fruits"],
-    individualVolume: "25 - 50 kg / month",
-    individualFrequency: "Weekly",
-    individualPayment: "UPI Instant",
-
-    // 2. Business
-    businessName: "",
-    businessConstitution: "Proprietorship",
-    businessDesignation: "Proprietor / Owner",
-    businessIsGst: "No",
-    businessGstin: "",
-    businessCommodities: ["Fresh Vegetables"],
-    businessVolume: "500 kg - 2 MT / month",
-    businessPaymentTerms: "Bank Transfer (NEFT/RTGS)",
-
-    // 3. Manufacturer
-    mfgCompanyName: "",
-    mfgConstitution: "Private Limited",
-    mfgDesignation: "Procurement Manager",
-    mfgCategory: "Food & Beverage",
-    mfgRawMaterials: "Corn / Maize, Oilseeds, Turmeric",
-    mfgVolume: "10 - 50 MT / month",
-    mfgIsGst: "Yes",
-    mfgGstin: "",
-    mfgPaymentTerms: "30-day Invoice Credit",
-
-    // 4. Food Processor
-    procBusinessName: "",
-    procActivity: "Flour Milling & Spice Grinding",
-    procRawCommodities: "Paddy, Turmeric, Chilly, Pulses",
-    procCapacity: "25 MT / month",
-    procFssaiNumber: "",
-    procIsGst: "Yes",
-    procGstin: "",
-    procPaymentTerms: "NEFT / RTGS Immediate",
-
-    // 5. Bakery or Food Business
-    bakeryName: "",
-    bakeryType: "Commercial Bakery & Kitchen",
-    bakeryDesignation: "Head Chef / Purchase Head",
-    bakeryIngredients: "Wheat Atta, Dairy Butter, Fresh Fruits, Sugar",
-    bakeryFrequency: "Daily",
-    bakeryFssaiNumber: "",
-    bakeryIsGst: "No",
-    bakeryGstin: "",
-
-    // 6. Reseller
-    resellerShopName: "",
-    resellerType: "Mandi Wholesale Merchant",
-    resellerCategories: ["Fresh Vegetables", "Onion & Potato", "Bananas"],
-    resellerDailyVolume: "10 - 25 Quintals / day",
-    resellerIsGst: "No",
-    resellerGstin: "",
-    resellerPaymentPreference: "Daily Settlement (UPI / Cash)",
-
-    // 7. Other
-    otherOrgName: "",
-    otherCategory: "Educational Hostel / Canteen",
-    otherPurpose: "Bulk kitchen feeding for students",
-    otherItemsNeeded: "Rice, Vegetables, Cooking Oil, Pulses",
-    otherIsGst: "No",
-    otherGstin: "",
-  });
-
-  // Dynamic Seller Form State
-  const [sellerData, setSellerData] = useState({
-    // Common location
-    district: "Coimbatore",
-    village: "Anaimalai",
-    pinCode: "642001",
-    farmAddress: "",
-
-    // 1. Farmer
-    farmerFarmName: "Green Harvest Farm",
-    farmerLandSize: "2 - 5 Acres",
-    farmerCategory: "Landowner Farmer",
-    farmerCrops: ["Coconut", "Banana", "Turmeric"],
-    farmerAvailableQty: "50 Quintals",
-    farmerHarvestMonths: "All Year",
-    farmerPriceExpectation: "Fair Market Mandi Rate",
-    farmerMethod: "Conventional Farming",
-
-    // 2. Agricultural Producer (FPO / Society)
-    fpoName: "Kongu Uzhavar Producer Company Ltd",
-    fpoStructure: "Farmer Producer Company (FPC)",
-    fpoRegNumber: "U01409TZ2021PTC028491",
-    fpoMemberCount: "200 - 500 Farmers",
-    fpoCombinedAcreage: "1,200 Acres",
-    fpoCrops: ["Paddy / Rice", "Coconut", "Millets"],
-    fpoCapacity: "150 MT / season",
-    fpoIsGst: "No",
-    fpoGstin: "",
-
-    // 3. Organic Producer
-    organicFarmName: "Pristine Nature Organic Farm",
-    organicAcreage: "5 - 10 Acres",
-    organicCertStatus: "Certified Organic (NPOP)",
-    organicCertAgency: "Aditi Organic Certifications",
-    organicScopeNumber: "NPOP/NAB/0017/ORG-2024",
-    organicCrops: ["Turmeric", "Millets", "Vegetables"],
-    organicCapacity: "30 Quintals",
-    organicMethod: "Vermi-compost & Jeevamrutham (No Chemicals)",
-
-    // 4. Raw-Material Provider
-    rawProviderName: "",
-    rawConstitution: "Proprietorship",
-    rawCommodities: ["Raw Spices", "Coconut Copra", "Oilseeds"],
-    rawSource: "Direct Farm Procurement & Aggregation",
-    rawStockCapacity: "100 MT",
-    rawMoq: "1 MT",
-    rawIsGst: "Yes",
-    rawGstin: "",
-
-    // 5. Ingredient Producer
-    ingProducerName: "",
-    ingProducts: "Cold-pressed Sesame & Coconut Oils, Turmeric Paste",
-    ingCapacity: "10 MT / month",
-    ingTechnology: "Traditional Wood Pressed (Marachekku)",
-    ingFssaiNumber: "",
-    ingPackaging: "15L Barrels & Bulk Cans",
-    ingIsGst: "Yes",
-    ingGstin: "",
-
-    // 6. Manufacturer
-    mfgSellerName: "",
-    mfgSellerConstitution: "Private Limited",
-    mfgCategory: "Agro-Industrial Food Products",
-    mfgProductsOffered: "Refined Agri Oils, Cattle Feed Pellets",
-    mfgRawMaterialsUsed: "Groundnut Cake, Maize, Rice Bran",
-    mfgCapacity: "200 MT / month",
-    mfgFssaiNumber: "",
-    mfgIsGst: "Yes",
-    mfgGstin: "",
-
-    // 7. Value-Added Manufacturer
-    vaBrandName: "",
-    vaProducts: "Traditional Pickles, Tapioca & Banana Chips, Millet Ready Mixes",
-    vaAgriInputs: "Raw Mango, Lemon, Banana, Tapioca, Millets",
-    vaMonthlyCapacity: "5,000 kg",
-    vaPackagingFormat: "Retail Pouches & Glass Jars",
-    vaFssaiNumber: "",
-    vaIsGst: "No",
-    vaGstin: "",
-
-    // 8. Other
-    otherSellerName: "",
-    otherActivity: "Agricultural Plant Nursery & Grafted Saplings",
-    otherProducts: "High-yield Coconut Saplings, Fruit Trees",
-    otherStockQty: "10,000 Saplings",
-    otherIsGst: "No",
-    otherGstin: "",
-  });
+  // Dynamic Seller Form State - initialized clean
+  const [sellerData, setSellerData] = useState(createInitialSellerData);
 
   // Uploaded Documents
   const [uploadedDocs, setUploadedDocs] = useState({});
@@ -255,7 +262,40 @@ function OnboardingContent() {
   // Feedback & State
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [termsAgreed, setTermsAgreed] = useState(true);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+
+  // Automatic reset when role switches or query changes
+  const prevRoleRef = useRef(role);
+  useEffect(() => {
+    const nextRole = roleParam === "seller" ? "seller" : "buyer";
+    if (prevRoleRef.current !== nextRole) {
+      prevRoleRef.current = nextRole;
+      setRole(nextRole);
+      setCurrentStep(1);
+      setUploadedDocs({});
+      setPreviewDoc(null);
+      setFormError("");
+      setTermsAgreed(false);
+      setBuyerData(createInitialBuyerData());
+      setSellerData(createInitialSellerData());
+    }
+  }, [roleParam]);
+
+  const handleBuyerTypeChange = (type) => {
+    if (type !== buyerType) {
+      setBuyerType(type);
+      setUploadedDocs({});
+      setFormError("");
+    }
+  };
+
+  const handleSellerTypeChange = (type) => {
+    if (type !== sellerType) {
+      setSellerType(type);
+      setUploadedDocs({});
+      setFormError("");
+    }
+  };
 
   // Stage 4: Razorpay Payment States
   const [addonBlocks, setAddonBlocks] = useState(0); // blocks of 10 sellers at ₹10 each for Buyer
@@ -286,18 +326,6 @@ function OnboardingContent() {
     },
   ];
 
-  // Toggle multi-select helper
-  const handleToggleArray = (setter, field, item) => {
-    setter((prev) => {
-      const arr = prev[field] || [];
-      const exists = arr.includes(item);
-      return {
-        ...prev,
-        [field]: exists ? arr.filter((x) => x !== item) : [...arr, item],
-      };
-    });
-  };
-
   // Step 1 Validation
   const handleNextFromStep1 = () => {
     setFormError("");
@@ -310,12 +338,16 @@ function OnboardingContent() {
         setFormError("Please enter your Legal Business Name.");
         return;
       }
-      if (buyerType === "Food Processor" && !buyerData.procFssaiNumber.trim()) {
-        setFormError("FSSAI License / Registration Number is required for Food Processors.");
+      if (buyerType === "Manufacturer" && !buyerData.mfgCompanyName.trim()) {
+        setFormError("Please enter your Legal Company Name.");
         return;
       }
-      if (buyerType === "Bakery or Food Business" && !buyerData.bakeryName.trim()) {
-        setFormError("Please enter your Bakery or Kitchen Name.");
+      if (buyerType === "Reseller" && !buyerData.resellerShopName.trim()) {
+        setFormError("Please enter your Shop / Mandi Stall Name.");
+        return;
+      }
+      if (buyerType === "Other" && !buyerData.otherOrgName.trim()) {
+        setFormError("Please enter your Organization / Applicant Name.");
         return;
       }
     } else {
@@ -323,20 +355,56 @@ function OnboardingContent() {
         setFormError("Please select your farm/operating district.");
         return;
       }
-      if (sellerType === "Farmer" && sellerData.farmerCrops.length === 0) {
-        setFormError("Please select at least one crop cultivated.");
+      if (sellerType === "Farmer" && !sellerData.farmerFarmName?.trim()) {
+        setFormError("Please enter your Farm Name.");
         return;
       }
       if (sellerType === "Agricultural Producer" && !sellerData.fpoName.trim()) {
         setFormError("Please enter your Producer Organization / FPO Name.");
         return;
       }
-      if (
-        (sellerType === "Ingredient Producer" || sellerType === "Value-Added Manufacturer") &&
-        !sellerData.ingFssaiNumber?.trim() &&
-        !sellerData.vaFssaiNumber?.trim()
-      ) {
-        setFormError("FSSAI Food License Number is required for food ingredients and value-added manufacturing.");
+      if (sellerType === "Organic Producer" && !sellerData.organicFarmName?.trim()) {
+        setFormError("Please enter your Organic Farm / Brand Name.");
+        return;
+      }
+      if (sellerType === "Raw-Material Provider" && !sellerData.rawProviderName?.trim()) {
+        setFormError("Please enter your Business / Enterprise Name.");
+        return;
+      }
+      if (sellerType === "Ingredient Producer" && !sellerData.ingProducerName?.trim()) {
+        setFormError("Please enter your Enterprise Name.");
+        return;
+      }
+      if (sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes" && !sellerData.ingFssaiNumber?.trim()) {
+        setFormError("Please enter your 14-digit FSSAI Food License Number.");
+        return;
+      }
+      if (sellerType === "Manufacturer" && !sellerData.mfgSellerName?.trim()) {
+        setFormError("Please enter your Company Name.");
+        return;
+      }
+      if (sellerType === "Manufacturer" && sellerData.mfgHasFssai === "Yes" && !sellerData.mfgFssaiNumber?.trim()) {
+        setFormError("Please enter your 14-digit FSSAI Food License Number.");
+        return;
+      }
+      if (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes" && !sellerData.mfgGstin?.trim()) {
+        setFormError("Please enter your 15-digit GSTIN.");
+        return;
+      }
+      if (sellerType === "Value-Added Manufacturer" && !sellerData.vaBrandName?.trim()) {
+        setFormError("Please enter your Brand / Enterprise Name.");
+        return;
+      }
+      if (sellerType === "Value-Added Manufacturer" && sellerData.vaHasFssai === "Yes" && !sellerData.vaFssaiNumber?.trim()) {
+        setFormError("Please enter your 14-digit FSSAI Food License Number.");
+        return;
+      }
+      if (sellerType === "Other" && !sellerData.otherSellerName?.trim()) {
+        setFormError("Please enter your Enterprise Name.");
+        return;
+      }
+      if (sellerType === "Other" && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
+        setFormError("Please enter your 15-digit GSTIN.");
         return;
       }
     }
@@ -348,12 +416,125 @@ function OnboardingContent() {
   // Step 2 Validation
   const handleNextFromStep2 = () => {
     setFormError("");
+
+    // For Farmer, only Patta / Chitta (LAND_PROOF) is required
+    if (role === "seller" && sellerType === "Farmer") {
+      if (!uploadedDocs["LAND_PROOF"]) {
+        setFormError("Please upload your Patta / Chitta document to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Agricultural Producer, only FPO Registration Certificate is required
+    if (role === "seller" && sellerType === "Agricultural Producer") {
+      if (!uploadedDocs["FPO_CERTIFICATE"]) {
+        setFormError("Please upload your FPO / Cooperative Registration Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Organic Producer, only NPOP Organic Certificate is required
+    if (role === "seller" && sellerType === "Organic Producer") {
+      if (!uploadedDocs["ORGANIC_CERTIFICATE"]) {
+        setFormError("Please upload your NPOP Organic Certificate document to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Raw-Material Provider, only GST Certificate is required
+    if (role === "seller" && sellerType === "Raw-Material Provider") {
+      if (!uploadedDocs["GST_CERTIFICATE"]) {
+        setFormError("Please upload your GST Registration Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Ingredient Producer, FSSAI (if has license) and GST Certificate are required
+    if (role === "seller" && sellerType === "Ingredient Producer") {
+      if (sellerData.ingHasFssai === "Yes" && !uploadedDocs["FSSAI_LICENSE"]) {
+        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
+        return;
+      }
+      if (!uploadedDocs["GST_CERTIFICATE"]) {
+        setFormError("Please upload your GST Registration Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Manufacturer, GST and FSSAI are required
+    if (role === "seller" && sellerType === "Manufacturer") {
+      if (!uploadedDocs["GST_CERTIFICATE"]) {
+        setFormError("Please upload your GST Registration Certificate to continue.");
+        return;
+      }
+      if (!uploadedDocs["FSSAI_LICENSE"]) {
+        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Value-Added Manufacturer, only FSSAI is required
+    if (role === "seller" && sellerType === "Value-Added Manufacturer") {
+      if (!uploadedDocs["FSSAI_LICENSE"]) {
+        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Other seller, only PAN (ID_PROOF) and GST Certificate are required
+    if (role === "seller" && sellerType === "Other") {
+      if (!uploadedDocs["ID_PROOF"]) {
+        setFormError("Please upload your PAN Card / Government Identity Proof to continue.");
+        return;
+      }
+      if (!uploadedDocs["GST_CERTIFICATE"]) {
+        setFormError("Please upload your GST Registration Certificate to continue.");
+        return;
+      }
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
+    // For Buyers, document upload is optional (not mandatory)
+    if (role === "buyer") {
+      setCurrentStep(3);
+      setReviewSubStep(1);
+      scrollToTop();
+      return;
+    }
+
     if (!uploadedDocs["ID_PROOF"]) {
-      setFormError(
-        role === "buyer" && buyerType === "Individual"
-          ? "Please upload your Aadhaar Card / ID Proof to continue."
-          : "Please upload your Government Identity Proof (Aadhaar / PAN / Voter ID) to continue."
-      );
+      setFormError("Please upload your Government Identity Proof to continue.");
       return;
     }
     if (role === "seller" && !uploadedDocs["BANK_PASSBOOK"]) {
@@ -372,7 +553,7 @@ function OnboardingContent() {
   // Stage 3 -> Stage 4 Transition
   const handleProceedToPayment = () => {
     if (!termsAgreed) {
-      setFormError("Please verify and accept the fair trade marketplace declaration.");
+      setFormError("Please agree to the declaration by checking the box to proceed.");
       return;
     }
     setFormError("");
@@ -602,8 +783,6 @@ function OnboardingContent() {
       ? buyerType !== "Individual" &&
       ((buyerType === "Business" && buyerData.businessIsGst === "Yes") ||
         (buyerType === "Manufacturer" && buyerData.mfgIsGst === "Yes") ||
-        (buyerType === "Food Processor" && buyerData.procIsGst === "Yes") ||
-        (buyerType === "Bakery or Food Business" && buyerData.bakeryIsGst === "Yes") ||
         (buyerType === "Reseller" && buyerData.resellerIsGst === "Yes") ||
         (buyerType === "Other" && buyerData.otherIsGst === "Yes"))
       : (sellerType === "Agricultural Producer" && sellerData.fpoIsGst === "Yes") ||
@@ -615,7 +794,7 @@ function OnboardingContent() {
 
   const isFssaiRequired =
     role === "buyer"
-      ? buyerType === "Food Processor" || buyerType === "Bakery or Food Business"
+      ? false
       : sellerType === "Ingredient Producer" || sellerType === "Value-Added Manufacturer" || sellerType === "Manufacturer";
 
   if (currentStep === 4) {
@@ -624,12 +803,18 @@ function OnboardingContent() {
         role={role}
         onRoleChange={(nextRole) => {
           setRole(nextRole);
-          router.replace(`/onboarding?role=${nextRole}`);
+          setCurrentStep(1);
+          setUploadedDocs({});
+          setPreviewDoc(null);
+          setFormError("");
+          setTermsAgreed(false);
+          setBuyerData(createInitialBuyerData());
+          setSellerData(createInitialSellerData());
+          router.replace(`/onboarding?role=${nextRole}&step=1`);
         }}
         userAuth={userAuth}
         onBack={() => {
           setCurrentStep(3);
-          setReviewSubStep(2);
           scrollToTop();
         }}
         onStepClick={(s) => {
@@ -811,28 +996,25 @@ function OnboardingContent() {
             {/* ======================================================== */}
             {role === "buyer" && (
               <div className="space-y-6">
-                {/* 7 Buyer Types Selection Pills / Cards */}
+                {/* 5 Buyer Types Selection Pills / Cards */}
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-2.5">
                     Buyer Classification <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                     {BUYER_TYPES.map((type) => {
                       const isSelected = buyerType === type;
                       return (
                         <button
                           key={type}
                           type="button"
-                          onClick={() => setBuyerType(type)}
-                          className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer flex flex-col justify-between min-h-[66px] ${isSelected
+                          onClick={() => handleBuyerTypeChange(type)}
+                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
                             ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
                             : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
                             }`}
                         >
                           <span className="leading-tight">{type}</span>
-                          <span className={`text-[10px] mt-1 font-normal ${isSelected ? "text-emerald-200" : "text-gray-400"}`}>
-                            {isSelected ? "● Active Form" : "Select"}
-                          </span>
                         </button>
                       );
                     })}
@@ -967,74 +1149,7 @@ function OnboardingContent() {
                   </div>
                 )}
 
-                {/* Sub-form 4: Food Processor */}
-                {buyerType === "Food Processor" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Agro-Food Processor Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Processing Unit / Mill Name"
-                        required
-                        placeholder="e.g. Annapoorna Dal & Flour Mill"
-                        value={buyerData.procBusinessName}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, procBusinessName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Processing Activity"
-                        placeholder="e.g. Pulse Sorting, Oil Extraction, Spice Milling"
-                        value={buyerData.procActivity}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, procActivity: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="FSSAI License / Registration (14 Digits)"
-                        required
-                        maxLength={14}
-                        placeholder="e.g. 10020042000123"
-                        value={buyerData.procFssaiNumber}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, procFssaiNumber: e.target.value }))}
-                        helperText="Mandatory for commercial food processing facilities."
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 5: Bakery or Food Business */}
-                {buyerType === "Bakery or Food Business" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Bakery &amp; Commercial Kitchen Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <FormInput
-                        label="Bakery / Restaurant Name"
-                        required
-                        placeholder="e.g. French Loaf Bakery & Kitchen"
-                        value={buyerData.bakeryName}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, bakeryName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Establishment Type"
-                        value={buyerData.bakeryType}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, bakeryType: e.target.value }))}
-                        options={["Commercial Bakery", "Restaurant / Hotel", "Cloud Kitchen", "Catering Service", "Confectionery"]}
-                      />
-                      <FormInput
-                        label="FSSAI Food License (14 Digits)"
-                        required
-                        maxLength={14}
-                        placeholder="e.g. 10020042000456"
-                        value={buyerData.bakeryFssaiNumber}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, bakeryFssaiNumber: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 6: Reseller */}
+                {/* Sub-form 4: Reseller */}
                 {buyerType === "Reseller" && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
@@ -1140,16 +1255,13 @@ function OnboardingContent() {
                         <button
                           key={type}
                           type="button"
-                          onClick={() => setSellerType(type)}
-                          className={`p-3 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer flex flex-col justify-between min-h-[66px] ${isSelected
+                          onClick={() => handleSellerTypeChange(type)}
+                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
                             ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
                             : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
                             }`}
                         >
                           <span className="leading-tight">{type}</span>
-                          <span className={`text-[10px] mt-1 font-normal ${isSelected ? "text-emerald-200" : "text-gray-400"}`}>
-                            {isSelected ? "● Active Form" : "Select"}
-                          </span>
                         </button>
                       );
                     })}
@@ -1162,72 +1274,14 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Direct Farmer &amp; Cultivator Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <FormInput
-                        label="Farm Name (Optional)"
-                        placeholder="e.g. Sri Murugan Thottam"
-                        value={sellerData.farmerFarmName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerFarmName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Cultivation Area / Land Size"
-                        value={sellerData.farmerLandSize}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerLandSize: e.target.value }))}
-                        options={["Under 2 Acres", "2 - 5 Acres", "5 - 10 Acres", "10 - 25 Acres", "25+ Acres"]}
-                      />
-                      <FormSelect
-                        label="Farmer Category"
-                        value={sellerData.farmerCategory}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerCategory: e.target.value }))}
-                        options={["Landowner Farmer", "Tenant Cultivator", "Marginal Smallholder"]}
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-bold text-gray-800 mb-1.5">
-                        Crops Cultivated <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {COMMON_CROPS.map((crop) => {
-                          const sel = sellerData.farmerCrops.includes(crop);
-                          return (
-                            <button
-                              key={crop}
-                              type="button"
-                              onClick={() => handleToggleArray(setSellerData, "farmerCrops", crop)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${sel ? "bg-[#174B35] text-white border-[#174B35]" : "bg-white text-gray-700 border-gray-200"
-                                }`}
-                            >
-                              {sel ? `✓ ${crop}` : `+ ${crop}`}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <FormInput
-                        label="Available Harvest Quantity"
-                        placeholder="e.g. 50 Quintals / 10 Tonnes"
-                        value={sellerData.farmerAvailableQty}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerAvailableQty: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Harvest Season"
-                        value={sellerData.farmerHarvestMonths}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerHarvestMonths: e.target.value }))}
-                        options={["All Year", "Jan - Apr (Thai / Chithirai)", "May - Aug (Aadi)", "Sep - Dec (Karthigai)"]}
-                      />
-                      <FormSelect
-                        label="Farming Method"
-                        value={sellerData.farmerMethod}
-                        onChange={(e) => setSellerData((p) => ({ ...p, farmerMethod: e.target.value }))}
-                        options={["Conventional Farming", "Natural / Zero-Budget Farming", "Residue-Free"]}
-                      />
-                    </div>
-                    <div className="text-[11px] text-gray-500 italic">
-                      ✓ Small &amp; direct farmers are completely GST exempt. 0% platform fee on all crop trades.
-                    </div>
+                    <FormInput
+                      label="Farm Name"
+                      required
+                      placeholder="e.g. Sri Murugan Thottam"
+                      value={sellerData.farmerFarmName}
+                      onChange={(e) => setSellerData((p) => ({ ...p, farmerFarmName: e.target.value }))}
+                    />
                   </div>
                 )}
 
@@ -1237,7 +1291,8 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>FPO &amp; Agricultural Cooperative Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormInput
                         label="FPO / Society Legal Name"
                         required
@@ -1251,26 +1306,48 @@ function OnboardingContent() {
                         onChange={(e) => setSellerData((p) => ({ ...p, fpoStructure: e.target.value }))}
                         options={["Farmer Producer Company (FPC)", "Registered Cooperative Society", "Joint Liability Group (JLG)", "Self Help Group (SHG)"]}
                       />
-                      <FormInput
-                        label="Registration No (CIN / Society Reg)"
-                        placeholder="e.g. U01409TZ2021PTC028491"
-                        value={sellerData.fpoRegNumber}
-                        onChange={(e) => setSellerData((p) => ({ ...p, fpoRegNumber: e.target.value }))}
-                      />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormSelect
-                        label="Total Member Farmers"
-                        value={sellerData.fpoMemberCount}
-                        onChange={(e) => setSellerData((p) => ({ ...p, fpoMemberCount: e.target.value }))}
-                        options={["50 - 200 Farmers", "200 - 500 Farmers", "500 - 1,500 Farmers", "1,500+ Farmers"]}
-                      />
-                      <FormInput
-                        label="Combined Seasonal Supply Capacity"
-                        placeholder="e.g. 150 Metric Tonnes"
-                        value={sellerData.fpoCapacity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, fpoCapacity: e.target.value }))}
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Do you have Registration Number?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="fpoIsRegistered"
+                              value="Yes"
+                              checked={sellerData.fpoIsRegistered === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="fpoIsRegistered"
+                              value="No"
+                              checked={sellerData.fpoIsRegistered === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "No", fpoRegNumber: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.fpoIsRegistered === "Yes" && (
+                        <FormInput
+                          label="Registration No (CIN / Society Reg)"
+                          required
+                          placeholder="e.g. U01409TZ2021PTC028491"
+                          value={sellerData.fpoRegNumber}
+                          onChange={(e) => setSellerData((p) => ({ ...p, fpoRegNumber: e.target.value.toUpperCase() }))}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -1281,7 +1358,8 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Organic Certified Producer Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormInput
                         label="Organic Farm / Brand Name"
                         required
@@ -1295,26 +1373,47 @@ function OnboardingContent() {
                         onChange={(e) => setSellerData((p) => ({ ...p, organicCertStatus: e.target.value }))}
                         options={["Certified Organic (NPOP)", "In-Conversion (C1 / C2)", "PGS-India Green / Organic", "Natural Farming (Uncertified)"]}
                       />
-                      <FormInput
-                        label="Certification Body"
-                        placeholder="e.g. Aditi Organic, OneCert, PGS-India"
-                        value={sellerData.organicCertAgency}
-                        onChange={(e) => setSellerData((p) => ({ ...p, organicCertAgency: e.target.value }))}
-                      />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Certificate Scope / License No"
-                        placeholder="e.g. NPOP/NAB/0017/ORG-2024"
-                        value={sellerData.organicScopeNumber}
-                        onChange={(e) => setSellerData((p) => ({ ...p, organicScopeNumber: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Cultivation Practice"
-                        placeholder="e.g. Vermicomposting, Jeevamrutham, No Chemical Input"
-                        value={sellerData.organicMethod}
-                        onChange={(e) => setSellerData((p) => ({ ...p, organicMethod: e.target.value }))}
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Do you have License Number?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="organicHasLicense"
+                              value="Yes"
+                              checked={sellerData.organicHasLicense === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="organicHasLicense"
+                              value="No"
+                              checked={sellerData.organicHasLicense === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "No", organicScopeNumber: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.organicHasLicense === "Yes" && (
+                        <FormInput
+                          label="Certificate Scope / License No"
+                          placeholder="e.g. NPOP/NAB/0017/ORG-2024"
+                          value={sellerData.organicScopeNumber}
+                          onChange={(e) => setSellerData((p) => ({ ...p, organicScopeNumber: e.target.value.toUpperCase() }))}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -1325,35 +1424,14 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Bulk Raw-Material Provider Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Provider / Business Name"
-                        required
-                        placeholder="e.g. Cauvery Raw Agri Commodities"
-                        value={sellerData.rawProviderName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, rawProviderName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Stock Warehouse Capacity"
-                        placeholder="e.g. 100 Metric Tonnes"
-                        value={sellerData.rawStockCapacity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, rawStockCapacity: e.target.value }))}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Raw Materials Supplied"
-                        placeholder="e.g. Turmeric Bulbs, Coconut Copra, Castor Seeds"
-                        value={sellerData.rawCommodities.join(", ")}
-                        onChange={(e) => setSellerData((p) => ({ ...p, rawCommodities: e.target.value.split(",") }))}
-                      />
-                      <FormInput
-                        label="Minimum Order Quantity (MOQ)"
-                        placeholder="e.g. 1 Metric Tonne"
-                        value={sellerData.rawMoq}
-                        onChange={(e) => setSellerData((p) => ({ ...p, rawMoq: e.target.value }))}
-                      />
-                    </div>
+
+                    <FormInput
+                      label="Business / Provider Name"
+                      required
+                      placeholder="e.g. Cauvery Raw Agri Commodities"
+                      value={sellerData.rawProviderName}
+                      onChange={(e) => setSellerData((p) => ({ ...p, rawProviderName: e.target.value }))}
+                    />
                   </div>
                 )}
 
@@ -1363,7 +1441,8 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Agri-Ingredient Producer Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                       <FormInput
                         label="Enterprise Name"
                         required
@@ -1371,29 +1450,50 @@ function OnboardingContent() {
                         value={sellerData.ingProducerName}
                         onChange={(e) => setSellerData((p) => ({ ...p, ingProducerName: e.target.value }))}
                       />
-                      <FormInput
-                        label="FSSAI Food License (14 Digits)"
-                        required
-                        maxLength={14}
-                        placeholder="e.g. 10020042000789"
-                        value={sellerData.ingFssaiNumber}
-                        onChange={(e) => setSellerData((p) => ({ ...p, ingFssaiNumber: e.target.value }))}
-                      />
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Do you have FSSAI Food License?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="ingHasFssai"
+                              value="Yes"
+                              checked={sellerData.ingHasFssai === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="ingHasFssai"
+                              value="No"
+                              checked={sellerData.ingHasFssai === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "No", ingFssaiNumber: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Ingredients Produced"
-                        placeholder="e.g. Wood Pressed Oils, Dehydrated Onion Powder, Tamarind Paste"
-                        value={sellerData.ingProducts}
-                        onChange={(e) => setSellerData((p) => ({ ...p, ingProducts: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Extraction / Milling Technology"
-                        placeholder="e.g. Cold-pressed wooden chekku, Air-dried"
-                        value={sellerData.ingTechnology}
-                        onChange={(e) => setSellerData((p) => ({ ...p, ingTechnology: e.target.value }))}
-                      />
-                    </div>
+
+                    {sellerData.ingHasFssai === "Yes" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="FSSAI Food License (14 Digits)"
+                          required
+                          maxLength={14}
+                          placeholder="e.g. 10020042000789"
+                          value={sellerData.ingFssaiNumber}
+                          onChange={(e) => setSellerData((p) => ({ ...p, ingFssaiNumber: e.target.value }))}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1403,34 +1503,99 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Industrial Agro-Manufacturer Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Legal Company Name"
-                        required
-                        placeholder="e.g. Salem Agro Refineries Ltd"
-                        value={sellerData.mfgSellerName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, mfgSellerName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Finished Goods Manufactured"
-                        placeholder="e.g. Refined Agri Oils, Cattle Feed Pellets"
-                        value={sellerData.mfgProductsOffered}
-                        onChange={(e) => setSellerData((p) => ({ ...p, mfgProductsOffered: e.target.value }))}
-                      />
+
+                    <FormInput
+                      label="Company Name"
+                      required
+                      placeholder="e.g. Salem Agro Refineries Ltd"
+                      value={sellerData.mfgSellerName}
+                      onChange={(e) => setSellerData((p) => ({ ...p, mfgSellerName: e.target.value }))}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Do you have FSSAI Food License?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="mfgHasFssai"
+                              value="Yes"
+                              checked={sellerData.mfgHasFssai === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="mfgHasFssai"
+                              value="No"
+                              checked={sellerData.mfgHasFssai === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "No", mfgFssaiNumber: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.mfgHasFssai === "Yes" && (
+                        <FormInput
+                          label="FSSAI Food License (14 Digits)"
+                          required
+                          maxLength={14}
+                          placeholder="e.g. 10020042000789"
+                          value={sellerData.mfgFssaiNumber}
+                          onChange={(e) => setSellerData((p) => ({ ...p, mfgFssaiNumber: e.target.value }))}
+                        />
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Local Farm Inputs Sourced"
-                        placeholder="e.g. Groundnut pods, Cottonseed, Rice husk"
-                        value={sellerData.mfgRawMaterialsUsed}
-                        onChange={(e) => setSellerData((p) => ({ ...p, mfgRawMaterialsUsed: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Monthly Manufacturing Capacity"
-                        placeholder="e.g. 200 Metric Tonnes"
-                        value={sellerData.mfgCapacity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, mfgCapacity: e.target.value }))}
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Are you GST Registered?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="mfgIsGst"
+                              value="Yes"
+                              checked={sellerData.mfgIsGst === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="mfgIsGst"
+                              value="No"
+                              checked={sellerData.mfgIsGst === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "No", mfgGstin: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.mfgIsGst === "Yes" && (
+                        <FormInput
+                          label="GSTIN (15 Digits)"
+                          required
+                          maxLength={15}
+                          placeholder="e.g. 33AAAAA0000A1Z5"
+                          value={sellerData.mfgGstin}
+                          onChange={(e) => setSellerData((p) => ({ ...p, mfgGstin: e.target.value.toUpperCase() }))}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -1441,7 +1606,8 @@ function OnboardingContent() {
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Value-Added Food Products Form</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                       <FormInput
                         label="Brand / Enterprise Name"
                         required
@@ -1449,27 +1615,50 @@ function OnboardingContent() {
                         value={sellerData.vaBrandName}
                         onChange={(e) => setSellerData((p) => ({ ...p, vaBrandName: e.target.value }))}
                       />
-                      <FormInput
-                        label="FSSAI License (14 Digits)"
-                        required
-                        maxLength={14}
-                        placeholder="e.g. 10020042000999"
-                        value={sellerData.vaFssaiNumber}
-                        onChange={(e) => setSellerData((p) => ({ ...p, vaFssaiNumber: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Monthly Production Output"
-                        placeholder="e.g. 5,000 kg"
-                        value={sellerData.vaMonthlyCapacity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, vaMonthlyCapacity: e.target.value }))}
-                      />
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Do you have FSSAI Food License?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="vaHasFssai"
+                              value="Yes"
+                              checked={sellerData.vaHasFssai === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="vaHasFssai"
+                              value="No"
+                              checked={sellerData.vaHasFssai === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "No", vaFssaiNumber: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                    <FormInput
-                      label="Value-Added Products Produced"
-                      placeholder="e.g. Mango Pickles, Banana & Tapioca Chips, Roasted Millets"
-                      value={sellerData.vaProducts}
-                      onChange={(e) => setSellerData((p) => ({ ...p, vaProducts: e.target.value }))}
-                    />
+
+                    {sellerData.vaHasFssai === "Yes" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="FSSAI License (14 Digits)"
+                          required
+                          maxLength={14}
+                          placeholder="e.g. 10020042000999"
+                          value={sellerData.vaFssaiNumber}
+                          onChange={(e) => setSellerData((p) => ({ ...p, vaFssaiNumber: e.target.value }))}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1494,20 +1683,57 @@ function OnboardingContent() {
                         onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
                       />
                     </div>
-                    <FormInput
-                      label="Produce Available for Direct Sale"
-                      placeholder="e.g. 5,000 TxD Hybrid Coconut Seedlings"
-                      value={sellerData.otherProducts}
-                      onChange={(e) => setSellerData((p) => ({ ...p, otherProducts: e.target.value }))}
-                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Are you GST Registered?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="otherIsGst"
+                              value="Yes"
+                              checked={sellerData.otherIsGst === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="otherIsGst"
+                              value="No"
+                              checked={sellerData.otherIsGst === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.otherIsGst === "Yes" && (
+                        <FormInput
+                          label="GSTIN (15 Digits)"
+                          required
+                          maxLength={15}
+                          placeholder="e.g. 33AAAAA0000A1Z5"
+                          value={sellerData.otherGstin}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Common Location Details for Seller */}
                 <div className="pt-4 border-t border-gray-200/80 space-y-4">
-                  <h3 className="text-sm font-bold text-[#174B35]">Farm Gate / Collection Point Location</h3>
+                  <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
                   <FormInput
-                    label="Farm Gate / Dispatch Point Address"
+                    label="Street Address"
                     placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
                     value={sellerData.farmAddress}
                     onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
@@ -1574,43 +1800,82 @@ function OnboardingContent() {
               </div>
               <div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                  Required Verification Documents
+                  {role === "buyer" ? "Verification Documents (Optional)" : "Required Verification Documents"}
                 </h2>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                  Upload verification proofs required for your selected classification (
-                  <strong className="text-gray-900 font-bold">{role === "buyer" ? buyerType : sellerType}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.
+                  {role === "buyer"
+                    ? "Upload identity or business verification documents (optional). Allowed formats: PDF, JPG, PNG up to 5MB."
+                    : <>Upload verification proofs required for your selected classification (<strong className="text-gray-900 font-bold">{sellerType}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.</>}
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
-              {/* Common: Aadhaar / Government ID */}
-              <DocumentUploader
-                documentType="ID_PROOF"
-                title={
-                  role === "buyer" && buyerType === "Individual"
-                    ? "Aadhaar Card / Government Identity Proof"
-                    : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
-                }
-                description={
-                  role === "buyer" && buyerType === "Individual"
-                    ? "Upload your Aadhaar Card (Front & Back) or valid Government ID proof."
-                    : "Government identity proof of the account owner or registered farmer."
-                }
-                required
-                uploadedDoc={uploadedDocs["ID_PROOF"]}
-                onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ID_PROOF: doc }))}
-                onRemove={() =>
-                  setUploadedDocs((prev) => {
-                    const next = { ...prev };
-                    delete next.ID_PROOF;
-                    return next;
-                  })
-                }
-              />
+              {/* Individual Buyer: Aadhaar Card & PAN Card */}
+              {role === "buyer" && buyerType === "Individual" && (
+                <>
+                  <DocumentUploader
+                    documentType="AADHAAR_CARD"
+                    title="Aadhaar Card"
+                    description="Upload your Aadhaar Card (Front & Back) or valid Government ID proof."
+                    required={false}
+                    uploadedDoc={uploadedDocs["AADHAAR_CARD"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, AADHAAR_CARD: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.AADHAAR_CARD;
+                        return next;
+                      })
+                    }
+                  />
+                  <DocumentUploader
+                    documentType="PAN_CARD"
+                    title="PAN Card"
+                    description="Upload your PAN Card proof document."
+                    required={false}
+                    uploadedDoc={uploadedDocs["PAN_CARD"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, PAN_CARD: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.PAN_CARD;
+                        return next;
+                      })
+                    }
+                  />
+                </>
+              )}
 
-              {/* Seller: Bank Account Proof for Direct Payments */}
-              {role === "seller" && (
+              {/* Common: PAN / Government ID for other roles (not for Individual Buyer, and not for Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer) */}
+              {!(role === "buyer" && buyerType === "Individual") && !(role === "seller" && (sellerType === "Farmer" || sellerType === "Agricultural Producer" || sellerType === "Organic Producer" || sellerType === "Raw-Material Provider" || sellerType === "Ingredient Producer" || sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer")) && (
+                <DocumentUploader
+                  documentType="ID_PROOF"
+                  title={
+                    role === "seller" && sellerType === "Other"
+                      ? "PAN Card / Government Identity Proof"
+                      : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
+                  }
+                  description={
+                    role === "seller" && sellerType === "Other"
+                      ? "Upload valid Business or Proprietor PAN Card proof."
+                      : "Government identity proof of the account owner or registered business."
+                  }
+                  required={role !== "buyer"}
+                  uploadedDoc={uploadedDocs["ID_PROOF"]}
+                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ID_PROOF: doc }))}
+                  onRemove={() =>
+                    setUploadedDocs((prev) => {
+                      const next = { ...prev };
+                      delete next.ID_PROOF;
+                      return next;
+                    })
+                  }
+                />
+              )}
+
+              {/* Seller: Bank Account Proof for Direct Payments (excluding Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer, Other) */}
+              {role === "seller" && sellerType !== "Farmer" && sellerType !== "Agricultural Producer" && sellerType !== "Organic Producer" && sellerType !== "Raw-Material Provider" && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer" && sellerType !== "Other" && (
                 <DocumentUploader
                   documentType="BANK_PASSBOOK"
                   title="Bank Account Passbook / Cancelled Cheque"
@@ -1628,13 +1893,13 @@ function OnboardingContent() {
                 />
               )}
 
-              {/* Farmer & Organic Producer: Land Records */}
-              {role === "seller" && (sellerType === "Farmer" || sellerType === "Organic Producer") && (
+              {/* Farmer: Land Records (Patta / Chitta) */}
+              {role === "seller" && sellerType === "Farmer" && (
                 <DocumentUploader
                   documentType="LAND_PROOF"
-                  title="Land Cultivation Record (Patta / Chitta / Uzhavar Card)"
-                  description="Revenue record or Uzhavar card proving farm cultivation rights."
-                  required={sellerType === "Farmer"}
+                  title="Patta / Chitta Document"
+                  description="Upload your official Patta / Chitta document for farm cultivation verification."
+                  required
                   uploadedDoc={uploadedDocs["LAND_PROOF"]}
                   onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, LAND_PROOF: doc }))}
                   onRemove={() =>
@@ -1647,13 +1912,13 @@ function OnboardingContent() {
                 />
               )}
 
-              {/* Organic Producer: Organic Certificate */}
+              {/* Organic Producer: Organic Certificate (NPOP) */}
               {role === "seller" && sellerType === "Organic Producer" && (
                 <DocumentUploader
                   documentType="ORGANIC_CERTIFICATE"
                   title="Organic Certification Document (NPOP / PGS-India)"
-                  description="Upload valid scope certificate from recognized organic accreditation agency."
-                  required={sellerData.organicCertStatus.includes("Certified")}
+                  description="Upload valid NPOP scope certificate from accredited organic certification agency."
+                  required
                   uploadedDoc={uploadedDocs["ORGANIC_CERTIFICATE"]}
                   onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ORGANIC_CERTIFICATE: doc }))}
                   onRemove={() =>
@@ -1685,13 +1950,19 @@ function OnboardingContent() {
                 />
               )}
 
-              {/* FSSAI Certificate if food processor / food business */}
-              {isFssaiRequired && (
+              {/* FSSAI Certificate if food processor / food business / ingredient producer / manufacturer / value-added */}
+              {((isFssaiRequired && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer") ||
+                (role === "seller" && sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes") ||
+                (role === "seller" && (sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer"))) && (
                 <DocumentUploader
                   documentType="FSSAI_LICENSE"
                   title="FSSAI Food Safety License Certificate"
                   description="Mandatory state or central FSSAI registration certificate for food products."
-                  required
+                  required={
+                    role === "seller" && sellerType === "Ingredient Producer"
+                      ? sellerData.ingHasFssai === "Yes"
+                      : true
+                  }
                   uploadedDoc={uploadedDocs["FSSAI_LICENSE"]}
                   onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FSSAI_LICENSE: doc }))}
                   onRemove={() =>
@@ -1704,13 +1975,18 @@ function OnboardingContent() {
                 />
               )}
 
-              {/* GST Certificate if GST registered */}
-              {isGstProvided && (
+              {/* GST Certificate if GST registered, Raw-Material Provider, Ingredient Producer, Manufacturer, or Other */}
+              {sellerType !== "Value-Added Manufacturer" && (isGstProvided ||
+                (role === "seller" &&
+                  (sellerType === "Raw-Material Provider" ||
+                    sellerType === "Ingredient Producer" ||
+                    sellerType === "Manufacturer" ||
+                    sellerType === "Other"))) && (
                 <DocumentUploader
                   documentType="GST_CERTIFICATE"
                   title="GST Registration Certificate (Form REG-06)"
-                  description="Upload certificate matching the 15-digit GSTIN provided."
-                  required
+                  description="Upload valid GST registration certificate for your business."
+                  required={role !== "buyer"}
                   uploadedDoc={uploadedDocs["GST_CERTIFICATE"]}
                   onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, GST_CERTIFICATE: doc }))}
                   onRemove={() =>
@@ -1752,11 +2028,8 @@ function OnboardingContent() {
         {/* ======================================================== */}
         {currentStep === 3 && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {reviewSubStep === 1 ? (
-              /* Sub-step 1: Account Credentials & Profile Details */
-              <>
-                {/* Header with Profile Icon Badge */}
-                <div className="flex items-start gap-3.5">
+            {/* Header with Profile Icon Badge */}
+            <div className="flex items-start gap-3.5">
                   <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -1914,66 +2187,6 @@ function OnboardingContent() {
                         </div>
                       </div>
                     )}
-                    {buyerType === "Food Processor" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Mill Name &amp; Activity</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.procBusinessName} • {buyerData.procActivity}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.procFssaiNumber}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {buyerType === "Bakery or Food Business" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Bakery Name &amp; Type</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.bakeryName} • {buyerData.bakeryType}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.bakeryFssaiNumber}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
                     {buyerType === "Reseller" && (
                       <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2054,47 +2267,19 @@ function OnboardingContent() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     {sellerType === "Farmer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Farm Name &amp; Land</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.farmerFarmName} ({sellerData.farmerLandSize})
-                            </span>
-                          </div>
+                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3" />
+                          </svg>
                         </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 19V6m0 0l-4 4m4-4l4 4M5 21h14" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Crops Cultivated</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.farmerCrops.join(", ")}
-                            </span>
-                          </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs text-gray-400 block font-normal">Farm Name</span>
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                            {sellerData.farmerFarmName}
+                          </span>
                         </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Harvest Capacity &amp; Method</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.farmerAvailableQty} • {sellerData.farmerMethod}
-                            </span>
-                          </div>
-                        </div>
-                      </>
+                      </div>
                     )}
                     {sellerType === "Agricultural Producer" && (
                       <>
@@ -2118,9 +2303,11 @@ function OnboardingContent() {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Registration &amp; Farmers</span>
+                            <span className="text-xs text-gray-400 block font-normal">Registration Number</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.fpoRegNumber} • {sellerData.fpoMemberCount}
+                              {sellerData.fpoIsRegistered === "Yes" && sellerData.fpoRegNumber
+                                ? sellerData.fpoRegNumber
+                                : "Not Registered"}
                             </span>
                           </div>
                         </div>
@@ -2148,43 +2335,30 @@ function OnboardingContent() {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Certification Agency</span>
+                            <span className="text-xs text-gray-400 block font-normal">License / Scope Number</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.organicCertAgency}
+                              {sellerData.organicHasLicense === "Yes" && sellerData.organicScopeNumber
+                                ? sellerData.organicScopeNumber
+                                : "No License"}
                             </span>
                           </div>
                         </div>
                       </>
                     )}
                     {sellerType === "Raw-Material Provider" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Provider Enterprise</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.rawProviderName} ({sellerData.rawStockCapacity})
-                            </span>
-                          </div>
+                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                          </svg>
                         </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 6l3 1m0 0l-3 9" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">MOQ</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.rawMoq}
-                            </span>
-                          </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs text-gray-400 block font-normal">Business / Provider Name</span>
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                            {sellerData.rawProviderName}
+                          </span>
                         </div>
-                      </>
+                      </div>
                     )}
                     {sellerType === "Ingredient Producer" && (
                       <>
@@ -2195,9 +2369,9 @@ function OnboardingContent() {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Extraction Unit</span>
+                            <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.ingProducerName} ({sellerData.ingCapacity})
+                              {sellerData.ingProducerName}
                             </span>
                           </div>
                         </div>
@@ -2210,7 +2384,9 @@ function OnboardingContent() {
                           <div className="min-w-0 flex-1">
                             <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.ingFssaiNumber}
+                              {sellerData.ingHasFssai === "Yes" && sellerData.ingFssaiNumber
+                                ? sellerData.ingFssaiNumber
+                                : "No FSSAI License"}
                             </span>
                           </div>
                         </div>
@@ -2225,22 +2401,24 @@ function OnboardingContent() {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Manufacturing Unit</span>
+                            <span className="text-xs text-gray-400 block font-normal">Company Name</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.mfgSellerName} • {sellerData.mfgCategory}
+                              {sellerData.mfgSellerName}
                             </span>
                           </div>
                         </div>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 6l3 1" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Monthly Output</span>
+                            <span className="text-xs text-gray-400 block font-normal">FSSAI &amp; GSTIN</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.mfgCapacity}
+                              {sellerData.mfgHasFssai === "Yes" && sellerData.mfgFssaiNumber ? `FSSAI: ${sellerData.mfgFssaiNumber}` : "No FSSAI"}
+                              {" • "}
+                              {sellerData.mfgIsGst === "Yes" && sellerData.mfgGstin ? `GST: ${sellerData.mfgGstin}` : "No GST"}
                             </span>
                           </div>
                         </div>
@@ -2257,7 +2435,7 @@ function OnboardingContent() {
                           <div className="min-w-0 flex-1">
                             <span className="text-xs text-gray-400 block font-normal">Brand Name</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.vaBrandName} • {sellerData.vaProducts}
+                              {sellerData.vaBrandName}
                             </span>
                           </div>
                         </div>
@@ -2270,26 +2448,44 @@ function OnboardingContent() {
                           <div className="min-w-0 flex-1">
                             <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.vaFssaiNumber}
+                              {sellerData.vaHasFssai === "Yes" && sellerData.vaFssaiNumber
+                                ? sellerData.vaFssaiNumber
+                                : "No FSSAI License"}
                             </span>
                           </div>
                         </div>
                       </>
                     )}
                     {sellerType === "Other" && (
-                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                          </svg>
+                      <>
+                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              {sellerData.otherSellerName || "N/A"}
+                            </span>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Specialized Enterprise</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {sellerData.otherSellerName} • {sellerData.otherActivity}
-                          </span>
+                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">GSTIN & Activity</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              {sellerData.otherIsGst === "Yes" && sellerData.otherGstin ? sellerData.otherGstin : "Not GST Registered"}
+                              {sellerData.otherActivity ? ` • ${sellerData.otherActivity}` : ""}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                     <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
                       <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2308,161 +2504,109 @@ function OnboardingContent() {
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Action Bar for Sub-step 1 */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentStep(2);
-                  scrollToTop();
-                }}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-              >
-                &larr; Back to Documents
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setReviewSubStep(2);
-                  scrollToTop();
-                }}
-                className="px-8 py-3.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Next: Review Documents</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
-          </>
-        ) : (
-          /* Sub-step 2: Verification Documents & Fair Trade Declaration */
-          <>
-            {/* Header with Verification Badge */}
-            <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                  Review Documents &amp; Declaration
-                </h2>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                  Verify your uploaded verification documents and confirm fair trade agreement.
-                </p>
-              </div>
-            </div>
+                {/* Uploaded Documents Card */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <span className="text-sm sm:text-base font-bold text-gray-900">
+                      Verification documents uploaded
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      {Object.keys(uploadedDocs).length} file{Object.keys(uploadedDocs).length === 1 ? "" : "s"}
+                    </span>
+                  </div>
 
-            <div className="space-y-4">
-              {/* Uploaded Documents Card */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <span className="text-sm sm:text-base font-bold text-gray-900">
-                    Verification documents uploaded
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    {Object.keys(uploadedDocs).length} file{Object.keys(uploadedDocs).length === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                <div className="space-y-2.5 pt-1">
-                  {Object.entries(uploadedDocs).map(([key, doc]) => (
-                    <div
-                      key={key}
-                      className="bg-[#EDF7EE] border border-[#CDE5D0] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-[#174B35] shadow-2xs shrink-0">
-                          <svg className="w-5 h-5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
+                  <div className="space-y-2.5 pt-1">
+                    {Object.entries(uploadedDocs).map(([key, doc]) => (
+                      <div
+                        key={key}
+                        className="bg-[#EDF7EE] border border-[#CDE5D0] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center text-[#174B35] shadow-2xs shrink-0">
+                            <svg className="w-5 h-5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-xs sm:text-sm text-gray-900 truncate">
+                              {doc.fileName || key}
+                            </p>
+                            <p className="text-[11px] text-[#174B35] font-medium mt-0.5">
+                              Uploaded
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-xs sm:text-sm text-gray-900 truncate">
-                            {doc.fileName || key}
-                          </p>
-                          <p className="text-[11px] text-[#174B35] font-medium mt-0.5">
-                            Uploaded
-                          </p>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          <div className="w-6 h-6 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-xs" title="Document verified">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewDoc(doc)}
-                          title="View Document"
-                          className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#174B35] text-[#174B35] hover:text-white border border-[#CDE5D0] flex items-center gap-1.5 text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer group"
-                        >
-                          <svg className="w-4 h-4 text-[#174B35] group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          <span className="hidden sm:inline">View</span>
-                        </button>
-                        <div className="w-6 h-6 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-xs" title="Document verified">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {Object.keys(uploadedDocs).length === 0 && (
-                    <p className="text-xs text-gray-400 italic py-2">
-                      No verification documents attached
-                    </p>
-                  )}
+                    ))}
+                    {Object.keys(uploadedDocs).length === 0 && (
+                      <p className="text-xs text-gray-400 italic py-2">
+                        No verification documents attached
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Declaration Checkbox */}
-            <div className="pt-2">
-              <label className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-200/80 shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={termsAgreed}
-                  onChange={(e) => {
-                    setTermsAgreed(e.target.checked);
-                    if (formError) setFormError("");
+              {/* Declaration Checkbox */}
+              <div className="pt-2">
+                <label
+                  className={`flex items-start sm:items-center gap-3 p-4 rounded-2xl bg-white border transition-colors cursor-pointer select-none ${
+                    !termsAgreed && formError
+                      ? "border-red-400 bg-red-50/30 ring-2 ring-red-200"
+                      : "border-gray-200/80 hover:border-emerald-300"
+                  } shadow-2xs`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={termsAgreed}
+                    onChange={(e) => {
+                      setTermsAgreed(e.target.checked);
+                      if (formError) setFormError("");
+                    }}
+                    className="mt-0.5 sm:mt-0 h-4 w-4 text-[#174B35] focus:ring-[#174B35] border-gray-300 rounded cursor-pointer accent-[#174B35] shrink-0"
+                  />
+                  <span className="text-xs sm:text-sm text-gray-900 font-medium leading-normal">
+                    I certify that the information entered above is genuine and accurate. I agree to trade on Ulavan Santhai following direct agricultural trade practices with 0% middleman margin.
+                  </span>
+                </label>
+                {!termsAgreed && formError && (
+                  <p className="text-xs font-semibold text-red-600 mt-1.5 ml-1 animate-in fade-in">
+                    ⚠ {formError}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Bar */}
+              <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep(2);
+                    scrollToTop();
                   }}
-                  className="mt-0.5 h-4 w-4 text-[#174B35] focus:ring-[#174B35] border-gray-300 rounded cursor-pointer accent-[#174B35]"
-                />
-                <span className="text-xs sm:text-sm text-gray-900 font-medium leading-relaxed">
-                  I certify that the information entered above is genuine and accurate. I agree to trade on Ulavan Santhai following direct agricultural trade practices with 0% middleman margin.
-                </span>
-              </label>
-            </div>
-
-            {/* Action Bar for Sub-step 2 */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setReviewSubStep(1);
-                  scrollToTop();
-                }}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-              >
-                &larr; Back to Profile Review
-              </button>
-              <button
-                type="button"
-                onClick={handleProceedToPayment}
-                className="px-8 py-3.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Proceed to Payment</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
-          </>
-        )}
+                  className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
+                >
+                  &larr; Back to Documents
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProceedToPayment}
+                  className="px-8 py-3.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Proceed to Payment</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              </div>
       </div>
     )}
 
@@ -2562,6 +2706,13 @@ function OnboardingContent() {
   );
 }
 
+function OnboardingContentWrapper() {
+  const searchParams = useSearchParams();
+  const roleParam = (searchParams.get("role") || "buyer").toLowerCase();
+
+  return <OnboardingContent key={roleParam} initialRole={roleParam} />;
+}
+
 export default function OnboardingPage() {
   return (
     <Suspense
@@ -2571,7 +2722,7 @@ export default function OnboardingPage() {
         </div>
       }
     >
-      <OnboardingContent />
+      <OnboardingContentWrapper />
     </Suspense>
   );
 }
