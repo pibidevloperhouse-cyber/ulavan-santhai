@@ -4,15 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { submitRolePayment } from "@/services/paymentApi";
 import BrandLogo from "@/components/ui/BrandLogo";
 import HandshakeLoader from "@/components/ui/HandshakeLoader";
 import Stepper from "@/components/forms/Stepper";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
 /**
  * Clean & Modular PaymentView Component
  * Powers Step 4 of Onboarding for both Buyer (BUYER_ANNUAL) and Seller (SELLER_ANNUAL).
- * Reusable architecture: uses useRazorpayPayment hook, PlanBenefitsCard, and PaymentReceipt.
+ * Features 2-panel Onboarding alignment, Stepper, HandshakeLoader, and Real Razorpay Integration.
  */
 export default function PaymentView({
   role = "buyer",
@@ -28,8 +28,6 @@ export default function PaymentView({
 }) {
   const router = useRouter();
   const [activeRole, setActiveRole] = useState(role);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
   const [paymentResult, setPaymentResult] = useState(externalPaymentResult || null);
 
   const {
@@ -37,6 +35,7 @@ export default function PaymentView({
     isProcessing: isHookProcessing,
     error: hookError,
     isAlreadyActive,
+    clearError,
   } = useRazorpayPayment();
 
   const currentRole = onRoleChange ? role : activeRole;
@@ -52,209 +51,13 @@ export default function PaymentView({
     }
   };
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (typeof window === "undefined") return resolve(false);
-      if (window.Razorpay) return resolve(true);
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
-  const handleInitiatePayment = async () => {
-    setErrorMessage("");
-    setIsProcessing(true);
-
-    const baseAmount = 365;
-    const totalAmount = baseAmount;
-    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const isLoaded = await loadRazorpayScript();
-
-    if (isLoaded && razorpayKey && typeof window !== "undefined" && window.Razorpay) {
-      try {
-        const options = {
-          key: razorpayKey,
-          amount: totalAmount * 100, // paise
-          currency: "INR",
-          name: "Ulavan Santhai",
-          description:
-            currentRole === "buyer"
-              ? "Buyer Access Plan (10 Sellers)"
-              : "Seller Monthly Membership",
-          image: "/images/ulavan-santhai-emblem@2x.png",
-          prefill: {
-            name: userAuth?.name || "Verified Trader",
-            email: userAuth?.email || "trader@ulavansanthai.in",
-            contact: userAuth?.mobile || "9876543210",
-          },
-          theme: {
-            color: "#1F4D36",
-          },
-          handler: function (response) {
-            handleFinalizePayment(response.razorpay_payment_id || `pay_rzp_${Date.now()}`);
-          },
-          modal: {
-            ondismiss: function () {
-              setIsProcessing(false);
-            },
-          },
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-        return;
-      } catch (err) {
-        console.warn("Razorpay live checkout error, opening preview simulation:", err);
-      }
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.clear();
+      localStorage.removeItem("ulavan_auth_token");
+      localStorage.removeItem("ulavan_registered_user");
     }
-
-    // In preview mode or when no Razorpay key is configured:
-    setIsProcessing(false);
-    setIsRazorpayModalOpen(true);
-  };
-
-  const handleFinalizePayment = async (razorpayPaymentId) => {
-    setIsProcessing(true);
-    setIsRazorpayModalOpen(false);
-
-    if (externalFinalizePayment) {
-      try {
-        await externalFinalizePayment(razorpayPaymentId);
-      } catch (err) {
-        console.error("External finalize error:", err);
-        setErrorMessage("Payment verification failed. Please try again.");
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    const baseAmount = 365;
-    const totalAmount = baseAmount;
-    const buyerViewLimit = currentRole === "buyer" ? 10 : null;
-
-    const now = new Date();
-    const startDate = now.toISOString();
-    const endDate = new Date(now);
-    if (currentRole === "seller") {
-      endDate.setDate(endDate.getDate() + 30);
-    } else {
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    }
-    const renewalDueDate = endDate.toISOString();
-
-    const txId = `TXN_US_${Date.now().toString().slice(-8)}`;
-    const gwRef = razorpayPaymentId || `pay_rzp_${Math.random().toString(36).substring(2, 10)}`;
-    const invNumber = `INV-US-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    const applicationId = `US_${currentRole.toUpperCase()}_${Date.now().toString().slice(-6)}`;
-
-    try {
-      const checkoutData = {
-        transactionId: txId,
-        gatewayReference: gwRef,
-        userId: userAuth?.id || `USR_${Date.now().toString().slice(-6)}`,
-        userName: userAuth?.name || "Verified Member",
-        userEmail: userAuth?.email || "member@ulavansanthai.in",
-        userMobile: userAuth?.mobile || "9876543210",
-        role: currentRole.toUpperCase(),
-        planId: currentRole === "buyer" ? "plan_buyer_base" : "plan_seller_monthly",
-        planName:
-          currentRole === "buyer"
-            ? "Buyer Access Plan (10 Sellers)"
-            : "Seller Monthly Plan (₹365/mo)",
-        baseAmount,
-        taxAmount: 0,
-        totalAmount,
-        currency: "INR",
-        paymentMethod: "Razorpay (UPI / Cards / Net Banking)",
-        paymentDetails: {
-          gateway: "Razorpay",
-          razorpayPaymentId: gwRef,
-        },
-      };
-
-      await submitRolePayment(checkoutData);
-
-      if (typeof window !== "undefined") {
-        const isBuyer = currentRole === "buyer";
-        const stored =
-          sessionStorage.getItem("ulavan_user") ||
-          sessionStorage.getItem("ulavan_registered_user") ||
-          localStorage.getItem("ulavan_registered_user");
-        const existing = stored ? JSON.parse(stored) : (userAuth || {});
-
-        const paymentRecord = {
-          transactionId: txId,
-          gatewayReference: gwRef,
-          invoiceNumber: invNumber,
-          amount: totalAmount,
-          status: "SUCCESS",
-          paidAt: startDate,
-          planStartDate: startDate,
-          planEndDate: endDate.toISOString(),
-          renewalDueDate,
-          buyerViewLimit,
-          buyerViewed: 0,
-          buyerRemaining: buyerViewLimit,
-        };
-
-        const updatedUser = {
-          ...existing,
-          role: currentRole.charAt(0).toUpperCase() + currentRole.slice(1),
-          activeRole: currentRole,
-          status: "active",
-          isPaid: true,
-          buyerPaid: isBuyer ? true : Boolean(existing.buyerPaid),
-          buyerOnboarded: isBuyer ? true : Boolean(existing.buyerOnboarded),
-          buyerPayment: isBuyer ? paymentRecord : existing.buyerPayment,
-
-          sellerPaid: !isBuyer ? true : Boolean(existing.sellerPaid),
-          sellerOnboarded: !isBuyer ? true : Boolean(existing.sellerOnboarded),
-          sellerPayment: !isBuyer ? paymentRecord : existing.sellerPayment,
-
-          payment: paymentRecord,
-        };
-        sessionStorage.setItem("ulavan_user", JSON.stringify(updatedUser));
-        sessionStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
-        localStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
-        sessionStorage.setItem("ulavan_latest_payment_id", invNumber);
-      }
-
-      const res = {
-        transactionId: txId,
-        gatewayReference: gwRef,
-        invoiceNumber: invNumber,
-        paymentStatus: "SUCCESS",
-        paymentDate: now.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
-        planStartDate: now.toLocaleDateString("en-IN", { dateStyle: "medium" }),
-        planEndDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
-        renewalDueDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
-        role: currentRole === "buyer" ? "Buyer" : "Seller",
-        planName:
-          currentRole === "buyer"
-            ? "Buyer Access Plan (10 Verified Sellers)"
-            : "Seller Monthly Plan (Unlimited Listings)",
-        baseAmount,
-        totalAmount,
-        paymentMethod: "Razorpay Gateway",
-        buyerViewLimit,
-        buyerViewed: 0,
-        buyerRemaining: buyerViewLimit,
-        applicationId,
-      };
-
-      setPaymentResult(res);
-      if (onPaymentSuccess) onPaymentSuccess(res);
-    } catch (err) {
-      console.error("Payment finalization error:", err);
-      setErrorMessage("Payment verification failed. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+    router.push("/login");
   };
 
   const handleBackAction = () => {
@@ -263,6 +66,43 @@ export default function PaymentView({
     } else {
       router.back();
     }
+  };
+
+  /**
+   * Executes the 2-step Razorpay payment workflow via useRazorpayPayment hook
+   */
+  const handlePay = () => {
+    clearError();
+    const planId = isBuyer ? "BUYER_ANNUAL" : "SELLER_ANNUAL";
+
+    initiatePayment({
+      planId,
+      role: currentRole,
+      userAuth,
+      onSuccess: async (resultPayload) => {
+        setPaymentResult(resultPayload);
+
+        // Submit application package to backend if handler provided
+        if (externalFinalizePayment) {
+          try {
+            await externalFinalizePayment(resultPayload.transactionId);
+          } catch (subErr) {
+            console.warn("Application record submission note:", subErr);
+          }
+        }
+
+        if (onPaymentSuccess) {
+          onPaymentSuccess(resultPayload);
+        }
+      },
+      onFailure: (err) => {
+        if (err?.code === "MEMBERSHIP_ALREADY_ACTIVE") {
+          setTimeout(() => {
+            router.push(isBuyer ? "/onboarding/status" : "/seller/dashboard");
+          }, 1800);
+        }
+      },
+    });
   };
 
   const steps = [
@@ -276,7 +116,7 @@ export default function PaymentView({
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#1F4D36] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
-      {/* Panoramic landscape footer strip in sequence without any clipping */}
+      {/* Panoramic landscape footer strip */}
       <div
         className="fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
         style={{
@@ -301,9 +141,8 @@ export default function PaymentView({
           </p>
         </div>
 
-        {/* Stepper + Flourishing Tree Visual Side-by-Side (NO vertical line between them) */}
+        {/* Stepper + Flourishing Tree Visual Side-by-Side */}
         <div className="flex items-center justify-between gap-4 my-auto py-6 relative">
-          {/* Vertical Stepper with Step 4 Active */}
           <div className="shrink-0 z-20 pr-2">
             <Stepper
               currentStep={4}
@@ -319,7 +158,6 @@ export default function PaymentView({
             />
           </div>
 
-          {/* Step 4: Flourishing Tree Growth Stage Visual - Pushed Right */}
           <div className="relative w-[210px] sm:w-[240px] xl:w-[270px] 2xl:w-[300px] h-[230px] sm:h-[260px] xl:h-[290px] 2xl:h-[320px] shrink-0 flex items-end justify-center pointer-events-none translate-x-3 sm:translate-x-6 xl:translate-x-8">
             <div className="relative w-full h-full transition-all duration-700 ease-out transform origin-bottom scale-[1.18] animate-in fade-in duration-300">
               <Image
@@ -339,8 +177,16 @@ export default function PaymentView({
       {/* RIGHT PANEL: Form Controls on Shared Nature BG         */}
       {/* ======================================================== */}
       <div className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-8 pb-32 sm:pb-36 px-5 sm:px-10 xl:px-16 flex flex-col justify-between relative bg-transparent scroll-smooth">
-        {/* Top Floating Actions: Home, Logout & User Avatar */}
+        {/* Top Floating Actions: Home & Logout */}
         <div className="flex items-center justify-end gap-2.5 pb-6">
+          <button
+            type="button"
+            onClick={() => handleRoleToggle(isBuyer ? "seller" : "buyer")}
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer shadow-2xs backdrop-blur-xs"
+          >
+            View {isBuyer ? "Seller" : "Buyer"} Screen
+          </button>
+
           <Link
             href="/"
             className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
@@ -365,7 +211,6 @@ export default function PaymentView({
 
         {/* Main Content Container matching Steps 1-3 */}
         <main className="w-full max-w-2xl mx-auto space-y-6 my-0 [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
-
           {/* If Payment Successful: Show Official Receipt */}
           {activeResult ? (
             <div className="space-y-6 animate-in fade-in">
@@ -376,10 +221,10 @@ export default function PaymentView({
                   </svg>
                 </div>
                 <h2 className="text-2xl font-black text-gray-900">
-                  Payment Successful &amp; Profile Active!
+                  Payment Verified &amp; Profile Active!
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto">
-                  Your payment of <strong className="text-gray-900">₹{activeResult.totalAmount}.00</strong> has been verified via Razorpay. Your verified trading credentials on UlavanSanthai are now active.
+                  Your payment of <strong className="text-gray-900">₹{activeResult.totalAmount || 365}.00</strong> has been verified via Razorpay. Your verified trading credentials on UlavanSanthai are now active.
                 </p>
               </div>
 
@@ -391,23 +236,23 @@ export default function PaymentView({
                     <span className="text-gray-500">Official Membership &amp; Platform Access Receipt</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-gray-400 block font-semibold uppercase">Invoice</span>
+                    <span className="text-gray-400 block font-semibold uppercase text-[10px]">Invoice</span>
                     <span className="font-mono font-bold text-gray-900">{activeResult.invoiceNumber}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="p-3 bg-white rounded-xl border border-gray-200">
-                    <span className="text-gray-500 block">Subscribed Plan</span>
-                    <span className="font-bold text-[#1F4D36]">{activeResult.planName}</span>
+                    <span className="text-gray-500 block text-[11px]">Subscribed Plan</span>
+                    <span className="font-bold text-[#1F4D36]">{activeResult.planName || (isBuyer ? "Buyer Verified Plan" : "Seller Membership")}</span>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-gray-200">
-                    <span className="text-gray-500 block">Transaction Reference</span>
+                    <span className="text-gray-500 block text-[11px]">Payment Reference</span>
                     <span className="font-mono font-bold text-gray-900 truncate block">{activeResult.transactionId}</span>
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-gray-200">
-                    <span className="text-gray-500 block">Payment Date</span>
-                    <span className="font-bold text-gray-900">{activeResult.paymentDate}</span>
+                    <span className="text-gray-500 block text-[11px]">Payment Date</span>
+                    <span className="font-bold text-gray-900">{activeResult.paymentDate || "Verified Today"}</span>
                   </div>
                 </div>
               </div>
@@ -420,7 +265,7 @@ export default function PaymentView({
                   }}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-100 transition-colors cursor-pointer"
                 >
-                  Print / Save Receipt
+                  Download / Print Receipt
                 </button>
                 <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
                   <Link
@@ -430,14 +275,10 @@ export default function PaymentView({
                     Role Switcher (Buyer / Seller)
                   </Link>
                   <Link
-                    href={
-                      (activeResult?.role?.toLowerCase().includes("buyer") || activeResult?.planName?.toLowerCase().includes("buyer"))
-                        ? "/"
-                        : "/seller/dashboard"
-                    }
+                    href={isBuyer ? "/onboarding/status" : "/seller/dashboard"}
                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#204732] hover:bg-[#153423] text-white text-xs font-bold shadow-md transition-colors text-center"
                   >
-                    {(activeResult?.role?.toLowerCase().includes("buyer") || activeResult?.planName?.toLowerCase().includes("buyer")) ? "Explore Marketplace" : "Open Seller Dashboard"} &rarr;
+                    {isBuyer ? "View Buyer Status" : "Open Seller Dashboard"} &rarr;
                   </Link>
                 </div>
               </div>
@@ -454,27 +295,37 @@ export default function PaymentView({
                 </div>
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                    {currentRole === "buyer" ? "Buyer Membership Payment" : "Seller Subscription Payment"}
+                    {isBuyer ? "Buyer Verified Plan" : "Seller Platform Membership"}
                   </h2>
                   <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                    {currentRole === "buyer"
-                      ? "Get access to explore and connect with trusted sellers."
-                      : "Continue as a verified seller and showcase your products."}
+                    {isBuyer
+                      ? "Full 1-year verified access to connect directly with certified agricultural producers."
+                      : "Activate your producer workspace for 1 full year to showcase crops & receive direct commercial buyer orders."}
                   </p>
                 </div>
               </div>
 
               {/* Error Message if any */}
-              {errorMessage && (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 animate-in fade-in">
-                  <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-xs sm:text-sm font-semibold text-red-800">{errorMessage}</p>
+              {hookError && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start justify-between gap-3 animate-in fade-in">
+                  <div className="flex items-start gap-2.5">
+                    <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-xs sm:text-sm font-semibold text-red-800">{hookError}</p>
+                  </div>
+                  {isAlreadyActive && (
+                    <Link
+                      href={isBuyer ? "/onboarding/status" : "/seller/dashboard"}
+                      className="shrink-0 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[11px] transition"
+                    >
+                      Go to {isBuyer ? "Status" : "Dashboard"} &rarr;
+                    </Link>
+                  )}
                 </div>
               )}
 
-              {/* Two-Column Main Payment Cards Container matching original design */}
+              {/* Two-Column Main Payment Cards Container */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
                 {/* Left Column: Plan Card */}
                 <div className="md:col-span-7 bg-white border border-gray-200/80 rounded-3xl p-5 sm:p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
@@ -482,40 +333,44 @@ export default function PaymentView({
                     {/* Badge & Price Header */}
                     <div className="flex items-start justify-between gap-4">
                       <span className="inline-block px-3 py-1 rounded-full bg-[#174B35] text-white text-[11px] font-bold tracking-wide">
-                        {currentRole === "buyer" ? "Buyer Plan" : "Seller Plan"}
+                        {isBuyer ? "Buyer Verified Plan" : "Seller Membership"}
                       </span>
                       <div className="text-right shrink-0">
                         <span className="text-2xl sm:text-3xl font-black text-gray-900">₹365</span>
                         <span className="text-xs text-gray-500 font-semibold block mt-0.5">
-                          {currentRole === "buyer" ? "/ Year" : "/ Month"}
+                          / Year (₹1.00/day)
                         </span>
                       </div>
                     </div>
 
                     {/* Title & Subtitle */}
                     <h3 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight pt-1">
-                      {currentRole === "buyer" ? "Access up to 10 Sellers" : "Seller Subscription"}
+                      {isBuyer ? "Verified Buyer Platform Access" : "Agricultural Producer Membership"}
                     </h3>
 
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      {currentRole === "buyer"
-                        ? "Explore products and connect with trusted sellers on our platform."
-                        : "List and manage your products on UlavanSanthai."}
+                      {isBuyer
+                        ? "Full 1-year verified access to connect with cultivators and procure agricultural produce."
+                        : "List crops, receive verified commercial buyer enquiries, and manage your agricultural sales."}
                     </p>
 
                     {/* Checklist Items */}
                     <div className="pt-3 space-y-2">
-                      {(currentRole === "buyer"
+                      {(isBuyer
                         ? [
-                          "Search & Explore Products",
-                          "Connect with Sellers",
-                          "Safe & Trusted Platform",
-                        ]
+                            "100% Verified Buyer & Procurement Badge",
+                            "Direct phone & WhatsApp contact with farmers",
+                            "Direct access to farmer harvest produce listings",
+                            "Create procurement requests & bulk RFQs",
+                            "Zero middleman brokerage & trade commission",
+                          ]
                         : [
-                          "Add Products & Showcase",
-                          "Manage Your Business",
-                          "Reach More Buyers",
-                        ]
+                            "100% Verified Farmer / Producer Badge",
+                            "Showcase unlimited crop & harvest lots",
+                            "Receive direct verified commercial buyer enquiries",
+                            "Zero commission on all farm-gate transactions",
+                            "Direct farmer-to-buyer transparent communication",
+                          ]
                       ).map((feature, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-800">
                           <span className="w-4 h-4 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-[10px] font-bold">
@@ -527,7 +382,7 @@ export default function PaymentView({
                     </div>
                   </div>
 
-                  {/* Subtle Botanical Leaf Illustration / Watermark in Bottom-Right Corner */}
+                  {/* Subtle Botanical Leaf Illustration */}
                   <div className="absolute -bottom-2 -right-2 w-32 h-32 pointer-events-none opacity-40">
                     <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
                       <path d="M110 110C90 90 70 70 40 60C30 80 50 110 110 110Z" fill="url(#leaf-grad-1)" />
@@ -553,11 +408,11 @@ export default function PaymentView({
                     <h4 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">Payment Summary</h4>
                     <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex justify-between items-center text-gray-600">
-                        <span>{currentRole === "buyer" ? "Plan Amount" : "Subscription Fee"}</span>
+                        <span>Annual Membership (365 Days)</span>
                         <span className="font-bold text-gray-900">₹365</span>
                       </div>
                       <div className="flex justify-between items-center text-gray-600">
-                        <span>Tax (if applicable)</span>
+                        <span>Taxes &amp; Platform Fees</span>
                         <span className="font-bold text-gray-900">₹0</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between items-baseline">
@@ -595,7 +450,7 @@ export default function PaymentView({
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                           </svg>
-                          <span>Connecting...</span>
+                          <span>Connecting Razorpay...</span>
                         </>
                       ) : (
                         <>
@@ -612,7 +467,7 @@ export default function PaymentView({
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                             />
                           </svg>
-                          <span>Pay ₹365 Now</span>
+                          <span>Subscribe &amp; Pay ₹365</span>
                           <span className="text-base font-bold">&rarr;</span>
                         </>
                       )}
@@ -623,18 +478,10 @@ export default function PaymentView({
                         className="w-3.5 h-3.5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
-                      <span>Secure payment via Razorpay</span>
+                      <span>Official Gateway (UPI, Cards, NetBanking)</span>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Bottom Alert / Info Banner */}
-              <div className="bg-emerald-50/70 border border-emerald-200/70 rounded-2xl p-3.5 flex items-center justify-center gap-2 text-xs text-[#174B35] font-semibold shadow-2xs">
-                <svg className="w-4 h-4 text-[#174B35] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>You will be redirected to Razorpay&apos;s secure payment page</span>
               </div>
 
               {/* Action Bar matching Steps 1-3 */}
@@ -666,66 +513,8 @@ export default function PaymentView({
             </div>
           )}
 
-          {/* Razorpay Interactive Simulation Modal (Fallback for Local / Preview) */}
-          {isRazorpayModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-              <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#0C2340] text-white flex items-center justify-center font-black text-xs">
-                      R
-                    </div>
-                    <span className="font-bold text-gray-900 text-sm">Razorpay Checkout</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsRazorpayModalOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="py-5 space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0C2340] flex items-center justify-center mx-auto">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <h4 className="text-lg font-black text-gray-900">Ulavan Santhai Platform Access</h4>
-                  <p className="text-xs text-gray-500">
-                    {currentRole === "buyer" ? "Buyer Verified Plan (10 Sellers)" : "Seller Monthly Membership Plan"}
-                  </p>
-                  <div className="text-2xl font-black text-[#1F4D36]">₹365.00</div>
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium text-left">
-                    ⚡ <strong>Razorpay Gateway Ready</strong>: Complete test payment to activate your trading credentials.
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleFinalizePayment(`pay_rzp_mock_${Date.now().toString().slice(-8)}`)}
-                    className="w-full py-3 px-4 rounded-xl bg-[#204732] hover:bg-[#153423] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>Complete &amp; Simulate Successful Payment</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsRazorpayModalOpen(false)}
-                    className="w-full py-2 px-4 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-xs transition-colors cursor-pointer"
-                  >
-                    Cancel Transaction
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
           {/* Handshake Loader while payment/backend processes */}
-          {processingState && <HandshakeLoader />}
+          {isProcessing && <HandshakeLoader />}
         </main>
       </div>
     </div>
