@@ -22,7 +22,6 @@ const AUDIENCE_CARDS = [
     image: require('../../../assets/images/photographs/farmer-full-supplied.png'),
     actionText: 'Connect as Seller',
     role: 'SELLER',
-    hasEmbeddedCaption: false,
     isLimeGreen: false,
   },
   {
@@ -39,12 +38,11 @@ const AUDIENCE_CARDS = [
     image: require('../../../assets/images/photographs/commercial-buyers-supplied.png'),
     actionText: 'Connect as Buyer',
     role: 'BUYER',
-    hasEmbeddedCaption: false,
     isLimeGreen: true,
   },
   {
     number: '03',
-    categoryBadge: 'Agro Industries',
+    categoryBadge: 'Bulk Distribution',
     title: 'Manufacturers & Processors',
     description:
       'For food processors and manufacturers sourcing produce or ingredients for their operations.',
@@ -54,14 +52,15 @@ const AUDIENCE_CARDS = [
       'Add a seller role to showcase your own products',
     ],
     image: require('../../../assets/images/photographs/agro-factory-supplied.png'),
+    circularCrop: true,
     actionText: 'Explore Sourcing',
     role: 'BUYER',
-    hasEmbeddedCaption: true,
+    badgeOverlap: 36,
     isLimeGreen: false,
   },
   {
     number: '04',
-    categoryBadge: 'Bulk Distribution',
+    categoryBadge: 'Form Supply',
     title: 'Wholesalers & Businesses',
     description:
       'For wholesalers, distributors and businesses connecting with agricultural suppliers and customers.',
@@ -73,7 +72,9 @@ const AUDIENCE_CARDS = [
     image: require('../../../assets/images/photographs/bulk-people-supplied.jpg'),
     actionText: 'Build Relationships',
     role: 'BOTH',
-    hasEmbeddedCaption: true,
+    cropBottomWhitespace: true,
+    badgeOverlap: 52,
+    extraArtSpacing: 10,
     isLimeGreen: true,
   },
 ];
@@ -95,21 +96,25 @@ export default function AudienceSection({ onNavigateToRegister }) {
         {AUDIENCE_CARDS.map((card) => (
           <View key={card.number} style={styles.cardItem}>
             {/* Top Circular Artwork */}
-            <View style={styles.artContainer}>
-              <View style={styles.artImageWrapper}>
-                <Image
-                  source={card.image}
-                  style={styles.artImage}
-                  resizeMode="contain"
-                />
+            <View style={[styles.artContainer, { marginBottom: card.extraArtSpacing ?? 0 }]}>
+              <View style={[styles.artImageWrapper, card.cropBottomWhitespace && styles.bulkImageCrop]}>
+                {card.circularCrop ? (
+                  <View style={styles.factoryCircle}>
+                    <Image source={card.image} style={styles.factoryImage} resizeMode="cover" />
+                  </View>
+                ) : (
+                  <Image
+                    source={card.image}
+                    style={[styles.artImage, card.cropBottomWhitespace && styles.bulkImage]}
+                    resizeMode="contain"
+                  />
+                )}
               </View>
 
-              {/* Category Badge Pill under circle (for non-embedded cards) */}
-              {!card.hasEmbeddedCaption && (
-                <View style={styles.artBadge}>
-                  <Text style={styles.artBadgeText}>{card.categoryBadge}</Text>
-                </View>
-              )}
+              {/* Cover the printed caption where the artwork already includes one. */}
+              <View style={[styles.artBadge, { marginTop: -(card.badgeOverlap ?? 20) }]}>
+                <Text style={styles.artBadgeText}>{card.categoryBadge}</Text>
+              </View>
             </View>
 
             {/* Speech Bubble Card (img1 & img2 design) */}
@@ -237,12 +242,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  bulkImageCrop: {
+    width: 302,
+    maxWidth: '100%',
+    height: 264,
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+  },
+  factoryCircle: {
+    width: 248,
+    height: 248,
+    borderRadius: 124,
+    borderWidth: 5,
+    borderColor: '#EBEADA',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  factoryImage: {
+    width: 288,
+    height: 288,
+  },
+  bulkImage: {
+    height: 297,
+  },
   artBadge: {
     backgroundColor: '#174B35',
     paddingHorizontal: 22,
     paddingVertical: 8,
     borderRadius: 20,
-    marginTop: -20,
     shadowColor: '#174B35',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
@@ -263,7 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 22,
-    marginTop: 6,
+    marginTop: 20,
     position: 'relative',
     overflow: 'visible',
   },

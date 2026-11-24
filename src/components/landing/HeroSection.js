@@ -32,10 +32,10 @@ export default function HeroSection({
         {/* Hero Intro Typography & CTAs */}
         <View style={styles.introContent}>
           <View style={styles.eyebrowRow}>
-            <View style={styles.eyebrowDash} />
             <Text style={styles.eyebrowText}>
-              Rooted in agriculture. Connected through opportunity.
+              Rooted in agriculture.{'\n'}Connected through opportunity.
             </Text>
+            <View style={styles.eyebrowUnderline} />
           </View>
 
           <Text style={styles.headingTitle}>
@@ -169,21 +169,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eyebrowRow: {
-    flexDirection: 'row',
+    transform: [{ translateY: -20 }],
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    gap: 6,
+    marginBottom: 8,
   },
-  eyebrowDash: {
+  eyebrowUnderline: {
     width: 22,
-    height: 2.5,
+    height: 2,
     backgroundColor: '#D6A437',
   },
   eyebrowText: {
+    textAlign: 'center',
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '800',
     color: '#1B5E20',
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   headingTitle: {

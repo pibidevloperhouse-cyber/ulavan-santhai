@@ -13,13 +13,11 @@ import {
 } from 'react-native';
 import Colors from '../theme/colors';
 import {
-  AuthHeader,
   FeedbackModal,
   ServerConfigModal,
   OtpModal,
 } from '../components';
 import { loginUser, verifyEmailOtp, resendEmailOtp } from '../services/authService';
-import { getBaseUrl } from '../config/api';
 
 export default function LoginScreen({
   onNavigateToRegister,
@@ -34,7 +32,7 @@ export default function LoginScreen({
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
-  const [serverUrl, setServerUrl] = useState(getBaseUrl());
+  const [focusedField, setFocusedField] = useState(null);
 
   // Popup Modal state
   const [popup, setPopup] = useState({
@@ -180,8 +178,6 @@ export default function LoginScreen({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Main Form Container Card */}
-            <View style={styles.card}>
               {/* Back to Home Button */}
               {onNavigateToLanding && (
                 <TouchableOpacity
@@ -189,10 +185,16 @@ export default function LoginScreen({
                   onPress={onNavigateToLanding}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.backHomeBtnText}>← Back to Home</Text>
+                  <Text style={styles.backHomeBtnText}>←  Back</Text>
                 </TouchableOpacity>
               )}
 
+            <View style={styles.card}>
+              <View pointerEvents="none" style={styles.sprig}>
+                <View style={styles.stem} />
+                <View style={[styles.leaf, styles.upperLeaf]} />
+                <View style={[styles.leaf, styles.lowerLeaf]} />
+              </View>
               {/* Registration Success Banner */}
               {registeredParam ? (
                 <View style={styles.registeredBanner}>
@@ -206,35 +208,29 @@ export default function LoginScreen({
                 </View>
               ) : null}
 
-              {/* Branding Header */}
-              <AuthHeader
-                badgeText="🌱 Sign In to Your Account"
-                title="Welcome Back"
-                subtitle="Empowering Farmers & Buyers Across Tamil Nadu"
-              />
-
-              {/* Dynamic Server Config Pill */}
               <TouchableOpacity
-                style={styles.serverPill}
+                style={styles.badge}
+                accessibilityRole="button"
+                accessibilityLabel="Open server settings"
                 onPress={() => setShowServerModal(true)}
-                activeOpacity={0.75}
               >
-                <Text style={styles.serverPillText}>
-                  ⚙️ Server: <Text style={styles.serverPillBold}>{serverUrl}</Text>
-                </Text>
+                <Text style={styles.badgeText}>✓   SIGN IN TO YOUR ACCOUNT</Text>
               </TouchableOpacity>
+              <Text accessibilityRole="header" style={styles.title}>Welcome Back</Text>
 
               {/* Identifier Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  Email Address or Mobile Number <Text style={styles.required}>*</Text>
+                  Email Address <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
+                <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputFocused]}>
                   <Text style={styles.fieldIcon}>✉</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 9876543210 or ramesh@example.com"
+                    placeholder="you@example.com"
                     placeholderTextColor={Colors.textPlaceholder}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
                     value={identifier}
                     onChangeText={setIdentifier}
                     autoCapitalize="none"
@@ -246,26 +242,23 @@ export default function LoginScreen({
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>
-                    Password <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TouchableOpacity onPress={handleForgotPassword}>
-                    <Text style={styles.forgotText}>Forgot password?</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
+                <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputFocused]}>
                   <Text style={styles.fieldIcon}>🔒</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="••••••••"
                     placeholderTextColor={Colors.textPlaceholder}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                   />
                   <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -273,10 +266,15 @@ export default function LoginScreen({
                     <Text style={styles.eyeIcon}>{showPassword ? '👁' : '👁‍🗨'}</Text>
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity style={styles.forgotLink} onPress={handleForgotPassword}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </TouchableOpacity>
               </View>
 
               {/* Remember Me Toggle */}
               <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: rememberMe }}
                 style={styles.rememberRow}
                 onPress={() => setRememberMe(!rememberMe)}
                 activeOpacity={0.8}
@@ -284,7 +282,7 @@ export default function LoginScreen({
                 <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                   {rememberMe ? <Text style={styles.checkmark}>✓</Text> : null}
                 </View>
-                <Text style={styles.rememberText}>Remember me on this device</Text>
+                <Text style={styles.rememberText}>Remember me on this browser</Text>
               </TouchableOpacity>
 
               {/* Submit Button */}
@@ -315,10 +313,20 @@ export default function LoginScreen({
               </View>
 
               {/* Register Link */}
-              <View style={styles.registerPrompt}>
-                <Text style={styles.registerPromptText}>Don&apos;t have an account yet? </Text>
-                <TouchableOpacity onPress={onNavigateToRegister}>
-                  <Text style={styles.registerLink}>Create an Account →</Text>
+              <View style={styles.registerFooter}>
+                <Text style={styles.registerPrompt}>
+                  Don&apos;t have an account yet?
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Create an Account"
+                  onPress={onNavigateToRegister}
+                  activeOpacity={0.7}
+                  style={styles.registerLinkBtn}
+                >
+                  <Text style={styles.registerLink}>
+                    Create an Account →
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -339,7 +347,6 @@ export default function LoginScreen({
       <ServerConfigModal
         visible={showServerModal}
         onClose={() => setShowServerModal(false)}
-        onSaved={(newUrl) => setServerUrl(newUrl)}
       />
 
       {/* Pending Registration OTP Verification Modal */}
@@ -362,64 +369,49 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  overlayLayer: {
-    flex: 1,
-    backgroundColor: 'rgba(235, 245, 238, 0.72)',
-  },
-  keyboardView: {
-    flex: 1,
-  },
+  overlayLayer: { flex: 1 },
+  keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 32,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 500,
+    paddingHorizontal: 10,
+    paddingVertical: 20,
   },
   card: {
-    backgroundColor: Colors.surfaceTranslucent,
+    paddingHorizontal: 28,
+    paddingTop: 36,
+    paddingBottom: 28,
     borderRadius: 28,
-    padding: 24,
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    elevation: 8,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.88)',
+    backgroundColor: 'rgba(249,252,255,0.50)',
+    overflow: 'hidden',
   },
   backHomeBtn: {
     alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
     borderRadius: 16,
-    backgroundColor: '#E8F0E3',
-    marginBottom: 12,
+    marginBottom: 22,
+    backgroundColor: 'rgba(255,255,255,0.75)',
   },
-  backHomeBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  serverPill: {
-    alignSelf: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+  backHomeBtnText: { color: Colors.primary, fontSize: 15, fontWeight: '700' },
+  sprig: { position: 'absolute', top: 1, right: 0, width: 86, height: 84 },
+  stem: { position: 'absolute', right: 16, top: 8, width: 1, height: 82, backgroundColor: '#96B849', transform: [{ rotate: '-29deg' }] },
+  leaf: { position: 'absolute', width: 34, height: 20, borderTopLeftRadius: 20, borderBottomRightRadius: 20 },
+  upperLeaf: { right: -3, top: 12, backgroundColor: '#94BD48', transform: [{ rotate: '85deg' }] },
+  lowerLeaf: { right: 25, top: 29, backgroundColor: '#ADD353', transform: [{ rotate: '24deg' }] },
+  badge: {
+    alignSelf: 'flex-start',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.mintPill,
   },
-  serverPillText: {
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
-  serverPillBold: {
-    fontWeight: '700',
-    color: Colors.primary,
-  },
+  badgeText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  title: { fontSize: 38, fontWeight: '800', color: Colors.primary, marginTop: 12, marginBottom: 24 },
   registeredBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -459,14 +451,8 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 16,
   },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
   label: {
-    fontSize: 12.5,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.textBody,
     marginBottom: 6,
@@ -474,8 +460,9 @@ const styles = StyleSheet.create({
   required: {
     color: Colors.error,
   },
+  forgotLink: { alignSelf: 'flex-end', paddingTop: 8 },
   forgotText: {
-    fontSize: 11.5,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.primary,
   },
@@ -488,6 +475,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.inputBorder,
     paddingHorizontal: 12,
   },
+  inputFocused: { borderColor: Colors.primary, borderWidth: 2 },
   fieldIcon: {
     fontSize: 15,
     marginRight: 8,
@@ -495,8 +483,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 48,
-    fontSize: 14,
+    height: 54,
+    fontSize: 17,
     color: Colors.textBody,
   },
   eyeButton: {
@@ -515,7 +503,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 6,
+    borderRadius: 3,
     borderWidth: 1.5,
     borderColor: Colors.primary,
     alignItems: 'center',
@@ -532,14 +520,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   rememberText: {
-    fontSize: 12.5,
+    fontSize: 15,
     color: Colors.textBody,
     fontWeight: '500',
   },
   submitButton: {
+    marginHorizontal: 10,
     backgroundColor: Colors.primary,
+    backgroundImage: 'linear-gradient(165deg, #1BA54C 0%, #104B32 36%, #104B32 100%)',
     borderRadius: 16,
-    height: 52,
+    height: 66,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primaryDark,
@@ -558,7 +548,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '800',
   },
   arrowIcon: {
@@ -569,7 +559,7 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 18,
+    marginVertical: 26,
   },
   dividerLine: {
     flex: 1,
@@ -580,20 +570,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 12,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  registerFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   registerPrompt: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textBody,
+    textAlign: 'center',
   },
-  registerPromptText: {
-    fontSize: 12.5,
-    color: Colors.textMuted,
+  registerLinkBtn: {
+    marginTop: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
   },
   registerLink: {
-    fontSize: 12.5,
+    fontSize: 15,
     fontWeight: '800',
     color: Colors.primary,
+    textDecorationLine: 'underline',
+    textAlign: 'center',
   },
 });

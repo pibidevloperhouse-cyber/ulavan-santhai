@@ -12,9 +12,11 @@ export default function AboutSection({ onNavigateToRegister }) {
     <View style={styles.container}>
       {/* Heading & Subtitles */}
       <View style={styles.header}>
-        <Text style={styles.heading}>
-          Bringing the Agricultural{'\n'}
-          <Text style={styles.headingAccent}>Community Together</Text>
+        <Text style={styles.heading} numberOfLines={1} adjustsFontSizeToFit>
+          Bringing the Agricultural
+        </Text>
+        <Text style={[styles.heading, styles.headingAccent]}>
+          Community Together
         </Text>
 
         <Text style={styles.lead}>
@@ -113,17 +115,19 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E2E8DE',
   },
   header: {
+    paddingHorizontal: 8,
     marginBottom: 24,
   },
   heading: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
     color: '#174B35',
     lineHeight: 38,
     letterSpacing: -0.6,
-    marginBottom: 16,
   },
   headingAccent: {
+    fontSize: 30,
+    marginBottom: 16,
     color: '#729B59',
   },
   lead: {

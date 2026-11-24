@@ -15,7 +15,7 @@ const JOURNEYS = {
       caption: 'Start with one account',
       mainSceneTitle: 'Your account starts here',
       items: ['Name & contact details', 'Create your password'],
-      icon: '📱',
+      icon: '',
     },
     {
       stepName: 'Profile',

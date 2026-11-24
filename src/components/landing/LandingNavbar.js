@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,36 @@ const NAV_LINKS = [
   { id: 'plans', label: 'Plans' },
   { id: 'contact', label: 'Contact Us' },
 ];
+
+const androidLogoFrames = [
+  require('../../../assets/images/ulavan-mart-frames/frame-0.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-1.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-2.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-3.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-4.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-5.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-6.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-7.png'),
+  require('../../../assets/images/ulavan-mart-frames/frame-8.png'),
+];
+
+export function BrandLogo({ style = styles.brandLogo }) {
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const timer = setInterval(() => {
+      setFrame(current => (current + 1) % androidLogoFrames.length);
+    }, 220);
+    return () => clearInterval(timer);
+  }, []);
+
+  const source = Platform.OS === 'android'
+    ? androidLogoFrames[frame]
+    : require('../../../assets/images/ulavan-mart-animated.gif');
+
+  return <Image source={source} style={style} resizeMode="contain" fadeDuration={0} />;
+}
 
 export default function LandingNavbar({
   activeSection = 'home',
@@ -37,17 +67,12 @@ export default function LandingNavbar({
   return (
     <View style={styles.container}>
       <View style={styles.bar}>
-        {/* Brand Logo: Ulavan Mart + Handshake Logo (img3) */}
         <TouchableOpacity
           style={styles.brandWrapper}
           onPress={() => handleLinkPress('home')}
           activeOpacity={0.8}
         >
-          <Image
-            source={require('../../../assets/images/ulavan-mart-handshake-logo.png')}
-            style={styles.brandLogo}
-            resizeMode="contain"
-          />
+          <BrandLogo />
         </TouchableOpacity>
 
         {/* Right side controls: Menu Toggle */}

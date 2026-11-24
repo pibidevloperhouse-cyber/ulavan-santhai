@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,20 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
-  Animated,
 } from 'react-native';
 import Colors from '../theme/colors';
+import { BrandLogo } from '../components/landing/LandingNavbar';
 import { fetchLiveUser, getSessionCache } from '../services/authService';
 
 /**
- * Ulavan Santhai - Get Started / Marketplace Role Selection Screen
+ * Ulavan Santhai / Ulavan Mart - Get Started / Marketplace Role Selection Screen
  * Mobile Adaptation of frontend `app/get-started/page.js`
  *
- * Preserves 100% of the content, role options, badges, benefit lists,
- * and live onboarding validation from the frontend web application.
+ * Visually & functionally matches the web experience:
+ * - Brand header with Ulavan Mart leaf logo, Home & Logout buttons
+ * - Two-line centered welcome heading & subtitle
+ * - 'CHOOSE YOUR MARKETPLACE ROLE' pill below subtitle
+ * - Clean Buyer & Seller cards with 4-step action buttons
  */
 export default function GetStartedScreen({
   user: initialUser = null,
@@ -28,29 +31,9 @@ export default function GetStartedScreen({
   onNavigateToRegister,
   onSelectRole,
   onNavigateToOnboarding,
+  onLogout,
 }) {
   const [liveUser, setLiveUser] = useState(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  // Pulse animation for verified badge active indicator
-  useEffect(() => {
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 0.35,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulseLoop.start();
-    return () => pulseLoop.stop();
-  }, [pulseAnim]);
 
   // Query GET /api/v1/user/me live from Express backend on mount
   useEffect(() => {
@@ -87,17 +70,8 @@ export default function GetStartedScreen({
       ? sessionUser.name
       : '');
 
-  // Flags derived with live database priority (matches frontend logic)
-  const isSellerOnboarded = liveUser
-    ? Boolean(liveUser.sellerOnboarded)
-    : Boolean(sessionUser?.sellerOnboarded || sessionUser?.sellerPaid);
-
-  const isBuyerOnboarded = liveUser
-    ? Boolean(liveUser.buyerOnboarded)
-    : Boolean(sessionUser?.buyerOnboarded || sessionUser?.buyerPaid);
-
   // Role Selection Redirection Handler (matches frontend handleSelectRole)
-  const handleSelectRole = (role, isEdit = false) => {
+  const handleSelectRole = (role) => {
     try {
       const activeSessionUser = sessionUser || {};
       const roleCapitalized = role === 'buyer' ? 'Buyer' : 'Seller';
@@ -105,35 +79,23 @@ export default function GetStartedScreen({
       activeSessionUser.role = roleCapitalized;
 
       if (role === 'seller') {
-        if (isSellerOnboarded && !isEdit) {
-          if (onSelectRole) {
-            onSelectRole('seller');
-          }
-        } else {
-          if (onNavigateToOnboarding) {
-            onNavigateToOnboarding('seller', 1);
-          } else if (onNavigateToRegister) {
-            onNavigateToRegister('SELLER');
-          } else if (onSelectRole) {
-            onSelectRole('seller');
-          }
+        if (onNavigateToOnboarding) {
+          onNavigateToOnboarding('seller', 1);
+        } else if (onNavigateToRegister) {
+          onNavigateToRegister('SELLER');
+        } else if (onSelectRole) {
+          onSelectRole('seller');
         }
         return;
       }
 
       if (role === 'buyer') {
-        if (isBuyerOnboarded && !isEdit) {
-          if (onSelectRole) {
-            onSelectRole('buyer');
-          }
-        } else {
-          if (onNavigateToOnboarding) {
-            onNavigateToOnboarding('buyer', 1);
-          } else if (onNavigateToRegister) {
-            onNavigateToRegister('BUYER');
-          } else if (onSelectRole) {
-            onSelectRole('buyer');
-          }
+        if (onNavigateToOnboarding) {
+          onNavigateToOnboarding('buyer', 1);
+        } else if (onNavigateToRegister) {
+          onNavigateToRegister('BUYER');
+        } else if (onSelectRole) {
+          onSelectRole('buyer');
         }
         return;
       }
@@ -158,10 +120,8 @@ export default function GetStartedScreen({
         'Discover direct farm producers.',
         'Connect directly with suppliers.',
       ],
-      isOnboarded: isBuyerOnboarded,
-      popularBadge: isBuyerOnboarded ? 'Active Plan' : 'Step 1 to 4 Required',
-      buttonText: isBuyerOnboarded ? 'Open Buyer Workspace' : 'Complete Buyer Form (4 Steps)',
-      buttonBg: Colors.primary,
+      buttonText: 'Complete Buyer Form (4 Steps)',
+      buttonBg: '#174B35',
     },
     {
       role: 'seller',
@@ -176,10 +136,8 @@ export default function GetStartedScreen({
         'Connect directly with bulk verified buyers.',
         'Receive direct farm-gate payments.',
       ],
-      isOnboarded: isSellerOnboarded,
-      popularBadge: isSellerOnboarded ? 'Active Plan' : 'Step 1 to 4 Required',
-      buttonText: isSellerOnboarded ? 'Open Seller Workspace' : 'Complete Seller Form (4 Steps)',
-      buttonBg: Colors.primary,
+      buttonText: 'Complete Seller Form (4 Steps)',
+      buttonBg: '#174B35',
     },
   ];
 
@@ -189,45 +147,34 @@ export default function GetStartedScreen({
 
       {/* Top Brand Bar */}
       <View style={styles.header}>
-        {/* Logo with 2x sharp emblem */}
+        {/* Ulavan Mart Brand Logo */}
         <TouchableOpacity
           style={styles.brandRow}
           onPress={onNavigateToLanding}
           activeOpacity={0.8}
         >
-          <View style={styles.emblemContainer}>
-            <Image
-              source={require('../../assets/images/ulavan-santhai-emblem.png')}
-              style={styles.emblemImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.brandInfo}>
-            <Text style={styles.brandTitle}>Ulavan Santhai</Text>
-            <Text style={styles.brandSubtitle}>AGRICULTURAL MARKETPLACE</Text>
-          </View>
+          <BrandLogo style={styles.brandLogo} />
         </TouchableOpacity>
 
-        {/* Quick Links / Auth Status */}
+        {/* Quick Links: Home & Logout */}
         <View style={styles.headerRight}>
-          {userName ? (
-            <View style={styles.userSignedPill}>
-              <Animated.View
-                style={[styles.pulseDot, { opacity: pulseAnim }]}
-              />
-              <Text style={styles.userSignedText} numberOfLines={1}>
-                Signed in: <Text style={styles.userSignedBold}>{userName}</Text>
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.signInBtn}
-              onPress={onNavigateToLogin}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.signInBtnText}>Sign In</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.navPillBtn}
+            onPress={onNavigateToLanding}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.navPillIcon}>⌂</Text>
+            <Text style={styles.navPillText}>Home</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navPillBtn}
+            onPress={onLogout || onNavigateToLogin}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.navPillIcon}>↪</Text>
+            <Text style={styles.navPillText}>Logout</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -239,24 +186,33 @@ export default function GetStartedScreen({
       >
         {/* Page Title & Subtitle Section */}
         <View style={styles.titleSection}>
-          <View style={styles.stepBadge}>
-            <View style={styles.stepBadgeDot} />
-            <Text style={styles.stepBadgeText}>
-              STEP 2: CHOOSE YOUR MARKETPLACE ROLE
-            </Text>
-          </View>
-
           <Text style={styles.pageTitle}>
-            {userName ? `Welcome back, ${userName}!` : 'Choose Your Marketplace Role'}
+            {userName ? (
+              <>
+                <Text style={styles.welcomeText}>Welcome back,</Text>
+                {'\n'}
+                <Text style={styles.userNameText}>{userName}!</Text>
+              </>
+            ) : (
+              <Text style={styles.welcomeText}>Welcome to Ulavan Santhai!</Text>
+            )}
           </Text>
 
           <Text style={styles.pageSubtitle}>
             Switch between your Buyer and Seller workspaces anytime, or complete
             your tailored profile to start trading with zero middleman margin.
           </Text>
+
+          {/* Role Pill placed BELOW the subtitle */}
+          <View style={styles.stepBadge}>
+            <View style={styles.stepBadgeDot} />
+            <Text style={styles.stepBadgeText}>
+              CHOOSE YOUR MARKETPLACE ROLE
+            </Text>
+          </View>
         </View>
 
-        {/* Cards Grid / Stack: Buyer and Seller */}
+        {/* 2 Large Image Cards Stack: Buyer and Seller */}
         <View style={styles.cardsContainer}>
           {cards.map((card) => (
             <View key={card.role} style={styles.cardWrapper}>
@@ -265,28 +221,6 @@ export default function GetStartedScreen({
                 onPress={() => handleSelectRole(card.role)}
                 activeOpacity={0.92}
               >
-                {/* Active Plan / Status Badge */}
-                {card.isOnboarded ? (
-                  <View style={styles.badgeTopRight}>
-                    <View style={styles.verifiedActiveBadge}>
-                      <Animated.View
-                        style={[styles.verifiedPulseDot, { opacity: pulseAnim }]}
-                      />
-                      <Text style={styles.verifiedBadgeText}>
-                        Verified Plan Active
-                      </Text>
-                    </View>
-                  </View>
-                ) : card.popularBadge ? (
-                  <View style={styles.badgeTopRight}>
-                    <View style={styles.popularBadge}>
-                      <Text style={styles.popularBadgeText}>
-                        {card.popularBadge}
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
-
                 {/* Large Image Header with Gradient Overlay */}
                 <View style={styles.imageHeader}>
                   <Image
@@ -317,7 +251,7 @@ export default function GetStartedScreen({
                     ))}
                   </View>
 
-                  {/* Action Buttons */}
+                  {/* Action Button */}
                   <View style={styles.actionSection}>
                     <TouchableOpacity
                       style={[styles.primaryActionBtn, { backgroundColor: card.buttonBg }]}
@@ -329,34 +263,11 @@ export default function GetStartedScreen({
                       </Text>
                       <Text style={styles.primaryActionArrow}>→</Text>
                     </TouchableOpacity>
-
-                    {card.isOnboarded && (
-                      <TouchableOpacity
-                        style={styles.editBtn}
-                        onPress={() => handleSelectRole(card.role, true)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.editBtnText}>
-                          Edit {card.title} Details / Re-fill Form
-                        </Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
                 </View>
               </TouchableOpacity>
             </View>
           ))}
-        </View>
-
-        {/* Bottom Navigation Helper */}
-        <View style={styles.bottomHelperRow}>
-          <TouchableOpacity
-            style={styles.backHomeBtn}
-            onPress={onNavigateToLanding}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.backHomeBtnText}>← Back to Home / Landing</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -392,83 +303,46 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  emblemContainer: {
-    width: 44,
+  brandLogo: {
+    width: 145,
     height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F5F5EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: 10,
-    overflow: 'hidden',
-  },
-  emblemImage: {
-    width: 38,
-    height: 38,
-  },
-  brandInfo: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#174B35',
-    letterSpacing: -0.3,
-  },
-  brandSubtitle: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#729B59',
-    letterSpacing: 0.8,
-    marginTop: 1,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  userSignedPill: {
+  navPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E8F0E3',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    maxWidth: 160,
+    borderColor: 'rgba(114, 155, 89, 0.45)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    gap: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
-  pulseDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginRight: 6,
-  },
-  userSignedText: {
-    fontSize: 11,
-    color: '#4B5563',
-    fontWeight: '600',
-  },
-  userSignedBold: {
+  navPillIcon: {
+    fontSize: 14,
     color: '#174B35',
     fontWeight: '800',
   },
-  signInBtn: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(23, 75, 53, 0.35)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: '#FFFFFF',
-  },
-  signInBtnText: {
-    fontSize: 12.5,
-    fontWeight: '800',
+  navPillText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#174B35',
   },
   scrollArea: {
@@ -482,6 +356,33 @@ const styles = StyleSheet.create({
   titleSection: {
     alignItems: 'center',
     marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  pageTitle: {
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  welcomeText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#174B35',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  userNameText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#174B35',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+  },
+  pageSubtitle: {
+    fontSize: 14.5,
+    lineHeight: 22,
+    color: '#4B5563',
+    textAlign: 'center',
+    maxWidth: 380,
+    marginBottom: 18,
   },
   stepBadge: {
     flexDirection: 'row',
@@ -490,41 +391,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(114, 155, 89, 0.35)',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    gap: 8,
   },
   stepBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: '#729B59',
-    marginRight: 6,
   },
   stepBadgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#174B35',
-    letterSpacing: 0.6,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#174B35',
-    textAlign: 'center',
-    letterSpacing: -0.4,
-    lineHeight: 32,
-    marginBottom: 8,
-  },
-  pageSubtitle: {
-    fontSize: 13.5,
-    lineHeight: 20,
-    color: '#4B5563',
-    textAlign: 'center',
-    maxWidth: 380,
+    letterSpacing: 0.8,
   },
   cardsContainer: {
-    gap: 20,
+    paddingHorizontal: 8,
+    gap: 22,
   },
   cardWrapper: {
     marginBottom: 4,
@@ -548,67 +433,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  badgeTopRight: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    zIndex: 20,
-  },
-  verifiedActiveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#059669',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  verifiedPulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFFFFF',
-    marginRight: 6,
-  },
-  verifiedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  popularBadge: {
-    backgroundColor: '#174B35',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  popularBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
   imageHeader: {
     width: '100%',
     height: 200,
@@ -631,65 +455,65 @@ const styles = StyleSheet.create({
     right: 16,
   },
   cardCategoryBadge: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
     color: '#A7F3D0', // emerald-200
     letterSpacing: 1.2,
     marginBottom: 2,
+    textTransform: 'uppercase',
   },
   cardMainTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -0.4,
   },
   cardBody: {
-    padding: 18,
+    padding: 20,
   },
   cardTagline: {
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#4B5563',
-    lineHeight: 19,
-    marginBottom: 14,
+    lineHeight: 20,
+    marginBottom: 16,
   },
   benefitsContainer: {
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    paddingTop: 14,
-    marginBottom: 16,
-    gap: 10,
+    paddingTop: 16,
+    marginBottom: 18,
+    gap: 12,
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   benefitCheckCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#E8F0E3',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   benefitCheckIcon: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     color: '#174B35',
   },
   benefitText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#1F2937',
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   actionSection: {
     paddingTop: 4,
-    gap: 8,
   },
   primaryActionBtn: {
-    height: 50,
+    height: 52,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -708,42 +532,14 @@ const styles = StyleSheet.create({
     }),
   },
   primaryActionBtnText: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#FFFFFF',
     marginRight: 8,
   },
   primaryActionArrow: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     color: '#FFFFFF',
-  },
-  editBtn: {
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6B7280',
-    textDecorationLine: 'underline',
-  },
-  bottomHelperRow: {
-    marginTop: 28,
-    alignItems: 'center',
-  },
-  backHomeBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  backHomeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#174B35',
   },
 });

@@ -8,6 +8,8 @@ import {
   GetStartedScreen,
 } from './src/screens';
 import Colors from './src/theme/colors';
+import BuyerOnboarding from './src/screens/BuyerOnboarding';
+import { clearSessionCache } from './src/services/authService';
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
@@ -25,9 +27,10 @@ export default function App() {
   const [token, setToken] = useState(null);
   const [registeredParam, setRegisteredParam] = useState(false);
   const [prefilledEmail, setPrefilledEmail] = useState('');
+  const [resumeRole, setResumeRole] = useState(null);
 
   // Ensures non-authenticated users land on 'landing' screen unless navigating to public screens
-  const currentView = !user && !['landing', 'login', 'register', 'get-started'].includes(activeScreen)
+  const currentView = !user && !['landing', 'login', 'register', 'get-started', 'buyer-onboarding', 'seller-onboarding'].includes(activeScreen)
     ? 'landing'
     : activeScreen;
 
@@ -41,6 +44,7 @@ export default function App() {
   };
 
   const handleNavigateToLanding = () => {
+    setResumeRole(null);
     setActiveScreen('landing');
   };
 
@@ -58,9 +62,8 @@ export default function App() {
     setUser(userData);
     setToken(authToken);
     setRegisteredParam(false);
-    // Directly routes to role selection / switching screen (/get-started)
-    // exactly matching frontend login behavior
-    setActiveScreen('get-started');
+    setActiveScreen(resumeRole ? resumeRole + '-onboarding' : 'get-started');
+    setResumeRole(null);
   };
 
   const handleSelectRoleFromGetStarted = (role) => {
@@ -102,6 +105,19 @@ export default function App() {
             onNavigateToLogin={handleNavigateToLogin}
             onNavigateToRegister={handleNavigateToRegister}
             onSelectRole={handleSelectRoleFromGetStarted}
+            onNavigateToOnboarding={(role) => {
+              setActiveScreen(role === 'seller' ? 'seller-onboarding' : 'buyer-onboarding');
+            }}
+            onLogout={handleLogout}
+          />
+        )}
+
+        {['buyer-onboarding', 'seller-onboarding'].includes(currentView) && (
+          <BuyerOnboarding key={currentView} isSeller={currentView === 'seller-onboarding'} user={user} token={token}
+            onChangeRole={handleNavigateToGetStarted}
+            onSwitchRole={() => setActiveScreen(currentView === 'seller-onboarding' ? 'buyer-onboarding' : 'seller-onboarding')}
+            onLogout={() => { clearSessionCache(); handleLogout(); }}
+            onComplete={() => handleSelectRoleFromGetStarted(currentView === 'seller-onboarding' ? 'seller' : 'buyer')}
           />
         )}
 

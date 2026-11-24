@@ -12,7 +12,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import Colors from '../theme/colors';
-import { AuthHeader, FeedbackModal, OtpModal } from '../components';
+import { FeedbackModal, OtpModal } from '../components';
 import {
   registerUser,
   verifyEmailOtp,
@@ -200,7 +200,7 @@ export default function RegisterScreen({
 
   return (
     <ImageBackground
-      source={require('../../assets/images/register-paddy-harvest.webp')}
+      source={require('../../assets/images/login-paddy-distant-farmer.webp')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
@@ -214,32 +214,28 @@ export default function RegisterScreen({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {onNavigateToLanding && (
+              <TouchableOpacity style={styles.backHomeBtn} onPress={onNavigateToLanding}>
+                <Text style={styles.backHomeBtnText}>←  Back</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.card}>
-              {/* Back to Home Button */}
-              {onNavigateToLanding && (
-                <TouchableOpacity
-                  style={styles.backHomeBtn}
-                  onPress={onNavigateToLanding}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.backHomeBtnText}>← Back to Home</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Branding Header */}
-              <AuthHeader
-                badgeText="🌾 Create Account"
-                title="Join Ulavan Santhai"
-                subtitle="Direct Marketplace for Farmers & Buyers"
-              />
+              <View pointerEvents="none" style={styles.sprig}>
+                <View style={styles.stem} />
+                <View style={[styles.leaf, styles.upperLeaf]} />
+                <View style={[styles.leaf, styles.lowerLeaf]} />
+              </View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>ACCOUNT REGISTRATION</Text>
+              </View>
+              <Text accessibilityRole="header" style={styles.title}>Create Your{'\n'}Account</Text>
 
               {/* Full Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  Full Name / Username <Text style={styles.required}>*</Text>
+                  Username <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.fieldIcon}>👤</Text>
+                <View style={[styles.inputWrapper, formData.fullName.length > 0 && styles.filledInput]}>
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. Ramesh Kumar"
@@ -256,8 +252,7 @@ export default function RegisterScreen({
                 <Text style={styles.label}>
                   Email Address <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.fieldIcon}>✉</Text>
+                <View style={[styles.inputWrapper, formData.email.length > 0 && styles.filledInput]}>
                   <TextInput
                     style={styles.input}
                     placeholder="e.g. ramesh@example.com"
@@ -274,15 +269,15 @@ export default function RegisterScreen({
               {/* Mobile Number */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  Mobile Number <Text style={styles.required}>*</Text>
+                  Mobile Number (10 Digits) <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
+                <View style={[styles.inputWrapper, formData.mobile.length > 0 && styles.filledInput]}>
                   <View style={styles.countryCodeBadge}>
                     <Text style={styles.countryCodeText}>+91</Text>
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="10-digit mobile number"
+                    placeholder="9876543210"
                     placeholderTextColor={Colors.textPlaceholder}
                     value={formData.mobile}
                     onChangeText={(val) => updateField('mobile', val)}
@@ -295,13 +290,12 @@ export default function RegisterScreen({
               {/* Password */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  Password (min 8 chars) <Text style={styles.required}>*</Text>
+                  Password <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.fieldIcon}>🔒</Text>
+                <View style={[styles.inputWrapper, formData.password.length > 0 && styles.filledInput]}>
                   <TextInput
                     style={styles.input}
-                    placeholder="••••••••"
+                    placeholder="At least 8 characters"
                     placeholderTextColor={Colors.textPlaceholder}
                     value={formData.password}
                     onChangeText={(val) => updateField('password', val)}
@@ -310,10 +304,12 @@ export default function RegisterScreen({
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowPassword(!showPassword)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.eyeIcon}>{showPassword ? '👁' : '👁‍🗨'}</Text>
+                    <Text style={styles.eyeIcon}>👁︎</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -323,11 +319,10 @@ export default function RegisterScreen({
                 <Text style={styles.label}>
                   Confirm Password <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.fieldIcon}>🔒</Text>
+                <View style={[styles.inputWrapper, formData.confirmPassword.length > 0 && styles.filledInput]}>
                   <TextInput
                     style={styles.input}
-                    placeholder="••••••••"
+                    placeholder="Re-enter password"
                     placeholderTextColor={Colors.textPlaceholder}
                     value={formData.confirmPassword}
                     onChangeText={(val) => updateField('confirmPassword', val)}
@@ -336,18 +331,20 @@ export default function RegisterScreen({
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.eyeIcon}>
-                      {showConfirmPassword ? '👁' : '👁‍🗨'}
-                    </Text>
+                    <Text style={styles.eyeIcon}>👁︎</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Terms Checkbox */}
               <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: formData.agreeTerms }}
                 style={styles.termsRow}
                 onPress={() => updateField('agreeTerms', !formData.agreeTerms)}
                 activeOpacity={0.8}
@@ -364,8 +361,8 @@ export default function RegisterScreen({
                 </View>
                 <Text style={styles.termsText}>
                   I agree to the{' '}
-                  <Text style={styles.termsLink}>Terms of Service</Text> &{' '}
-                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                  <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
+                  <Text style={styles.termsLink}>Privacy Policy</Text> of Ulavan Santhai.
                 </Text>
               </TouchableOpacity>
 
@@ -388,7 +385,7 @@ export default function RegisterScreen({
                   </View>
                 ) : (
                   <View style={styles.loadingRow}>
-                    <Text style={styles.submitButtonText}>Create Account</Text>
+                    <Text style={styles.submitButtonText}>Register Account</Text>
                     <Text style={styles.arrowIcon}>→</Text>
                   </View>
                 )}
@@ -402,10 +399,20 @@ export default function RegisterScreen({
               </View>
 
               {/* Login Link */}
-              <View style={styles.loginPrompt}>
-                <Text style={styles.loginPromptText}>Already have an account? </Text>
-                <TouchableOpacity onPress={onNavigateToLogin}>
-                  <Text style={styles.loginLink}>Sign In →</Text>
+              <View style={styles.loginFooter}>
+                <Text style={styles.loginPrompt}>
+                  Already registered?
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Log in to your account"
+                  onPress={onNavigateToLogin}
+                  activeOpacity={0.7}
+                  style={styles.loginLinkBtn}
+                >
+                  <Text style={styles.loginLink}>
+                    Log in to your account →
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -442,54 +449,57 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  overlayLayer: {
-    flex: 1,
-    backgroundColor: 'rgba(235, 245, 238, 0.72)',
-  },
-  keyboardView: {
-    flex: 1,
-  },
+  overlayLayer: { flex: 1 },
+  keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 28,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 500,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   card: {
-    backgroundColor: Colors.surfaceTranslucent,
+    paddingHorizontal: 28,
+    paddingTop: 39,
+    paddingBottom: 28,
     borderRadius: 28,
-    padding: 24,
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    elevation: 8,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.88)',
+    backgroundColor: 'rgba(249,252,255,0.50)',
+    overflow: 'hidden',
   },
   backHomeBtn: {
     alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
     borderRadius: 16,
-    backgroundColor: '#E8F0E3',
-    marginBottom: 12,
+    marginBottom: 22,
+    backgroundColor: 'rgba(255,255,255,0.75)',
   },
-  backHomeBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
+  backHomeBtnText: { color: Colors.primary, fontSize: 15, fontWeight: '700' },
+  sprig: { position: 'absolute', top: 1, right: 0, width: 86, height: 84 },
+  stem: { position: 'absolute', right: 16, top: 8, width: 1, height: 82, backgroundColor: '#96B849', transform: [{ rotate: '-29deg' }] },
+  leaf: { position: 'absolute', width: 34, height: 20, borderTopLeftRadius: 20, borderBottomRightRadius: 20 },
+  upperLeaf: { right: -3, top: 12, backgroundColor: '#94BD48', transform: [{ rotate: '85deg' }] },
+  lowerLeaf: { right: 25, top: 29, backgroundColor: '#ADD353', transform: [{ rotate: '24deg' }] },
+  badge: {
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.mintPill,
   },
+  badgeText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  title: { fontSize: 38, fontWeight: '800', color: Colors.primary, marginTop: 12, marginBottom: 24 },
   inputGroup: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   label: {
-    fontSize: 12.5,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.textBody,
-    marginBottom: 5,
+    marginBottom: 8,
   },
   required: {
     color: Colors.error,
@@ -497,33 +507,19 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.inputBg,
+    backgroundColor: 'rgba(255,255,255,0.90)',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.inputBorder,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
-  countryCodeBadge: {
-    backgroundColor: Colors.mintPill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  countryCodeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  fieldIcon: {
-    fontSize: 14,
-    marginRight: 8,
-    color: Colors.primary,
-  },
+  filledInput: { backgroundColor: Colors.inputBg },
+  countryCodeBadge: { marginRight: 12 },
+  countryCodeText: { fontSize: 15, fontWeight: '700', color: Colors.textMuted },
   input: {
     flex: 1,
-    height: 46,
-    fontSize: 13.5,
+    height: 50,
+    fontSize: 17,
     color: Colors.textBody,
   },
   eyeButton: {
@@ -541,7 +537,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 6,
+    borderRadius: 3,
     borderWidth: 1.5,
     borderColor: Colors.primary,
     alignItems: 'center',
@@ -558,19 +554,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   termsText: {
-    fontSize: 11.5,
+    fontSize: 15,
     color: Colors.textBody,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 24,
   },
   termsLink: {
+    textDecorationLine: 'underline',
     color: Colors.primary,
     fontWeight: '700',
   },
   submitButton: {
+    backgroundImage: 'linear-gradient(165deg, #1BA54C 0%, #104B32 36%, #104B32 100%)',
     backgroundColor: Colors.primary,
     borderRadius: 16,
-    height: 52,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primaryDark,
@@ -590,7 +588,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: Colors.white,
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '800',
   },
   arrowIcon: {
@@ -601,7 +599,7 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 28,
   },
   dividerLine: {
     flex: 1,
@@ -612,20 +610,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontSize: 12,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  loginFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loginPrompt: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textBody,
   },
-  loginPromptText: {
-    fontSize: 12.5,
-    color: Colors.textMuted,
+  loginLinkBtn: {
+    marginTop: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
   },
   loginLink: {
-    fontSize: 12.5,
+    fontSize: 15,
     fontWeight: '800',
+    textDecorationLine: 'underline',
     color: Colors.primary,
+    textAlign: 'center',
   },
 });

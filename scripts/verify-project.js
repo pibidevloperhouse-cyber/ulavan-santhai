@@ -17,7 +17,7 @@ function getFiles(dir) {
   return results;
 }
 
-const files = ['App.js', 'babel.config.js', ...getFiles('scripts'), ...getFiles('src')];
+const files = ['index.js', 'App.js', 'babel.config.js', ...getFiles('scripts'), ...getFiles('src')];
 let errors = 0;
 let missingAssets = 0;
 
