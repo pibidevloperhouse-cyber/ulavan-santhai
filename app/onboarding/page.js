@@ -13,6 +13,7 @@ import { submitRolePayment } from "@/services/paymentApi";
 import { useSessionUser } from "@/services/sessionAuth";
 import PaymentView from "@/components/onboarding/PaymentView";
 import BrandLogo from "@/components/ui/BrandLogo";
+import { getSellerCategories, getBuyerCategories } from "@/services/categoryStorage";
 
 export const BUYER_TYPES = [
   "Individual",
@@ -249,6 +250,41 @@ function OnboardingContent({ initialRole }) {
   const [buyerType, setBuyerType] = useState("Individual");
   const [sellerType, setSellerType] = useState("Farmer");
 
+  // Live dynamic categories synchronized with Admin Portal
+  const [dynamicSellerCats, setDynamicSellerCats] = useState(getSellerCategories);
+  const [dynamicBuyerCats, setDynamicBuyerCats] = useState(getBuyerCategories);
+
+  useEffect(() => {
+    const handleCategorySync = () => {
+      setDynamicSellerCats(getSellerCategories());
+      setDynamicBuyerCats(getBuyerCategories());
+    };
+    handleCategorySync();
+    window.addEventListener("ulavan_categories_updated", handleCategorySync);
+    window.addEventListener("storage", handleCategorySync);
+    return () => {
+      window.removeEventListener("ulavan_categories_updated", handleCategorySync);
+      window.removeEventListener("storage", handleCategorySync);
+    };
+  }, []);
+
+  const displayedBuyerTypes = dynamicBuyerCats
+    .filter((c) => c.status === "Active")
+    .map((c) => c.code || c.name);
+  const finalBuyerTypes = Array.from(new Set([...displayedBuyerTypes, ...BUYER_TYPES]));
+
+  const displayedSellerTypes = dynamicSellerCats
+    .filter((c) => c.status === "Active")
+    .map((c) => c.code || c.name);
+  const finalSellerTypes = Array.from(new Set([...displayedSellerTypes, ...SELLER_TYPES]));
+
+  const selectedSellerCategoryObj = dynamicSellerCats.find(
+    (c) => (c.code || c.name) === sellerType || c.name === sellerType
+  );
+  const selectedBuyerCategoryObj = dynamicBuyerCats.find(
+    (c) => (c.code || c.name) === buyerType || c.name === buyerType
+  );
+
   // Dynamic Buyer Form State - initialized clean
   const [buyerData, setBuyerData] = useState(createInitialBuyerData);
 
@@ -349,6 +385,10 @@ function OnboardingContent({ initialRole }) {
         setFormError("Please enter your Organization / Applicant Name.");
         return;
       }
+      if (!BUYER_TYPES.includes(buyerType) && !buyerData.businessName?.trim() && !buyerData.otherOrgName?.trim()) {
+        setFormError(`Please enter your Organization / Entity Name for ${buyerType}.`);
+        return;
+      }
     } else {
       if (!sellerData.district) {
         setFormError("Please select your farm/operating district.");
@@ -404,6 +444,10 @@ function OnboardingContent({ initialRole }) {
       }
       if (sellerType === "Other" && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
         setFormError("Please enter your 15-digit GSTIN.");
+        return;
+      }
+      if (!SELLER_TYPES.includes(sellerType) && !sellerData.otherSellerName?.trim() && !sellerData.farmerFarmName?.trim()) {
+        setFormError(`Please enter your Enterprise or Farm Name for ${sellerType}.`);
         return;
       }
     }
@@ -1000,8 +1044,8 @@ function OnboardingContent({ initialRole }) {
                   <label className="block text-sm font-bold text-gray-800 mb-2.5">
                     Buyer Classification <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-                    {BUYER_TYPES.map((type) => {
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                    {finalBuyerTypes.map((type) => {
                       const isSelected = buyerType === type;
                       return (
                         <button
@@ -1202,6 +1246,116 @@ function OnboardingContent({ initialRole }) {
                   </div>
                 )}
 
+                {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
+                {!BUYER_TYPES.includes(buyerType) && (
+                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>{buyerType} Procurement Form</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
+                        Admin Synced Category
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormInput
+                        label="Business / Enterprise Name"
+                        required
+                        placeholder={`e.g. Prime ${buyerType} Enterprises`}
+                        value={buyerData.businessName}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, businessName: e.target.value }))}
+                      />
+                      <FormInput
+                        label="Designation / Role"
+                        placeholder="e.g. Managing Partner / Procurement Lead"
+                        value={buyerData.businessDesignation}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, businessDesignation: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Dynamic subcategory pills if configured by Admin */}
+                    {selectedBuyerCategoryObj?.subcategories?.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Commodities &amp; Products of Interest:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedBuyerCategoryObj.subcategories.map((sub) => {
+                            const isChecked = buyerData.businessCommodities?.includes(sub);
+                            return (
+                              <button
+                                key={sub}
+                                type="button"
+                                onClick={() => {
+                                  setBuyerData((prev) => {
+                                    const current = prev.businessCommodities || [];
+                                    const next = current.includes(sub)
+                                      ? current.filter((c) => c !== sub)
+                                      : [...current, sub];
+                                    return { ...prev, businessCommodities: next };
+                                  });
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                  isChecked
+                                    ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
+                                    : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
+                                }`}
+                              >
+                                {isChecked && "✓ "}
+                                {sub}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Are you GST Registered?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="customBuyerIsGst"
+                              value="Yes"
+                              checked={buyerData.businessIsGst === "Yes"}
+                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="customBuyerIsGst"
+                              value="No"
+                              checked={buyerData.businessIsGst === "No"}
+                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "No", businessGstin: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {buyerData.businessIsGst === "Yes" && (
+                        <FormInput
+                          label="GSTIN (15 Digits)"
+                          required
+                          maxLength={15}
+                          placeholder="e.g. 33AAAAA0000A1Z5"
+                          value={buyerData.businessGstin}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, businessGstin: e.target.value.toUpperCase() }))}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Common Location Details for Buyer */}
                 <div className="pt-4 border-t border-gray-200/80 space-y-4">
                   <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
@@ -1247,8 +1401,8 @@ function OnboardingContent({ initialRole }) {
                   <label className="block text-sm font-bold text-gray-800 mb-2.5">
                     Seller Classification <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {SELLER_TYPES.map((type) => {
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                    {finalSellerTypes.map((type) => {
                       const isSelected = sellerType === type;
                       return (
                         <button
@@ -1704,6 +1858,116 @@ function OnboardingContent({ initialRole }) {
                             <input
                               type="radio"
                               name="otherIsGst"
+                              value="No"
+                              checked={sellerData.otherIsGst === "No"}
+                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">No</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {sellerData.otherIsGst === "Yes" && (
+                        <FormInput
+                          label="GSTIN (15 Digits)"
+                          required
+                          maxLength={15}
+                          placeholder="e.g. 33AAAAA0000A1Z5"
+                          value={sellerData.otherGstin}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
+                {!SELLER_TYPES.includes(sellerType) && (
+                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>{sellerType} Specialized Form</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
+                        Admin Synced Category
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormInput
+                        label="Farm / Enterprise Legal Name"
+                        required
+                        placeholder={`e.g. Kongu ${sellerType} Collective`}
+                        value={sellerData.otherSellerName}
+                        onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
+                      />
+                      <FormInput
+                        label="Primary Agricultural Activity"
+                        placeholder="e.g. Cultivation, processing & direct producer supply"
+                        value={sellerData.otherActivity}
+                        onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
+                      />
+                    </div>
+
+                    {/* Dynamic subcategory pills if configured by Admin */}
+                    {selectedSellerCategoryObj?.subcategories?.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Available Crops / Produce / Products:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedSellerCategoryObj.subcategories.map((sub) => {
+                            const isChecked = sellerData.farmerCrops?.includes(sub);
+                            return (
+                              <button
+                                key={sub}
+                                type="button"
+                                onClick={() => {
+                                  setSellerData((prev) => {
+                                    const current = prev.farmerCrops || [];
+                                    const next = current.includes(sub)
+                                      ? current.filter((c) => c !== sub)
+                                      : [...current, sub];
+                                    return { ...prev, farmerCrops: next };
+                                  });
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                  isChecked
+                                    ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
+                                    : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
+                                }`}
+                              >
+                                {isChecked && "✓ "}
+                                {sub}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">
+                          Are you GST Registered?
+                        </label>
+                        <div className="flex items-center gap-6 h-11">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="customSellerIsGst"
+                              value="Yes"
+                              checked={sellerData.otherIsGst === "Yes"}
+                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
+                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-gray-800">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="radio"
+                              name="customSellerIsGst"
                               value="No"
                               checked={sellerData.otherIsGst === "No"}
                               onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
