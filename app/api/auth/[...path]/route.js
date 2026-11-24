@@ -72,6 +72,7 @@ async function proxyAuthRequest(request, { params }) {
       headers: responseHeaders,
     });
   } catch (err) {
+    console.error(`\x1b[31m[BACKEND PROXY FAILED]\x1b[0m ${targetUrl} - ${err.message}`);
     return NextResponse.json(
       {
         success: false,

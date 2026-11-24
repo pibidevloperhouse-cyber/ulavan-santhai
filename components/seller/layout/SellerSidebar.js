@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -63,27 +64,28 @@ export default function SellerSidebar({
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#132E20] text-white select-none">
       {/* Brand Header */}
-      <div className="p-5 pb-4 border-b border-[#1D4430] flex items-center justify-between shrink-0">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded bg-[#24583B] flex items-center justify-center font-black text-white text-base shadow-xs">
-              U
-            </div>
-            <span className="font-bold tracking-tight text-white text-base">
-              Ulavan Santhai
-            </span>
-          </div>
-          <div className="text-[11px] font-semibold tracking-wider text-[#7E9E81] uppercase mt-2">
+      <div className="bg-white px-4 py-3.5 border-b border-gray-200 flex items-center justify-between shrink-0">
+        <Link href="/seller/dashboard" className="flex items-center justify-between w-full group cursor-pointer">
+          <Image
+            src="/images/ulavan-mart-animated.gif"
+            alt="Ulavan Mart"
+            width={719}
+            height={234}
+            unoptimized
+            priority
+            className="w-[145px] h-auto object-contain transition-transform group-hover:scale-[1.02]"
+          />
+          <span className="text-[10px] font-extrabold tracking-widest text-[#174B35] uppercase px-2 py-0.5 rounded-md bg-[#E8F0E3] border border-[#729B59]/40 shrink-0 ml-2">
             SELLER
-          </div>
-        </div>
+          </span>
+        </Link>
 
         {/* Close button on mobile */}
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-md text-[#7E9E81] hover:text-white hover:bg-[#1D4430] cursor-pointer"
+            className="lg:hidden ml-2 p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />

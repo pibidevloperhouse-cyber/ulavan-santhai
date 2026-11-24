@@ -1,28 +1,69 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import ProductFilters from "@/components/seller/products/ProductFilters";
 import ProductTable from "@/components/seller/products/ProductTable";
 import ProductViewModal from "@/components/seller/products/ProductViewModal";
-import { INITIAL_PRODUCTS } from "@/data/sellerPortalData";
+import {
+  getSellerProducts,
+  toggleProductStatus,
+  deleteSellerProduct,
+} from "@/services/productApi";
 
 export default function MyProductsPage() {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchName, setSearchName] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All categories");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [availabilityFilter, setAvailabilityFilter] = useState("All");
   const [selectedProductForView, setSelectedProductForView] = useState(null);
 
+  const loadProducts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await getSellerProducts();
+      if (res.success && Array.isArray(res.data)) {
+        setProducts(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function init() {
+      try {
+        const res = await getSellerProducts();
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setProducts(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load products:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    init();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Dynamic filter processing
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
       if (
         searchName &&
-        !item.name.toLowerCase().includes(searchName.toLowerCase()) &&
-        !item.type.toLowerCase().includes(searchName.toLowerCase())
+        !item.name?.toLowerCase().includes(searchName.toLowerCase()) &&
+        !item.type?.toLowerCase().includes(searchName.toLowerCase())
       ) {
         return false;
       }
@@ -48,21 +89,25 @@ export default function MyProductsPage() {
     });
   }, [products, searchName, categoryFilter, statusFilter, availabilityFilter]);
 
-  const handleToggleStatus = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === id) {
-          const nextStatus =
-            p.listingStatus === "Published" ? "Inactive" : "Published";
-          return { ...p, listingStatus: nextStatus };
-        }
-        return p;
-      })
-    );
+  const handleToggleStatus = async (id) => {
+    const target = products.find((p) => p.id === id);
+    if (!target) return;
+    const nextStatus =
+      target.listingStatus === "Published" ? "INACTIVE" : "PUBLISHED";
+
+    const res = await toggleProductStatus(id, nextStatus);
+    if (res.success) {
+      loadProducts();
+    }
   };
 
-  const handleDelete = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const handleDelete = async (id) => {
+    if (confirm("Are you sure you want to delete this product listing?")) {
+      const res = await deleteSellerProduct(id);
+      if (res.success) {
+        loadProducts();
+      }
+    }
   };
 
   return (

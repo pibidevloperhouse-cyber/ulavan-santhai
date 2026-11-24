@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import SellerSidebar from "@/components/seller/layout/SellerSidebar";
 import { SellerProvider, useSeller } from "@/components/seller/layout/SellerContext";
 import { useSessionUser } from "@/services/sessionAuth";
@@ -14,12 +16,12 @@ function SellerLayoutShell({ children }) {
   return (
     <div className="min-h-screen bg-[#FBF9F4] text-[#1F2922]">
       {/* Mobile Top Header - visible only on mobile screens */}
-      <div className="lg:hidden bg-[#132E20] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
-        <div className="flex items-center gap-2.5">
+      <div className="lg:hidden bg-white text-gray-900 px-4 py-2.5 flex items-center justify-between sticky top-0 z-40 border-b border-gray-200 shadow-xs">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={openMobileMenu}
-            className="p-1.5 rounded-lg text-white hover:bg-[#1D4430] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="Open navigation menu"
           >
             <svg
@@ -36,20 +38,23 @@ function SellerLayoutShell({ children }) {
               />
             </svg>
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-[#24583B] flex items-center justify-center font-bold text-xs text-white">
-              U
-            </div>
-            <span className="font-bold text-sm tracking-tight text-white">
-              Ulavan Santhai
-            </span>
-            <span className="text-[10px] uppercase font-semibold text-[#7E9E81] tracking-wider ml-1">
+          <Link href="/seller/dashboard" className="flex items-center gap-2 cursor-pointer">
+            <Image
+              src="/images/ulavan-mart-animated.gif"
+              alt="Ulavan Mart"
+              width={719}
+              height={234}
+              unoptimized
+              priority
+              className="w-[130px] h-auto object-contain"
+            />
+            <span className="text-[10px] uppercase font-bold text-[#174B35] tracking-wider px-1.5 py-0.5 rounded bg-[#E8F0E3] border border-[#729B59]/40">
               SELLER
             </span>
-          </div>
+          </Link>
         </div>
 
-        <div className="w-7 h-7 rounded-full bg-[#24583B] text-white font-bold text-xs flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full bg-[#E8F0E3] text-[#174B35] font-bold text-xs flex items-center justify-center border border-[#729B59]/30">
           {profile.avatarInitials || "S"}
         </div>
       </div>

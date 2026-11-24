@@ -28,13 +28,34 @@ export async function apiFetch(endpoint, options = {}) {
     ...options.headers,
   };
 
-  // Attach session token if available
+  // Attach session token & seller id if available
   if (typeof window !== "undefined") {
     const token =
       sessionStorage.getItem("ulavan_auth_token") ||
-      localStorage.getItem("ulavan_auth_token");
+      localStorage.getItem("ulavan_auth_token") ||
+      sessionStorage.getItem("token") ||
+      localStorage.getItem("token");
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    try {
+      const rawUser =
+        sessionStorage.getItem("ulavan_user") ||
+        sessionStorage.getItem("ulavan_registered_user") ||
+        localStorage.getItem("ulavan_registered_user") ||
+        "";
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        const sid = u.id || u.userId || u.sellerId;
+        if (sid) {
+          headers["x-seller-id"] = sid;
+          headers["x-user-id"] = sid;
+        }
+      }
+    } catch {
+      // ignore
     }
   }
 
