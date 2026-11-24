@@ -38,7 +38,19 @@ This branch (`mobile-app`) was created by converting the existing **Login** and 
   * **Farmer / Seller (உழவர் / விற்பனையாளர்)**
   * **Buyer / Wholesaler (வாங்குபவர்)**
 * Live backend server configuration indicator with on-tap IP customization.
+* Shortcut banner to access `/get-started` for role switching.
 * Secure Sign-out action.
+
+### 5. 🌾 Role Selection & Onboarding (`src/screens/GetStartedScreen.js`)
+* Faithful mobile adaptation of `frontend` branch `/get-started` screen.
+* Buyer and Seller dual cards with high-resolution imagery and badge indicators.
+* Live status check query to `GET /api/v1/user/me`.
+* Verified Plan Active pulsing status indicators.
+* Direct workspace and onboarding navigation.
+
+### 6. 🏠 Landing Experience (`src/screens/LandingScreen.js`)
+* Responsive mobile landing screen with hero section, audience cards, categories, how-it-works, plans, and footer.
+* Interactive drawer navbar with quick jump anchors and role access.
 
 ---
 
@@ -106,19 +118,30 @@ npm start
 │   └── splash.png
 ├── src/
 │   ├── components/
+│   │   ├── landing/              # Modular landing page sections (Hero, About, Plans, etc.)
 │   │   ├── AuthHeader.js         # Header with emblem, badge, and titles
 │   │   ├── FeedbackModal.js      # Success / Error / Info popup modal
-│   │   └── OtpModal.js           # 6-digit interactive email verification modal
+│   │   ├── OtpModal.js           # 6-digit interactive email verification modal
+│   │   ├── ServerConfigModal.js  # Dynamic IP & backend configuration dialog
+│   │   └── index.js              # Clean barrel exports for components
 │   ├── config/
-│   │   └── api.js                # Dynamic backend base URL & endpoints
+│   │   ├── api.js                # Dynamic backend base URL & endpoints
+│   │   └── index.js              # Config barrel exports
+│   ├── context/
+│   │   └── index.js              # Application context definitions
 │   ├── screens/
+│   │   ├── LandingScreen.js      # Mobile agricultural marketplace landing screen
+│   │   ├── GetStartedScreen.js   # Step 2 role selector (Buyer vs Seller)
 │   │   ├── LoginScreen.js        # Mobile login screen
 │   │   ├── RegisterScreen.js     # Mobile registration screen
-│   │   └── HomeScreen.js         # Welcome & role selection dashboard
+│   │   ├── HomeScreen.js         # Welcome & role selection dashboard
+│   │   └── index.js              # Screen barrel exports
 │   ├── services/
-│   │   └── authService.js        # Backend fetch client & session handling
+│   │   ├── authService.js        # Backend fetch client & session handling
+│   │   └── index.js              # Services barrel exports
 │   └── theme/
-│       └── colors.js             # Ulavan Santhai green agricultural palette
+│       ├── colors.js             # Ulavan Santhai green agricultural palette
+│       └── index.js              # Theme barrel exports
 ├── scripts/
 │   └── set-mobile-ip.js          # CLI script to detect and apply host Wi-Fi IP
 ├── App.js                        # App root with navigation & screen state

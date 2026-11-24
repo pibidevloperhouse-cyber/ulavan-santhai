@@ -9,7 +9,6 @@ import {
   StatusBar,
   Platform,
   Animated,
-  Alert,
 } from 'react-native';
 import Colors from '../theme/colors';
 import { fetchLiveUser, getSessionCache } from '../services/authService';

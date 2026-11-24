@@ -12,10 +12,12 @@ import {
   ImageBackground,
 } from 'react-native';
 import Colors from '../theme/colors';
-import AuthHeader from '../components/AuthHeader';
-import FeedbackModal from '../components/FeedbackModal';
-import ServerConfigModal from '../components/ServerConfigModal';
-import OtpModal from '../components/OtpModal';
+import {
+  AuthHeader,
+  FeedbackModal,
+  ServerConfigModal,
+  OtpModal,
+} from '../components';
 import { loginUser, verifyEmailOtp, resendEmailOtp } from '../services/authService';
 import { getBaseUrl } from '../config/api';
 

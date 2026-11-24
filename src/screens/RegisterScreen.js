@@ -12,9 +12,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import Colors from '../theme/colors';
-import AuthHeader from '../components/AuthHeader';
-import FeedbackModal from '../components/FeedbackModal';
-import OtpModal from '../components/OtpModal';
+import { AuthHeader, FeedbackModal, OtpModal } from '../components';
 import {
   registerUser,
   verifyEmailOtp,

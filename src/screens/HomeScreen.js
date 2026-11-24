@@ -8,8 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import Colors from '../theme/colors';
-import AuthHeader from '../components/AuthHeader';
-import ServerConfigModal from '../components/ServerConfigModal';
+import { AuthHeader, ServerConfigModal } from '../components';
 import { getBaseUrl } from '../config/api';
 import { clearSessionCache } from '../services/authService';
 

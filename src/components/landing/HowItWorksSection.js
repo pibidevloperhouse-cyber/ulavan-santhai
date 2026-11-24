@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import Colors from '../../theme/colors';
 
 const JOURNEYS = {
   buyer: [

@@ -4,18 +4,18 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
-  Platform,
 } from 'react-native';
-import LandingNavbar from '../components/landing/LandingNavbar';
-import HeroSection from '../components/landing/HeroSection';
-import AboutSection from '../components/landing/AboutSection';
-import AudienceSection from '../components/landing/AudienceSection';
-import HowItWorksSection from '../components/landing/HowItWorksSection';
-import CategoriesSection from '../components/landing/CategoriesSection';
-import WhyChooseUsSection from '../components/landing/WhyChooseUsSection';
-import PlansSection from '../components/landing/PlansSection';
-import MarketplaceFooter from '../components/landing/MarketplaceFooter';
-import Colors from '../theme/colors';
+import {
+  LandingNavbar,
+  HeroSection,
+  AboutSection,
+  AudienceSection,
+  HowItWorksSection,
+  CategoriesSection,
+  WhyChooseUsSection,
+  PlansSection,
+  MarketplaceFooter,
+} from '../components/landing';
 
 export default function LandingScreen({
   onNavigateToLogin,

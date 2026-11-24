@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
-import Colors from '../../theme/colors';
 
 const FEATURES = [
   {

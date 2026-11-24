@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import Colors from '../../theme/colors';
 
 export default function PlansSection({ onNavigateToRegister }) {
   return (

@@ -1,0 +1,10 @@
+export { default as LandingNavbar } from './LandingNavbar';
+export { default as HeroSection } from './HeroSection';
+export { default as AboutSection } from './AboutSection';
+export { default as AudienceSection } from './AudienceSection';
+export { default as HowItWorksSection } from './HowItWorksSection';
+export { default as CategoriesSection } from './CategoriesSection';
+export { default as WhyChooseUsSection } from './WhyChooseUsSection';
+export { default as PlansSection } from './PlansSection';
+export { default as FinalCTASection } from './FinalCTASection';
+export { default as MarketplaceFooter } from './MarketplaceFooter';

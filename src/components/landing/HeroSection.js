@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import Colors from '../../theme/colors';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -61,16 +60,10 @@ export default function HeroSection({
 
             <TouchableOpacity
               style={styles.secondaryBtn}
-              onPress={() => {
-                if (onNavigateToGetStarted) {
-                  onNavigateToGetStarted();
-                } else if (onNavigateToPlans) {
-                  onNavigateToPlans();
-                }
-              }}
+              onPress={() => onNavigateToRegister('SELLER')}
               activeOpacity={0.85}
             >
-              <Text style={styles.secondaryBtnText}>Join / Get Started ↗</Text>
+              <Text style={styles.secondaryBtnText}>Get Started ↗</Text>
             </TouchableOpacity>
           </View>
 

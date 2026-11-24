@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "set-ip": "node scripts/set-mobile-ip.js"
+    "set-ip": "node scripts/set-mobile-ip.js",
+    "verify": "node scripts/verify-project.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "^58.0.17",

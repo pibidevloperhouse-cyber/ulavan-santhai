@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import Colors from '../../theme/colors';
 
 const NAV_LINKS = [
   { id: 'home', label: 'Home' },
@@ -106,11 +105,7 @@ export default function LandingNavbar({
               style={styles.authSignUpBtn}
               onPress={() => {
                 setMenuOpen(false);
-                if (onNavigateToGetStarted) {
-                  onNavigateToGetStarted();
-                } else if (onNavigateToRegister) {
-                  onNavigateToRegister();
-                }
+                onNavigateToRegister();
               }}
               activeOpacity={0.8}
             >
