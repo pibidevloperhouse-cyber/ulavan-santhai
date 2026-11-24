@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StatusBar, StyleSheet, Platform, LogBox } from 'react-native';
+import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -15,65 +16,84 @@ LogBox.ignoreLogs([
  * Cross-platform React Native / Expo implementation
  */
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('login'); // 'login' | 'register' | 'home'
+  // Mobile app opens to landing page as default
+  const [activeScreen, setActiveScreen] = useState('landing'); // 'landing' | 'login' | 'register' | 'home'
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [registeredParam, setRegisteredParam] = useState(false);
   const [prefilledEmail, setPrefilledEmail] = useState('');
 
-  const handleNavigateToRegister = () => {
+  // Ensures non-authenticated users land on 'landing' screen
+  const currentView = !user && !['landing', 'login', 'register'].includes(activeScreen)
+    ? 'landing'
+    : activeScreen;
+
+  const handleNavigateToRegister = (role) => {
     setRegisteredParam(false);
-    setCurrentScreen('register');
+    setActiveScreen('register');
   };
 
   const handleNavigateToLogin = () => {
-    setCurrentScreen('login');
+    setActiveScreen('login');
+  };
+
+  const handleNavigateToLanding = () => {
+    setActiveScreen('landing');
   };
 
   const handleRegisterSuccess = (email) => {
     setPrefilledEmail(email);
     setRegisteredParam(true);
-    setCurrentScreen('login');
+    setActiveScreen('login');
   };
 
   const handleLoginSuccess = (userData, authToken) => {
     setUser(userData);
     setToken(authToken);
     setRegisteredParam(false);
-    setCurrentScreen('home');
+    setActiveScreen('home');
   };
 
   const handleLogout = () => {
     setUser(null);
     setToken(null);
     setRegisteredParam(false);
-    setCurrentScreen('login');
+    setActiveScreen('landing');
   };
 
   return (
     <View style={styles.safeArea}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={Colors.background}
+        backgroundColor={currentView === 'landing' ? '#FFFFFF' : Colors.background}
       />
       <View style={styles.container}>
-        {currentScreen === 'login' && (
+        {currentView === 'landing' && (
+          <LandingScreen
+            onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToRegister={handleNavigateToRegister}
+          />
+        )}
+
+        {currentView === 'login' && (
           <LoginScreen
             onNavigateToRegister={handleNavigateToRegister}
+            onNavigateToLanding={handleNavigateToLanding}
             onLoginSuccess={handleLoginSuccess}
             registeredParam={registeredParam}
             prefilledEmail={prefilledEmail}
           />
         )}
 
-        {currentScreen === 'register' && (
+        {currentView === 'register' && (
           <RegisterScreen
             onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToLanding={handleNavigateToLanding}
             onRegisterSuccess={handleRegisterSuccess}
           />
         )}
 
-        {currentScreen === 'home' && (
+        {currentView === 'home' && (
           <HomeScreen
             user={user}
             token={token}

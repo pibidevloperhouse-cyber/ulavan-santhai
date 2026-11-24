@@ -23,6 +23,7 @@ import {
 
 export default function RegisterScreen({
   onNavigateToLogin,
+  onNavigateToLanding,
   onRegisterSuccess,
 }) {
   const [formData, setFormData] = useState({
@@ -216,6 +217,17 @@ export default function RegisterScreen({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.card}>
+              {/* Back to Home Button */}
+              {onNavigateToLanding && (
+                <TouchableOpacity
+                  style={styles.backHomeBtn}
+                  onPress={onNavigateToLanding}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.backHomeBtnText}>← Back to Home</Text>
+                </TouchableOpacity>
+              )}
+
               {/* Branding Header */}
               <AuthHeader
                 badgeText="🌾 Create Account"
@@ -456,6 +468,21 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  backHomeBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: '#E8F0E3',
+    marginBottom: 12,
+  },
+  backHomeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   inputGroup: {
     marginBottom: 14,
