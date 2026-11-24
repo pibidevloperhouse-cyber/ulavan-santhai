@@ -100,7 +100,7 @@ export default function ServerConfigModal({ visible, onClose, onSaved }) {
             onChangeText={setApiUrl}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="http://192.168.1.74:5000"
+            placeholder="http://192.168.1.56:5000"
             placeholderTextColor={Colors.textPlaceholder}
           />
 

@@ -4,6 +4,7 @@ import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import GetStartedScreen from './src/screens/GetStartedScreen';
 import Colors from './src/theme/colors';
 
 LogBox.ignoreLogs([
@@ -17,14 +18,14 @@ LogBox.ignoreLogs([
  */
 export default function App() {
   // Mobile app opens to landing page as default
-  const [activeScreen, setActiveScreen] = useState('landing'); // 'landing' | 'login' | 'register' | 'home'
+  const [activeScreen, setActiveScreen] = useState('landing'); // 'landing' | 'login' | 'register' | 'get-started' | 'home'
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [registeredParam, setRegisteredParam] = useState(false);
   const [prefilledEmail, setPrefilledEmail] = useState('');
 
-  // Ensures non-authenticated users land on 'landing' screen
-  const currentView = !user && !['landing', 'login', 'register'].includes(activeScreen)
+  // Ensures non-authenticated users land on 'landing' screen unless navigating to public screens
+  const currentView = !user && !['landing', 'login', 'register', 'get-started'].includes(activeScreen)
     ? 'landing'
     : activeScreen;
 
@@ -41,6 +42,10 @@ export default function App() {
     setActiveScreen('landing');
   };
 
+  const handleNavigateToGetStarted = () => {
+    setActiveScreen('get-started');
+  };
+
   const handleRegisterSuccess = (email) => {
     setPrefilledEmail(email);
     setRegisteredParam(true);
@@ -51,6 +56,17 @@ export default function App() {
     setUser(userData);
     setToken(authToken);
     setRegisteredParam(false);
+    // Directly routes to role selection / switching screen (/get-started)
+    // exactly matching frontend login behavior
+    setActiveScreen('get-started');
+  };
+
+  const handleSelectRoleFromGetStarted = (role) => {
+    setUser((prev) => ({
+      ...(prev || {}),
+      role: role === 'seller' ? 'SELLER' : 'BUYER',
+      activeRole: role,
+    }));
     setActiveScreen('home');
   };
 
@@ -65,13 +81,25 @@ export default function App() {
     <View style={styles.safeArea}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={currentView === 'landing' ? '#FFFFFF' : Colors.background}
+        backgroundColor={currentView === 'landing' || currentView === 'get-started' ? '#FFFFFF' : Colors.background}
       />
       <View style={styles.container}>
         {currentView === 'landing' && (
           <LandingScreen
             onNavigateToLogin={handleNavigateToLogin}
             onNavigateToRegister={handleNavigateToRegister}
+            onNavigateToGetStarted={handleNavigateToGetStarted}
+          />
+        )}
+
+        {currentView === 'get-started' && (
+          <GetStartedScreen
+            user={user}
+            token={token}
+            onNavigateToLanding={handleNavigateToLanding}
+            onNavigateToLogin={handleNavigateToLogin}
+            onNavigateToRegister={handleNavigateToRegister}
+            onSelectRole={handleSelectRoleFromGetStarted}
           />
         )}
 
@@ -98,6 +126,7 @@ export default function App() {
             user={user}
             token={token}
             onLogout={handleLogout}
+            onNavigateToGetStarted={handleNavigateToGetStarted}
           />
         )}
       </View>

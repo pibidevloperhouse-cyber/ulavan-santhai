@@ -279,11 +279,69 @@ export const resendEmailOtp = async ({ email }) => {
   }
 };
 
+/**
+ * 5. Fetch Live User Profile & Onboarding Status
+ * Calls GET /api/v1/user/me to sync live buyer/seller status
+ * @param {string} [tokenOverride]
+ */
+export const fetchLiveUser = async (tokenOverride) => {
+  const token = tokenOverride || sessionCache.token;
+  if (!token) {
+    return {
+      success: false,
+      message: 'No active session token.',
+      data: sessionCache.user || null,
+    };
+  }
+
+  const baseUrl = getBaseUrl();
+  const endpoint = `${baseUrl}${API_ENDPOINTS.USER_ME}`;
+
+  try {
+    const response = await requestWithTimeout(endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }, 8000);
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data) {
+      return {
+        success: false,
+        message: data?.message || 'Could not fetch live status.',
+        data: sessionCache.user || null,
+      };
+    }
+
+    const userData = data.data || data.user || data;
+    if (userData && typeof userData === 'object') {
+      sessionCache.user = {
+        ...(sessionCache.user || {}),
+        ...userData,
+      };
+    }
+
+    return {
+      success: true,
+      data: userData,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message,
+      data: sessionCache.user || null,
+    };
+  }
+};
+
 export default {
   loginUser,
   registerUser,
   verifyEmailOtp,
   resendEmailOtp,
+  fetchLiveUser,
   getSessionCache,
   clearSessionCache,
 };

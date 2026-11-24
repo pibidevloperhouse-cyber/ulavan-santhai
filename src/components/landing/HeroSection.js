@@ -15,6 +15,7 @@ export default function HeroSection({
   onScrollToJourney,
   onNavigateToRegister,
   onNavigateToPlans,
+  onNavigateToGetStarted,
 }) {
   return (
     <View style={styles.container}>
@@ -60,10 +61,16 @@ export default function HeroSection({
 
             <TouchableOpacity
               style={styles.secondaryBtn}
-              onPress={onNavigateToPlans}
+              onPress={() => {
+                if (onNavigateToGetStarted) {
+                  onNavigateToGetStarted();
+                } else if (onNavigateToPlans) {
+                  onNavigateToPlans();
+                }
+              }}
               activeOpacity={0.85}
             >
-              <Text style={styles.secondaryBtnText}>Start selling ↗</Text>
+              <Text style={styles.secondaryBtnText}>Join / Get Started ↗</Text>
             </TouchableOpacity>
           </View>
 

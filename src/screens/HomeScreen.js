@@ -13,7 +13,7 @@ import ServerConfigModal from '../components/ServerConfigModal';
 import { getBaseUrl } from '../config/api';
 import { clearSessionCache } from '../services/authService';
 
-export default function HomeScreen({ user, token, onLogout }) {
+export default function HomeScreen({ user, token, onLogout, onNavigateToGetStarted }) {
   const [selectedRole, setSelectedRole] = useState(
     user?.role === 'SELLER' ? 'seller' : 'buyer'
   );
@@ -77,6 +77,23 @@ export default function HomeScreen({ user, token, onLogout }) {
 
         {/* Role Selection / Switcher */}
         <Text style={styles.sectionHeader}>Choose Your Operating Mode</Text>
+
+        {onNavigateToGetStarted && (
+          <TouchableOpacity
+            style={styles.switchRoleBanner}
+            onPress={onNavigateToGetStarted}
+            activeOpacity={0.85}
+          >
+            <View style={styles.switchRoleLeft}>
+              <Text style={styles.switchRoleIcon}>🌾</Text>
+              <View>
+                <Text style={styles.switchRoleTitle}>Marketplace Role Selection</Text>
+                <Text style={styles.switchRoleSubtitle}>Switch role or re-fill form in /get-started</Text>
+              </View>
+            </View>
+            <Text style={styles.switchRoleArrow}>→</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.roleOptions}>
           {/* Farmer / Seller Card */}
@@ -383,5 +400,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.white,
     fontWeight: '700',
+  },
+  switchRoleBanner: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  switchRoleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  switchRoleIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  switchRoleTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  switchRoleSubtitle: {
+    fontSize: 11.5,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  switchRoleArrow: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: Colors.primary,
+    marginLeft: 10,
   },
 });

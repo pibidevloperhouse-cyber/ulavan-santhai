@@ -24,6 +24,7 @@ export default function LandingNavbar({
   onScrollToSection,
   onNavigateToLogin,
   onNavigateToRegister,
+  onNavigateToGetStarted,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -105,11 +106,15 @@ export default function LandingNavbar({
               style={styles.authSignUpBtn}
               onPress={() => {
                 setMenuOpen(false);
-                onNavigateToRegister();
+                if (onNavigateToGetStarted) {
+                  onNavigateToGetStarted();
+                } else if (onNavigateToRegister) {
+                  onNavigateToRegister();
+                }
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.authSignUpText}>Sign Up</Text>
+              <Text style={styles.authSignUpText}>Get Started</Text>
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowText}>↗</Text>
               </View>

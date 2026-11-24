@@ -20,6 +20,7 @@ import Colors from '../theme/colors';
 export default function LandingScreen({
   onNavigateToLogin,
   onNavigateToRegister,
+  onNavigateToGetStarted,
 }) {
   const scrollRef = useRef(null);
   const sectionPositions = useRef({});
@@ -55,6 +56,7 @@ export default function LandingScreen({
         onScrollToSection={scrollToSection}
         onNavigateToLogin={onNavigateToLogin}
         onNavigateToRegister={onNavigateToRegister}
+        onNavigateToGetStarted={onNavigateToGetStarted}
       />
 
       {/* Main Landing Scrollable Body */}
@@ -85,6 +87,7 @@ export default function LandingScreen({
             onScrollToJourney={() => scrollToSection('journey')}
             onNavigateToRegister={onNavigateToRegister}
             onNavigateToPlans={() => scrollToSection('plans')}
+            onNavigateToGetStarted={onNavigateToGetStarted}
           />
         </View>
 

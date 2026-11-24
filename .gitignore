@@ -19,7 +19,10 @@ web-build/
 *.orig.*
 
 # Environment
+.env
 .env*.local
+.env.*
+!.env.example
 
 # Debug
 npm-debug.log*

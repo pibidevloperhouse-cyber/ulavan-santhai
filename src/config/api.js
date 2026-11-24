@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
  * Default LAN IP from frontend .env: 192.168.1.50
  * Port: 5000 (Express Backend)
  */
-const DEFAULT_LAN_IP = '192.168.1.74';
+const DEFAULT_LAN_IP = '192.168.1.56';
 const DEFAULT_PORT = '5000';
 
 const getHostAddress = () => {
@@ -33,6 +33,9 @@ export const API_ENDPOINTS = {
   VERIFY_OTP: '/api/auth/email/verify',
   RESEND_OTP: '/api/auth/email/resend',
   
+  // User onboarding status / profile check (from backend branch: src/routes/user.routes.js)
+  USER_ME: '/api/v1/user/me',
+
   // Status / Health check (from backend branch: src/server.js app.get('/'))
   HEALTH: '/',
 };
