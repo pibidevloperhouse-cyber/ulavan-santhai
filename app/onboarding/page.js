@@ -135,65 +135,29 @@ const createInitialSellerData = () => ({
 
   // 1. Farmer
   farmerFarmName: "",
-  farmerLandSize: "",
-  farmerCategory: "Landowner Farmer",
-  farmerCrops: [],
-  farmerAvailableQty: "",
-  farmerHarvestMonths: "",
-  farmerPriceExpectation: "",
-  farmerMethod: "Conventional Farming",
 
   // 2. Agricultural Producer (FPO / Society)
   fpoName: "",
   fpoStructure: "Farmer Producer Company (FPC)",
   fpoIsRegistered: "No",
   fpoRegNumber: "",
-  fpoMemberCount: "",
-  fpoCombinedAcreage: "",
-  fpoCrops: [],
-  fpoCapacity: "",
-  fpoIsGst: "No",
-  fpoGstin: "",
 
   // 3. Organic Producer
   organicFarmName: "",
-  organicAcreage: "",
   organicCertStatus: "Certified Organic (NPOP)",
-  organicCertAgency: "",
   organicHasLicense: "No",
   organicScopeNumber: "",
-  organicCrops: [],
-  organicCapacity: "",
-  organicMethod: "",
 
   // 4. Raw-Material Provider
   rawProviderName: "",
-  rawConstitution: "Proprietorship",
-  rawCommodities: [],
-  rawSource: "",
-  rawStockCapacity: "",
-  rawMoq: "",
-  rawIsGst: "No",
-  rawGstin: "",
 
   // 5. Ingredient Producer
   ingProducerName: "",
   ingHasFssai: "No",
-  ingProducts: "",
-  ingCapacity: "",
-  ingTechnology: "",
   ingFssaiNumber: "",
-  ingPackaging: "",
-  ingIsGst: "No",
-  ingGstin: "",
 
   // 6. Manufacturer
   mfgSellerName: "",
-  mfgSellerConstitution: "Private Limited",
-  mfgCategory: "",
-  mfgProductsOffered: "",
-  mfgRawMaterialsUsed: "",
-  mfgCapacity: "",
   mfgHasFssai: "No",
   mfgFssaiNumber: "",
   mfgIsGst: "No",
@@ -202,22 +166,89 @@ const createInitialSellerData = () => ({
   // 7. Value-Added Manufacturer
   vaBrandName: "",
   vaHasFssai: "No",
-  vaProducts: "",
-  vaAgriInputs: "",
-  vaMonthlyCapacity: "",
-  vaPackagingFormat: "",
   vaFssaiNumber: "",
-  vaIsGst: "No",
-  vaGstin: "",
 
   // 8. Other
   otherSellerName: "",
   otherActivity: "",
-  otherProducts: "",
-  otherStockQty: "",
   otherIsGst: "No",
   otherGstin: "",
 });
+
+/**
+ * Sanitizes seller profile data before submission so only relevant
+ * fields corresponding to the active classification are transmitted to backend.
+ */
+export const getSanitizedSellerProfile = (sellerType, sellerData) => {
+  const commonLocation = {
+    district: sellerData?.district || "",
+    village: sellerData?.village || "",
+    pinCode: sellerData?.pinCode || "",
+    farmAddress: sellerData?.farmAddress || "",
+  };
+
+  switch (sellerType) {
+    case "Farmer":
+      return {
+        ...commonLocation,
+        farmerFarmName: sellerData?.farmerFarmName?.trim() || "",
+      };
+    case "Agricultural Producer":
+      return {
+        ...commonLocation,
+        fpoName: sellerData?.fpoName?.trim() || "",
+        fpoStructure: sellerData?.fpoStructure || "Farmer Producer Company (FPC)",
+        fpoIsRegistered: sellerData?.fpoIsRegistered || "No",
+        ...(sellerData?.fpoIsRegistered === "Yes" ? { fpoRegNumber: sellerData?.fpoRegNumber?.trim() || "" } : {}),
+      };
+    case "Organic Producer":
+      return {
+        ...commonLocation,
+        organicFarmName: sellerData?.organicFarmName?.trim() || "",
+        organicCertStatus: sellerData?.organicCertStatus || "Certified Organic (NPOP)",
+        organicHasLicense: sellerData?.organicHasLicense || "No",
+        ...(sellerData?.organicHasLicense === "Yes" ? { organicScopeNumber: sellerData?.organicScopeNumber?.trim() || "" } : {}),
+      };
+    case "Raw-Material Provider":
+      return {
+        ...commonLocation,
+        rawProviderName: sellerData?.rawProviderName?.trim() || "",
+      };
+    case "Ingredient Producer":
+      return {
+        ...commonLocation,
+        ingProducerName: sellerData?.ingProducerName?.trim() || "",
+        ingHasFssai: sellerData?.ingHasFssai || "No",
+        ...(sellerData?.ingHasFssai === "Yes" ? { ingFssaiNumber: sellerData?.ingFssaiNumber?.trim() || "" } : {}),
+      };
+    case "Manufacturer":
+      return {
+        ...commonLocation,
+        mfgSellerName: sellerData?.mfgSellerName?.trim() || "",
+        mfgHasFssai: sellerData?.mfgHasFssai || "No",
+        ...(sellerData?.mfgHasFssai === "Yes" ? { mfgFssaiNumber: sellerData?.mfgFssaiNumber?.trim() || "" } : {}),
+        mfgIsGst: sellerData?.mfgIsGst || "No",
+        ...(sellerData?.mfgIsGst === "Yes" ? { mfgGstin: sellerData?.mfgGstin?.trim() || "" } : {}),
+      };
+    case "Value-Added Manufacturer":
+      return {
+        ...commonLocation,
+        vaBrandName: sellerData?.vaBrandName?.trim() || "",
+        vaHasFssai: sellerData?.vaHasFssai || "No",
+        ...(sellerData?.vaHasFssai === "Yes" ? { vaFssaiNumber: sellerData?.vaFssaiNumber?.trim() || "" } : {}),
+      };
+    case "Other":
+      return {
+        ...commonLocation,
+        otherSellerName: sellerData?.otherSellerName?.trim() || "",
+        otherActivity: sellerData?.otherActivity?.trim() || "",
+        otherIsGst: sellerData?.otherIsGst || "No",
+        ...(sellerData?.otherIsGst === "Yes" ? { otherGstin: sellerData?.otherGstin?.trim() || "" } : {}),
+      };
+    default:
+      return commonLocation;
+  }
+};
 
 function OnboardingContent({ initialRole }) {
   const router = useRouter();
@@ -653,13 +684,23 @@ function OnboardingContent({ initialRole }) {
 
     const applicationId = `US_${role.toUpperCase()}_${Date.now().toString().slice(-6)}`;
 
+    const sanitizedProfile =
+      role === "buyer"
+        ? buyerData
+        : getSanitizedSellerProfile(sellerType, sellerData);
+
     // 1. Submit Application Data
     const fullPayload = {
       applicationId,
       role: role.toUpperCase(),
-      account: userAuth,
+      account: {
+        id: userAuth?.id || "",
+        name: userAuth?.name || "",
+        email: userAuth?.email || "",
+        mobile: userAuth?.mobile || "",
+      },
       subType: role === "buyer" ? buyerType : sellerType,
-      profile: role === "buyer" ? buyerData : sellerData,
+      profile: sanitizedProfile,
       documents: uploadedDocs,
       status: "active",
       submittedAt: startDate,
