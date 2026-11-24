@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import MobileRegistrationHeader from "@/components/onboarding/MobileRegistrationHeader";
 import Stepper from "@/components/forms/Stepper";
 import FormInput from "@/components/forms/FormInput";
 import FormSelect from "@/components/forms/FormSelect";
@@ -862,13 +863,20 @@ function OnboardingContent({ initialRole }) {
     router.push("/login");
   };
 
+  const handleStepClick = (s) => {
+    setCurrentStep(s);
+    if (s === 3) setReviewSubStep(1);
+    scrollToTop();
+  };
+
   return (
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#174B35] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
+      <MobileRegistrationHeader currentStep={currentStep} onStepClick={handleStepClick} onLogout={handleLogout} />
       {/* Panoramic landscape footer strip in sequence without any clipping */}
       <div
-        className="fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
+        className="hidden lg:block fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
         style={{
           backgroundImage: "url('/images/onboarding-landscape-strip.png')",
           backgroundSize: "auto 30px",
@@ -879,7 +887,7 @@ function OnboardingContent({ initialRole }) {
       {/* ======================================================== */}
       {/* LEFT PANEL: Brand, Stepper & Plant Visual on Nature BG  */}
       {/* ======================================================== */}
-      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
+      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full hidden lg:flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
         {/* Top Brand & Welcome */}
         <div>
           <BrandLogo width={160} priority />
@@ -899,11 +907,7 @@ function OnboardingContent({ initialRole }) {
               currentStep={currentStep}
               steps={steps}
               orientation="vertical"
-              onStepClick={(s) => {
-                setCurrentStep(s);
-                if (s === 3) setReviewSubStep(1);
-                scrollToTop();
-              }}
+              onStepClick={handleStepClick}
             />
           </div>
 
@@ -931,9 +935,9 @@ function OnboardingContent({ initialRole }) {
       {/* ======================================================== */}
       {/* RIGHT PANEL: Form Controls on Shared Nature BG         */}
       {/* ======================================================== */}
-      <div ref={rightPanelRef} className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-8 pb-32 sm:pb-36 px-5 sm:px-10 xl:px-16 flex flex-col justify-between relative bg-transparent scroll-smooth">
+      <div ref={rightPanelRef} className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-5 lg:pt-8 pb-10 lg:pb-36 px-4 sm:px-10 xl:px-16 flex flex-col lg:justify-between relative bg-transparent scroll-smooth">
         {/* Top Floating Actions: Home, Logout & User Avatar */}
-        <div className="flex items-center justify-end gap-2.5 pb-6">
+        <div className="hidden lg:flex items-center justify-end gap-2.5 pb-6">
           <Link
             href="/"
             className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
@@ -957,7 +961,7 @@ function OnboardingContent({ initialRole }) {
         </div>
 
         {/* Form fits directly onto the natural cream background with leaf and tractor elements */}
-        <main className="w-full max-w-2xl mx-auto space-y-6 my-auto [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
+        <main className="w-full max-w-2xl mx-auto space-y-6 lg:my-auto [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
             {/* Error notification */}
             {formError && (
               <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 animate-in fade-in">
@@ -982,10 +986,10 @@ function OnboardingContent({ initialRole }) {
                   </div>
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                      {role === "buyer" ? "Select Your Buyer Type & Details" : "Select Your Seller Type & Details"}
+                      {role === "buyer" ? "Buyer profile" : "Seller profile"}
                     </h2>
                     <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                      Choose your specific classification below. The form will dynamically update with the exact fields tailored to your role.
+                      Choose your type, then enter your details.
                     </p>
                   </div>
                 </div>
@@ -997,10 +1001,18 @@ function OnboardingContent({ initialRole }) {
               <div className="space-y-6">
                 {/* 5 Buyer Types Selection Pills / Cards */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2.5">
+                  <label htmlFor="buyer-classification" className="block text-sm font-bold text-gray-800 mb-2.5">
                     Buyer Classification <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                  <select
+                    id="buyer-classification"
+                    value={buyerType}
+                    onChange={(event) => handleBuyerTypeChange(event.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#cbd8cb] bg-white px-3 text-base font-semibold text-[#174B35] focus:outline-2 focus:outline-[#246146] sm:hidden"
+                  >
+                    {BUYER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                     {BUYER_TYPES.map((type) => {
                       const isSelected = buyerType === type;
                       return (
@@ -1244,10 +1256,18 @@ function OnboardingContent({ initialRole }) {
               <div className="space-y-6">
                 {/* 8 Seller Types Selection Pills / Cards */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2.5">
+                  <label htmlFor="seller-classification" className="block text-sm font-bold text-gray-800 mb-2.5">
                     Seller Classification <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <select
+                    id="seller-classification"
+                    value={sellerType}
+                    onChange={(event) => handleSellerTypeChange(event.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#cbd8cb] bg-white px-3 text-base font-semibold text-[#174B35] focus:outline-2 focus:outline-[#246146] sm:hidden"
+                  >
+                    {SELLER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <div className="hidden sm:grid sm:grid-cols-4 gap-2.5">
                     {SELLER_TYPES.map((type) => {
                       const isSelected = sellerType === type;
                       return (
@@ -1764,23 +1784,27 @@ function OnboardingContent({ initialRole }) {
             )}
 
             {/* Action Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <Link
-                href="/get-started"
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all"
-              >
-                &larr; Change Role
-              </Link>
+            <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
               <button
                 type="button"
                 onClick={handleNextFromStep1}
-                className="px-6 py-3 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
               >
-                <span>Continue to Document Upload</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="sm:hidden">Continue to documents</span>
+                <span className="hidden sm:inline">Continue to Document Upload</span>
+                <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
+              <Link
+                href="/get-started"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+              >
+                <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                </svg>
+                Change Role
+              </Link>
             </div>
           </div>
         )}
@@ -2000,23 +2024,28 @@ function OnboardingContent({ initialRole }) {
             </div>
 
             {/* Action Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-              >
-                &larr; Back to Profile Details
-              </button>
+            <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
               <button
                 type="button"
                 onClick={handleNextFromStep2}
-                className="px-6 py-3 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
               >
-                <span>Continue to Review &amp; Submit</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="sm:hidden">Continue to review</span>
+                <span className="hidden sm:inline">Continue to Review &amp; Submit</span>
+                <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStepClick(1)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+              >
+                <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                </svg>
+                <span className="sm:hidden">Back to profile</span>
+                <span className="hidden sm:inline">Back to Profile Details</span>
               </button>
             </div>
           </div>
@@ -2584,26 +2613,26 @@ function OnboardingContent({ initialRole }) {
               </div>
 
               {/* Action Bar */}
-              <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentStep(2);
-                    scrollToTop();
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-                >
-                  &larr; Back to Documents
-                </button>
+              <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
                 <button
                   type="button"
                   onClick={handleProceedToPayment}
-                  className="px-8 py-3.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
                 >
                   <span>Proceed to Payment</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(2)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                >
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                  </svg>
+                  <span>Back to Documents</span>
                 </button>
               </div>
       </div>
