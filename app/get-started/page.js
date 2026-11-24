@@ -108,7 +108,7 @@ export default function GetStartedPage() {
 
       if (role === "buyer") {
         if (isBuyerOnboarded && !forceEdit) {
-          router.push("/");
+          router.push("/buyer");
         } else {
           router.push("/onboarding?role=buyer&step=1");
         }
