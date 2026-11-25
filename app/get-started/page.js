@@ -148,6 +148,7 @@ export default function GetStartedPage() {
       image: "/images/get-started/seller-farmer.jpg",
       alt: "Smiling Indian farmer in paddy field holding freshly harvested crops",
       benefits: [
+        "You can select multiple classifications. A ₹365 fee applies to each selected classification.",
         "Showcase your agricultural crops & harvest.",
         "Connect directly with bulk verified buyers.",
         "Receive direct farm-gate payments.",

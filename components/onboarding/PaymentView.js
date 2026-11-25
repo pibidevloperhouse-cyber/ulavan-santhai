@@ -17,6 +17,8 @@ import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
  */
 export default function PaymentView({
   role = "buyer",
+  selectedRoles = [],
+  payableAmount,
   onRoleChange,
   userAuth = {},
   onBack,
@@ -43,6 +45,8 @@ export default function PaymentView({
   const isProcessing = isHookProcessing || isProcessingExternal;
   const activeResult = externalPaymentResult || paymentResult;
   const isBuyer = currentRole === "buyer";
+  const sellerRoleCount = selectedRoles.length > 0 ? selectedRoles.length : 1;
+  const effectiveAmount = isBuyer ? 365 : (payableAmount || sellerRoleCount * 365);
 
   const handleRoleToggle = (newRole) => {
     if (onRoleChange) {
@@ -80,6 +84,7 @@ export default function PaymentView({
       planId,
       role: currentRole,
       userAuth,
+      amount: effectiveAmount,
       onSuccess: async (resultPayload) => {
         setPaymentResult(resultPayload);
 
@@ -340,9 +345,13 @@ export default function PaymentView({
                         {isBuyer ? "Buyer Verified Plan" : "Seller Membership"}
                       </span>
                       <div className="text-right shrink-0">
-                        <span className="text-2xl sm:text-3xl font-black text-gray-900">₹365</span>
+                        <span className="text-2xl sm:text-3xl font-black text-gray-900">₹{effectiveAmount}</span>
                         <span className="text-xs text-gray-500 font-semibold block mt-0.5">
-                          / Year (₹1.00/day)
+                          {isBuyer
+                            ? "/ Year (₹1.00/day)"
+                            : sellerRoleCount > 1
+                            ? `/ Year (${sellerRoleCount} Roles @ ₹365/ea)`
+                            : "/ Year (₹1.00/day)"}
                         </span>
                       </div>
                     </div>
@@ -369,6 +378,7 @@ export default function PaymentView({
                             "Zero middleman brokerage & trade commission",
                           ]
                         : [
+                            "You can select multiple classifications. A ₹365 fee applies to each selected classification.",
                             "100% Verified Farmer / Producer Badge",
                             "Showcase unlimited crop & harvest lots",
                             "Receive direct verified commercial buyer enquiries",
@@ -376,8 +386,8 @@ export default function PaymentView({
                             "Direct farmer-to-buyer transparent communication",
                           ]
                       ).map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-800">
-                          <span className="w-4 h-4 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-[10px] font-bold">
+                        <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm font-semibold text-gray-800">
+                          <span className="w-4 h-4 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">
                             ✓
                           </span>
                           <span>{feature}</span>
@@ -412,8 +422,14 @@ export default function PaymentView({
                     <h4 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">Payment Summary</h4>
                     <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex justify-between items-center text-gray-600">
-                        <span>Annual Membership (365 Days)</span>
-                        <span className="font-bold text-gray-900">₹365</span>
+                        <span>
+                          {isBuyer
+                            ? "Annual Membership (365 Days)"
+                            : sellerRoleCount > 1
+                            ? `Annual Membership (${sellerRoleCount} Roles @ ₹365/ea)`
+                            : "Annual Membership (365 Days)"}
+                        </span>
+                        <span className="font-bold text-gray-900">₹{effectiveAmount}</span>
                       </div>
                       <div className="flex justify-between items-center text-gray-600">
                         <span>Taxes &amp; Platform Fees</span>
@@ -421,7 +437,7 @@ export default function PaymentView({
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between items-baseline">
                         <span className="text-sm sm:text-base font-bold text-gray-900">Total Payable</span>
-                        <span className="text-2xl font-black text-[#174B35]">₹365</span>
+                        <span className="text-2xl font-black text-[#174B35]">₹{effectiveAmount}</span>
                       </div>
                     </div>
                   </div>
@@ -471,7 +487,7 @@ export default function PaymentView({
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                             />
                           </svg>
-                          <span>Subscribe &amp; Pay ₹365</span>
+                          <span>Subscribe &amp; Pay ₹{effectiveAmount}</span>
                           <span className="text-base font-bold">&rarr;</span>
                         </>
                       )}

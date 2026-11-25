@@ -33,6 +33,7 @@ export function useRazorpayPayment() {
       planId = "BUYER_ANNUAL",
       role = "buyer",
       userAuth = {},
+      amount: requestedAmount,
       onSuccess,
       onFailure,
     }) => {
@@ -89,7 +90,7 @@ export function useRazorpayPayment() {
         const orderData = orderRes.data || orderRes.raw?.data || orderRes;
         const orderId = orderData.orderId || orderData.id;
         const keyId = orderData.keyId || orderData.key;
-        const amount = orderData.amount || 36500;
+        const amount = orderData.amount || (requestedAmount ? requestedAmount * 100 : 36500);
         const currency = orderData.currency || "INR";
         const serverPlan = orderData.plan;
 

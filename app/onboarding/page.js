@@ -249,7 +249,13 @@ function OnboardingContent({ initialRole }) {
 
   // Selected sub-type
   const [buyerType, setBuyerType] = useState("Individual");
-  const [sellerType, setSellerType] = useState("Farmer");
+  const [sellerType, setSellerType] = useState("");
+  const [selectedSellerTypes, setSelectedSellerTypes] = useState([]);
+  const [showMultiRoleModal, setShowMultiRoleModal] = useState(false);
+
+  const hasSellerRole = (type) => selectedSellerTypes.includes(type);
+  const selectedCustomSellerTypes = selectedSellerTypes.filter((t) => !SELLER_TYPES.includes(t));
+  const activeCustomSellerType = selectedCustomSellerTypes[0] || "";
 
   // Live dynamic categories synchronized with Admin Portal
   const [dynamicSellerCats, setDynamicSellerCats] = useState(getSellerCategories);
@@ -280,7 +286,7 @@ function OnboardingContent({ initialRole }) {
   const finalSellerTypes = Array.from(new Set([...displayedSellerTypes, ...SELLER_TYPES]));
 
   const selectedSellerCategoryObj = dynamicSellerCats.find(
-    (c) => (c.code || c.name) === sellerType || c.name === sellerType
+    (c) => (c.code || c.name) === activeCustomSellerType || c.name === activeCustomSellerType
   );
   const selectedBuyerCategoryObj = dynamicBuyerCats.find(
     (c) => (c.code || c.name) === buyerType || c.name === buyerType
@@ -326,13 +332,43 @@ function OnboardingContent({ initialRole }) {
     }
   };
 
-  const handleSellerTypeChange = (type) => {
-    if (type !== sellerType) {
-      setSellerType(type);
-      setUploadedDocs({});
-      setFormError("");
-    }
+  const handleSellerTypeToggle = (type) => {
+    const isAlreadySelected = selectedSellerTypes.includes(type);
+    const nextSelected = isAlreadySelected
+      ? selectedSellerTypes.filter((t) => t !== type)
+      : [...selectedSellerTypes, type];
+
+    setSelectedSellerTypes(nextSelected);
+    setSellerType(isAlreadySelected ? (nextSelected[0] || "") : type);
+    setShowMultiRoleModal(nextSelected.length > 0);
+    setUploadedDocs({});
+    setFormError("");
   };
+
+  const handleSellerTypeChange = (type) => {
+    handleSellerTypeToggle(type);
+  };
+
+  // Combined document requirement flags across all selected seller classifications
+  const needLandProof = role === "seller" && hasSellerRole("Farmer");
+  const needFpoCert = role === "seller" && hasSellerRole("Agricultural Producer");
+  const needOrganicCert = role === "seller" && hasSellerRole("Organic Producer");
+  const needIdProof =
+    role === "seller" && (hasSellerRole("Other") || selectedCustomSellerTypes.length > 0);
+  const needBankPassbook = role === "seller" && selectedCustomSellerTypes.length > 0;
+  const needFssaiCert =
+    role === "seller" &&
+    ((hasSellerRole("Ingredient Producer") && sellerData.ingHasFssai === "Yes") ||
+      hasSellerRole("Manufacturer") ||
+      hasSellerRole("Value-Added Manufacturer"));
+  const needGstCert =
+    role === "seller" &&
+    (hasSellerRole("Raw-Material Provider") ||
+      hasSellerRole("Ingredient Producer") ||
+      hasSellerRole("Manufacturer") ||
+      hasSellerRole("Other") ||
+      (selectedCustomSellerTypes.length > 0 && sellerData.otherIsGst === "Yes") ||
+      (hasSellerRole("Agricultural Producer") && sellerData.fpoIsGst === "Yes"));
 
   // Stage 4: Razorpay Payment States
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -343,7 +379,14 @@ function OnboardingContent({ initialRole }) {
     {
       id: 1,
       title: "Profile Details",
-      subtitle: role === "buyer" ? `${buyerType} Form` : `${sellerType} Form`,
+      subtitle:
+        role === "buyer"
+          ? `${buyerType} Form`
+          : selectedSellerTypes.length > 1
+          ? `${selectedSellerTypes.length} Roles Selected`
+          : selectedSellerTypes.length === 1
+          ? `${selectedSellerTypes[0]} Form`
+          : "Choose Seller Type",
     },
     {
       id: 2,
@@ -358,7 +401,10 @@ function OnboardingContent({ initialRole }) {
     {
       id: 4,
       title: "Payment",
-      subtitle: "₹365 Membership",
+      subtitle:
+        role === "buyer"
+          ? "₹365 Membership"
+          : `₹${(Math.max(1, selectedSellerTypes.length) * 365).toLocaleString("en-IN")} Membership`,
     },
   ];
 
@@ -391,64 +437,68 @@ function OnboardingContent({ initialRole }) {
         return;
       }
     } else {
+      if (selectedSellerTypes.length === 0) {
+        setFormError("Please select at least one Seller Classification.");
+        return;
+      }
       if (!sellerData.district) {
         setFormError("Please select your farm/operating district.");
         return;
       }
-      if (sellerType === "Farmer" && !sellerData.farmerFarmName?.trim()) {
+      if (hasSellerRole("Farmer") && !sellerData.farmerFarmName?.trim()) {
         setFormError("Please enter your Farm Name.");
         return;
       }
-      if (sellerType === "Agricultural Producer" && !sellerData.fpoName.trim()) {
+      if (hasSellerRole("Agricultural Producer") && !sellerData.fpoName.trim()) {
         setFormError("Please enter your Producer Organization / FPO Name.");
         return;
       }
-      if (sellerType === "Organic Producer" && !sellerData.organicFarmName?.trim()) {
+      if (hasSellerRole("Organic Producer") && !sellerData.organicFarmName?.trim()) {
         setFormError("Please enter your Organic Farm / Brand Name.");
         return;
       }
-      if (sellerType === "Raw-Material Provider" && !sellerData.rawProviderName?.trim()) {
+      if (hasSellerRole("Raw-Material Provider") && !sellerData.rawProviderName?.trim()) {
         setFormError("Please enter your Business / Enterprise Name.");
         return;
       }
-      if (sellerType === "Ingredient Producer" && !sellerData.ingProducerName?.trim()) {
+      if (hasSellerRole("Ingredient Producer") && !sellerData.ingProducerName?.trim()) {
         setFormError("Please enter your Enterprise Name.");
         return;
       }
-      if (sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes" && !sellerData.ingFssaiNumber?.trim()) {
+      if (hasSellerRole("Ingredient Producer") && sellerData.ingHasFssai === "Yes" && !sellerData.ingFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Manufacturer" && !sellerData.mfgSellerName?.trim()) {
+      if (hasSellerRole("Manufacturer") && !sellerData.mfgSellerName?.trim()) {
         setFormError("Please enter your Company Name.");
         return;
       }
-      if (sellerType === "Manufacturer" && sellerData.mfgHasFssai === "Yes" && !sellerData.mfgFssaiNumber?.trim()) {
+      if (hasSellerRole("Manufacturer") && sellerData.mfgHasFssai === "Yes" && !sellerData.mfgFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes" && !sellerData.mfgGstin?.trim()) {
+      if (hasSellerRole("Manufacturer") && sellerData.mfgIsGst === "Yes" && !sellerData.mfgGstin?.trim()) {
         setFormError("Please enter your 15-digit GSTIN.");
         return;
       }
-      if (sellerType === "Value-Added Manufacturer" && !sellerData.vaBrandName?.trim()) {
+      if (hasSellerRole("Value-Added Manufacturer") && !sellerData.vaBrandName?.trim()) {
         setFormError("Please enter your Brand / Enterprise Name.");
         return;
       }
-      if (sellerType === "Value-Added Manufacturer" && sellerData.vaHasFssai === "Yes" && !sellerData.vaFssaiNumber?.trim()) {
+      if (hasSellerRole("Value-Added Manufacturer") && sellerData.vaHasFssai === "Yes" && !sellerData.vaFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Other" && !sellerData.otherSellerName?.trim()) {
+      if (hasSellerRole("Other") && !sellerData.otherSellerName?.trim()) {
         setFormError("Please enter your Enterprise Name.");
         return;
       }
-      if (sellerType === "Other" && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
+      if (hasSellerRole("Other") && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
         setFormError("Please enter your 15-digit GSTIN.");
         return;
       }
-      if (!SELLER_TYPES.includes(sellerType) && !sellerData.otherSellerName?.trim() && !sellerData.farmerFarmName?.trim()) {
-        setFormError(`Please enter your Enterprise or Farm Name for ${sellerType}.`);
+      if (selectedCustomSellerTypes.length > 0 && !sellerData.otherSellerName?.trim() && !sellerData.farmerFarmName?.trim()) {
+        setFormError(`Please enter your Enterprise or Farm Name for ${selectedCustomSellerTypes[0]}.`);
         return;
       }
     }
@@ -461,114 +511,6 @@ function OnboardingContent({ initialRole }) {
   const handleNextFromStep2 = () => {
     setFormError("");
 
-    // For Farmer, only Patta / Chitta (LAND_PROOF) is required
-    if (role === "seller" && sellerType === "Farmer") {
-      if (!uploadedDocs["LAND_PROOF"]) {
-        setFormError("Please upload your Patta / Chitta document to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Agricultural Producer, only FPO Registration Certificate is required
-    if (role === "seller" && sellerType === "Agricultural Producer") {
-      if (!uploadedDocs["FPO_CERTIFICATE"]) {
-        setFormError("Please upload your FPO / Cooperative Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Organic Producer, only NPOP Organic Certificate is required
-    if (role === "seller" && sellerType === "Organic Producer") {
-      if (!uploadedDocs["ORGANIC_CERTIFICATE"]) {
-        setFormError("Please upload your NPOP Organic Certificate document to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Raw-Material Provider, only GST Certificate is required
-    if (role === "seller" && sellerType === "Raw-Material Provider") {
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Ingredient Producer, FSSAI (if has license) and GST Certificate are required
-    if (role === "seller" && sellerType === "Ingredient Producer") {
-      if (sellerData.ingHasFssai === "Yes" && !uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Manufacturer, GST and FSSAI are required
-    if (role === "seller" && sellerType === "Manufacturer") {
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      if (!uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Value-Added Manufacturer, only FSSAI is required
-    if (role === "seller" && sellerType === "Value-Added Manufacturer") {
-      if (!uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Other seller, only PAN (ID_PROOF) and GST Certificate are required
-    if (role === "seller" && sellerType === "Other") {
-      if (!uploadedDocs["ID_PROOF"]) {
-        setFormError("Please upload your PAN Card / Government Identity Proof to continue.");
-        return;
-      }
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
     // For Buyers, document upload is optional (not mandatory)
     if (role === "buyer") {
       setCurrentStep(3);
@@ -577,18 +519,40 @@ function OnboardingContent({ initialRole }) {
       return;
     }
 
-    if (!uploadedDocs["ID_PROOF"]) {
-      setFormError("Please upload your Government Identity Proof to continue.");
+    // Validate combined document requirements across all selected seller classifications
+    if (needLandProof && !uploadedDocs["LAND_PROOF"]) {
+      setFormError("Please upload your Patta / Chitta document to continue.");
       return;
     }
-    if (role === "seller" && !uploadedDocs["BANK_PASSBOOK"]) {
+    if (needFpoCert && !uploadedDocs["FPO_CERTIFICATE"]) {
+      setFormError("Please upload your FPO / Cooperative Registration Certificate to continue.");
+      return;
+    }
+    if (needOrganicCert && !uploadedDocs["ORGANIC_CERTIFICATE"]) {
+      setFormError("Please upload your NPOP Organic Certificate document to continue.");
+      return;
+    }
+    if (needIdProof && !uploadedDocs["ID_PROOF"]) {
+      setFormError(
+        hasSellerRole("Other")
+          ? "Please upload your PAN Card / Government Identity Proof to continue."
+          : "Please upload your Government Identity Proof to continue."
+      );
+      return;
+    }
+    if (needBankPassbook && !uploadedDocs["BANK_PASSBOOK"]) {
       setFormError("Bank Account Proof / Passbook is required for direct farm-gate settlement.");
       return;
     }
-    if (isGstProvided && !uploadedDocs["GST_CERTIFICATE"]) {
-      setFormError("Please upload your GST Registration Certificate (Form REG-06) to continue.");
+    if (needGstCert && !uploadedDocs["GST_CERTIFICATE"]) {
+      setFormError("Please upload your GST Registration Certificate to continue.");
       return;
     }
+    if (needFssaiCert && !uploadedDocs["FSSAI_LICENSE"]) {
+      setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
+      return;
+    }
+
     setCurrentStep(3);
     setReviewSubStep(1);
     scrollToTop();
@@ -624,7 +588,7 @@ function OnboardingContent({ initialRole }) {
     setFormError("");
     setIsProcessingPayment(true);
 
-    const baseAmount = 365;
+    const baseAmount = role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365;
     const addonAmount = role === "buyer" ? addonBlocks * 10 : 0;
     const totalAmount = baseAmount + addonAmount;
 
@@ -677,7 +641,7 @@ function OnboardingContent({ initialRole }) {
     setIsProcessingPayment(true);
     setIsRazorpayModalOpen(false);
 
-    const baseAmount = 365;
+    const baseAmount = role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365;
     const addonAmount = role === "buyer" ? addonBlocks * 10 : 0;
     const totalAmount = baseAmount + addonAmount;
     const buyerViewLimit = role === "buyer" ? 10 + addonBlocks * 10 : null;
@@ -698,12 +662,16 @@ function OnboardingContent({ initialRole }) {
 
     const applicationId = `US_${role.toUpperCase()}_${Date.now().toString().slice(-6)}`;
 
+    const resolvedSellerTypes = selectedSellerTypes.length > 0 ? selectedSellerTypes : [sellerType || "Farmer"];
+    const sellerTypesLabel = resolvedSellerTypes.join(", ");
+
     // 1. Submit Application Data
     const fullPayload = {
       applicationId,
       role: role.toUpperCase(),
       account: userAuth,
-      subType: role === "buyer" ? buyerType : sellerType,
+      subType: role === "buyer" ? buyerType : sellerTypesLabel,
+      selectedSellerTypes: role === "seller" ? resolvedSellerTypes : [sellerType],
       profile: role === "buyer" ? buyerData : sellerData,
       documents: uploadedDocs,
       status: "active",
@@ -722,8 +690,16 @@ function OnboardingContent({ initialRole }) {
         userEmail: userAuth?.email || "member@ulavansanthai.in",
         userMobile: userAuth?.mobile || "9876543210",
         role: role.toUpperCase(),
-        planId: role === "buyer" ? "plan_buyer_base" : "plan_seller_monthly",
-        planName: role === "buyer" ? `Buyer Access Plan (${buyerViewLimit} Sellers)` : "Seller Monthly Plan (₹365/mo)",
+        planId:
+          role === "buyer"
+            ? "plan_buyer_base"
+            : resolvedSellerTypes.length > 1
+            ? `plan_seller_multi_${resolvedSellerTypes.length}`
+            : "plan_seller_monthly",
+        planName:
+          role === "buyer"
+            ? `Buyer Access Plan (${buyerViewLimit} Sellers)`
+            : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""} - ₹${resolvedSellerTypes.length * 365})`,
         baseAmount,
         taxAmount: 0,
         totalAmount,
@@ -765,7 +741,7 @@ function OnboardingContent({ initialRole }) {
           ...existing,
           role: role.charAt(0).toUpperCase() + role.slice(1),
           activeRole: role,
-          subType: isBuyer ? buyerType : sellerType,
+          subType: isBuyer ? buyerType : sellerTypesLabel,
           status: "active",
           isPaid: true,
           // Role-specific completion flags
@@ -776,7 +752,7 @@ function OnboardingContent({ initialRole }) {
 
           sellerPaid: !isBuyer ? true : Boolean(existing.sellerPaid),
           sellerOnboarded: !isBuyer ? true : Boolean(existing.sellerOnboarded),
-          sellerData: !isBuyer ? { ...sellerData, sellerType } : existing.sellerData,
+          sellerData: !isBuyer ? { ...sellerData, sellerType: resolvedSellerTypes[0], sellerTypes: resolvedSellerTypes } : existing.sellerData,
           sellerPayment: !isBuyer ? paymentRecord : existing.sellerPayment,
 
           payment: paymentRecord,
@@ -799,8 +775,8 @@ function OnboardingContent({ initialRole }) {
         planStartDate: now.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         planEndDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         renewalDueDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
-        role: role === "buyer" ? `Buyer (${buyerType})` : `Seller (${sellerType})`,
-        planName: role === "buyer" ? "Buyer Access Plan (10 Verified Sellers)" : "Seller Monthly Plan (Unlimited Listings)",
+        role: role === "buyer" ? `Buyer (${buyerType})` : `Seller (${sellerTypesLabel})`,
+        planName: role === "buyer" ? "Buyer Access Plan (10 Verified Sellers)" : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""})`,
         baseAmount,
         addonAmount,
         totalAmount,
@@ -829,22 +805,19 @@ function OnboardingContent({ initialRole }) {
         (buyerType === "Manufacturer" && buyerData.mfgIsGst === "Yes") ||
         (buyerType === "Reseller" && buyerData.resellerIsGst === "Yes") ||
         (buyerType === "Other" && buyerData.otherIsGst === "Yes"))
-      : (sellerType === "Agricultural Producer" && sellerData.fpoIsGst === "Yes") ||
-      (sellerType === "Raw-Material Provider" && sellerData.rawIsGst === "Yes") ||
-      (sellerType === "Ingredient Producer" && sellerData.ingIsGst === "Yes") ||
-      (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes") ||
-      (sellerType === "Value-Added Manufacturer" && sellerData.vaIsGst === "Yes") ||
-      (sellerType === "Other" && sellerData.otherIsGst === "Yes");
+      : needGstCert;
 
   const isFssaiRequired =
     role === "buyer"
       ? false
-      : sellerType === "Ingredient Producer" || sellerType === "Value-Added Manufacturer" || sellerType === "Manufacturer";
+      : needFssaiCert;
 
   if (currentStep === 4) {
     return (
       <PaymentView
         role={role}
+        selectedRoles={selectedSellerTypes}
+        payableAmount={role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365}
         onRoleChange={(nextRole) => {
           setRole(nextRole);
           setCurrentStep(1);
@@ -852,6 +825,8 @@ function OnboardingContent({ initialRole }) {
           setPreviewDoc(null);
           setFormError("");
           setTermsAgreed(false);
+          setSelectedSellerTypes([]);
+          setSellerType("");
           setBuyerData(createInitialBuyerData());
           setSellerData(createInitialSellerData());
           router.replace(`/onboarding?role=${nextRole}&step=1`);
@@ -1410,29 +1385,39 @@ function OnboardingContent({ initialRole }) {
               <div className="space-y-6">
                 {/* 8 Seller Types Selection Pills / Cards */}
                 <div>
-                  <label htmlFor="seller-classification" className="block text-sm font-bold text-gray-800 mb-2.5">
-                    Seller Classification <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="seller-classification"
-                    value={sellerType}
-                    onChange={(event) => handleSellerTypeChange(event.target.value)}
-                    className="min-h-12 w-full rounded-xl border border-[#cbd8cb] bg-white px-3 text-base font-semibold text-[#174B35] focus:outline-2 focus:outline-[#246146] sm:hidden"
-                  >
-                    {SELLER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-                  </select>
-                  <div className="hidden sm:grid sm:grid-cols-4 gap-2.5">
-                    {SELLER_TYPES.map((type) => {
-                      const isSelected = sellerType === type;
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label htmlFor="seller-classification" className="block text-sm font-bold text-gray-800">
+                        Seller Classification <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowMultiRoleModal(true)}
+                        className="text-xs text-gray-500 hover:text-[#174B35] flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Click to view multi-role pricing"
+                      >
+                        <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-[10px] flex items-center justify-center font-bold text-gray-500 leading-none">i</span>
+                        <span>You can select multiple roles that apply to you</span>
+                      </button>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
+                      {selectedSellerTypes.length} selected
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {finalSellerTypes.map((type) => {
+                      const isSelected = selectedSellerTypes.includes(type);
                       return (
                         <button
                           key={type}
                           type="button"
-                          onClick={() => handleSellerTypeChange(type)}
-                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
-                            ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
-                            : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
-                            }`}
+                          onClick={() => handleSellerTypeToggle(type)}
+                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${
+                            isSelected
+                              ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
+                              : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
+                          }`}
                         >
                           <span className="leading-tight">{type}</span>
                         </button>
@@ -1442,7 +1427,7 @@ function OnboardingContent({ initialRole }) {
                 </div>
 
                 {/* Sub-form 1: Farmer */}
-                {sellerType === "Farmer" && (
+                {hasSellerRole("Farmer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Direct Farmer &amp; Cultivator Form</span>
@@ -1459,7 +1444,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 2: Agricultural Producer (FPO / Society) */}
-                {sellerType === "Agricultural Producer" && (
+                {hasSellerRole("Agricultural Producer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>FPO &amp; Agricultural Cooperative Form</span>
@@ -1526,7 +1511,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 3: Organic Producer */}
-                {sellerType === "Organic Producer" && (
+                {hasSellerRole("Organic Producer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Organic Certified Producer Form</span>
@@ -1592,7 +1577,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 4: Raw-Material Provider */}
-                {sellerType === "Raw-Material Provider" && (
+                {hasSellerRole("Raw-Material Provider") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Bulk Raw-Material Provider Form</span>
@@ -1609,7 +1594,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 5: Ingredient Producer */}
-                {sellerType === "Ingredient Producer" && (
+                {hasSellerRole("Ingredient Producer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Agri-Ingredient Producer Form</span>
@@ -1671,7 +1656,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 6: Manufacturer */}
-                {sellerType === "Manufacturer" && (
+                {hasSellerRole("Manufacturer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Industrial Agro-Manufacturer Form</span>
@@ -1774,7 +1759,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 7: Value-Added Manufacturer */}
-                {sellerType === "Value-Added Manufacturer" && (
+                {hasSellerRole("Value-Added Manufacturer") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Value-Added Food Products Form</span>
@@ -1836,7 +1821,7 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form 8: Other */}
-                {sellerType === "Other" && (
+                {hasSellerRole("Other") && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
                       <span>Specialized Farm Enterprise Form</span>
@@ -1903,11 +1888,11 @@ function OnboardingContent({ initialRole }) {
                 )}
 
                 {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
-                {!SELLER_TYPES.includes(sellerType) && (
+                {selectedCustomSellerTypes.length > 0 && (
                   <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                        <span>{sellerType} Specialized Form</span>
+                        <span>{activeCustomSellerType} Specialized Form</span>
                       </div>
                       <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
                         Admin Synced Category
@@ -1918,7 +1903,7 @@ function OnboardingContent({ initialRole }) {
                       <FormInput
                         label="Farm / Enterprise Legal Name"
                         required
-                        placeholder={`e.g. Kongu ${sellerType} Collective`}
+                        placeholder={`e.g. Kongu ${activeCustomSellerType} Collective`}
                         value={sellerData.otherSellerName}
                         onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
                       />
@@ -2092,7 +2077,7 @@ function OnboardingContent({ initialRole }) {
                 <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
                   {role === "buyer"
                     ? "Upload identity or business verification documents (optional). Allowed formats: PDF, JPG, PNG up to 5MB."
-                    : <>Upload verification proofs required for your selected classification (<strong className="text-gray-900 font-bold">{sellerType}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.</>}
+                    : <>Upload verification proofs required for your selected classification (<strong className="text-gray-900 font-bold">{selectedSellerTypes.join(", ")}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.</>}
                 </p>
               </div>
             </div>
@@ -2134,17 +2119,17 @@ function OnboardingContent({ initialRole }) {
                 </>
               )}
 
-              {/* Common: PAN / Government ID for other roles (not for Individual Buyer, and not for Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer) */}
-              {!(role === "buyer" && buyerType === "Individual") && !(role === "seller" && (sellerType === "Farmer" || sellerType === "Agricultural Producer" || sellerType === "Organic Producer" || sellerType === "Raw-Material Provider" || sellerType === "Ingredient Producer" || sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer")) && (
+              {/* Common: PAN / Government ID for other buyers or Other/Custom sellers */}
+              {((role === "buyer" && buyerType !== "Individual") || needIdProof) && (
                 <DocumentUploader
                   documentType="ID_PROOF"
                   title={
-                    role === "seller" && sellerType === "Other"
+                    role === "seller" && hasSellerRole("Other")
                       ? "PAN Card / Government Identity Proof"
                       : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
                   }
                   description={
-                    role === "seller" && sellerType === "Other"
+                    role === "seller" && hasSellerRole("Other")
                       ? "Upload valid Business or Proprietor PAN Card proof."
                       : "Government identity proof of the account owner or registered business."
                   }
@@ -2161,8 +2146,8 @@ function OnboardingContent({ initialRole }) {
                 />
               )}
 
-              {/* Seller: Bank Account Proof for Direct Payments (excluding Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer, Other) */}
-              {role === "seller" && sellerType !== "Farmer" && sellerType !== "Agricultural Producer" && sellerType !== "Organic Producer" && sellerType !== "Raw-Material Provider" && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer" && sellerType !== "Other" && (
+              {/* Seller: Bank Account Proof for custom admin categories */}
+              {needBankPassbook && (
                 <DocumentUploader
                   documentType="BANK_PASSBOOK"
                   title="Bank Account Passbook / Cancelled Cheque"
@@ -2181,7 +2166,7 @@ function OnboardingContent({ initialRole }) {
               )}
 
               {/* Farmer: Land Records (Patta / Chitta) */}
-              {role === "seller" && sellerType === "Farmer" && (
+              {needLandProof && (
                 <DocumentUploader
                   documentType="LAND_PROOF"
                   title="Patta / Chitta Document"
@@ -2200,7 +2185,7 @@ function OnboardingContent({ initialRole }) {
               )}
 
               {/* Organic Producer: Organic Certificate (NPOP) */}
-              {role === "seller" && sellerType === "Organic Producer" && (
+              {needOrganicCert && (
                 <DocumentUploader
                   documentType="ORGANIC_CERTIFICATE"
                   title="Organic Certification Document (NPOP / PGS-India)"
@@ -2219,7 +2204,7 @@ function OnboardingContent({ initialRole }) {
               )}
 
               {/* Agricultural Producer: FPO / Society Reg */}
-              {role === "seller" && sellerType === "Agricultural Producer" && (
+              {needFpoCert && (
                 <DocumentUploader
                   documentType="FPO_CERTIFICATE"
                   title="FPO / Cooperative Registration Certificate"
@@ -2237,19 +2222,13 @@ function OnboardingContent({ initialRole }) {
                 />
               )}
 
-              {/* FSSAI Certificate if food processor / food business / ingredient producer / manufacturer / value-added */}
-              {((isFssaiRequired && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer") ||
-                (role === "seller" && sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes") ||
-                (role === "seller" && (sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer"))) && (
+              {/* FSSAI Certificate */}
+              {needFssaiCert && (
                 <DocumentUploader
                   documentType="FSSAI_LICENSE"
                   title="FSSAI Food Safety License Certificate"
                   description="Mandatory state or central FSSAI registration certificate for food products."
-                  required={
-                    role === "seller" && sellerType === "Ingredient Producer"
-                      ? sellerData.ingHasFssai === "Yes"
-                      : true
-                  }
+                  required
                   uploadedDoc={uploadedDocs["FSSAI_LICENSE"]}
                   onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FSSAI_LICENSE: doc }))}
                   onRemove={() =>
@@ -2262,13 +2241,8 @@ function OnboardingContent({ initialRole }) {
                 />
               )}
 
-              {/* GST Certificate if GST registered, Raw-Material Provider, Ingredient Producer, Manufacturer, or Other */}
-              {sellerType !== "Value-Added Manufacturer" && (isGstProvided ||
-                (role === "seller" &&
-                  (sellerType === "Raw-Material Provider" ||
-                    sellerType === "Ingredient Producer" ||
-                    sellerType === "Manufacturer" ||
-                    sellerType === "Other"))) && (
+              {/* GST Certificate */}
+              {(role === "buyer" ? isGstProvided : needGstCert) && (
                 <DocumentUploader
                   documentType="GST_CERTIFICATE"
                   title="GST Registration Certificate (Form REG-06)"
@@ -2413,7 +2387,7 @@ function OnboardingContent({ initialRole }) {
                     {role === "buyer" ? "Buyer classification" : "Seller classification"}
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                    {role === "buyer" ? buyerType : sellerType}
+                    {role === "buyer" ? buyerType : selectedSellerTypes.join(", ")}
                   </span>
                 </div>
 
@@ -2558,7 +2532,7 @@ function OnboardingContent({ initialRole }) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {sellerType === "Farmer" && (
+                    {hasSellerRole("Farmer") && (
                       <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2573,7 +2547,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </div>
                     )}
-                    {sellerType === "Agricultural Producer" && (
+                    {hasSellerRole("Agricultural Producer") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2605,7 +2579,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </>
                     )}
-                    {sellerType === "Organic Producer" && (
+                    {hasSellerRole("Organic Producer") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2637,7 +2611,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </>
                     )}
-                    {sellerType === "Raw-Material Provider" && (
+                    {hasSellerRole("Raw-Material Provider") && (
                       <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2652,7 +2626,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </div>
                     )}
-                    {sellerType === "Ingredient Producer" && (
+                    {hasSellerRole("Ingredient Producer") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2684,7 +2658,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </>
                     )}
-                    {sellerType === "Manufacturer" && (
+                    {hasSellerRole("Manufacturer") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2716,7 +2690,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </>
                     )}
-                    {sellerType === "Value-Added Manufacturer" && (
+                    {hasSellerRole("Value-Added Manufacturer") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2748,7 +2722,7 @@ function OnboardingContent({ initialRole }) {
                         </div>
                       </>
                     )}
-                    {sellerType === "Other" && (
+                    {hasSellerRole("Other") && (
                       <>
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
@@ -2991,6 +2965,55 @@ function OnboardingContent({ initialRole }) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MULTIPLE ROLES SUPPORTED MODAL (SELLER CLASSIFICATION)  */}
+      {/* ======================================================== */}
+      {showMultiRoleModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowMultiRoleModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ₹ Rupee Icon Circle */}
+            <div className="w-14 h-14 rounded-full bg-[#EAF5EC] flex items-center justify-center mx-auto mb-4 text-[#174B35]">
+              <span className="text-2xl font-black leading-none">₹</span>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mb-2">
+              Multiple Roles Supported
+            </h3>
+
+            {/* Subtitle */}
+            <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed max-w-xs mx-auto mb-5">
+              You can select one or more Seller Classifications that match your business.
+            </p>
+
+            {/* Dynamic Calculation Box */}
+            <div className="bg-[#EDF7EE] border border-[#D3E8D6] rounded-2xl p-4 sm:p-5 mb-6 text-center">
+              <div className="text-sm sm:text-base font-extrabold text-gray-900">
+                ₹365 per role / month
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 font-medium mt-1">
+                {selectedSellerTypes.length} {selectedSellerTypes.length === 1 ? "role" : "roles"} selected • Total: ₹{(selectedSellerTypes.length * 365).toLocaleString("en-IN")} / month
+              </div>
+            </div>
+
+            {/* Got it, Continue Button */}
+            <button
+              type="button"
+              onClick={() => setShowMultiRoleModal(false)}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#174B35] hover:bg-[#113B29] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all cursor-pointer"
+            >
+              Got it, Continue
+            </button>
           </div>
         </div>
       )}
