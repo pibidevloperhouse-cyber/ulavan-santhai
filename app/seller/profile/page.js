@@ -69,8 +69,8 @@ export default function ProfileAndSettingsPage() {
           },
         };
         sessionStorage.setItem("ulavan_user", JSON.stringify(updated));
-        sessionStorage.setItem("ulavan_registered_user", JSON.stringify(updated));
-        localStorage.setItem("ulavan_registered_user", JSON.stringify(updated));
+        sessionStorage.removeItem("ulavan_registered_user");
+        localStorage.removeItem("ulavan_registered_user");
       } catch {
         // ignore
       }

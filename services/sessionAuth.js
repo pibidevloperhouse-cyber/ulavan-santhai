@@ -25,11 +25,8 @@ function getClientSnapshot() {
   }
 
   try {
-    const raw =
-      sessionStorage.getItem("ulavan_user") ||
-      sessionStorage.getItem("ulavan_registered_user") ||
-      localStorage.getItem("ulavan_registered_user") ||
-      "";
+    // Strictly read authoritative backend user object from ulavan_user
+    const raw = sessionStorage.getItem("ulavan_user") || "";
 
     if (raw === lastRawStorage && cachedClientString !== null) {
       return cachedClientString;
@@ -40,22 +37,23 @@ function getClientSnapshot() {
     if (raw) {
       const parsed = JSON.parse(raw);
       cachedClientString = JSON.stringify({
-        id: parsed.id || parsed.userId || "",
+        id: parsed.id || parsed.userId || parsed._id || "",
         name: parsed.name || parsed.username || defaultSessionUser.name,
         username: parsed.username || defaultSessionUser.username,
         email: parsed.email || defaultSessionUser.email,
         mobile: parsed.mobile || defaultSessionUser.mobile,
         role: parsed.role || "unassigned",
         activeRole: parsed.activeRole || (parsed.role ? parsed.role.toLowerCase() : "unassigned"),
-        isPaid: parsed.isPaid ?? false,
-        onboarded: parsed.onboarded ?? false,
-        buyerPaid: Boolean(parsed.buyerPaid || (parsed.buyerData && parsed.isPaid && (parsed.role === "Buyer" || parsed.activeRole === "buyer"))),
-        buyerOnboarded: Boolean(parsed.buyerOnboarded !== undefined ? parsed.buyerOnboarded : (parsed.buyerData && (parsed.role === "Buyer" || parsed.activeRole === "buyer"))),
-        sellerPaid: Boolean(parsed.sellerPaid || (parsed.sellerData && parsed.isPaid && (parsed.role === "Seller" || parsed.activeRole === "seller"))),
-        sellerOnboarded: Boolean(parsed.sellerOnboarded !== undefined ? parsed.sellerOnboarded : (parsed.sellerData && (parsed.role === "Seller" || parsed.activeRole === "seller"))),
+        isPaid: Boolean(parsed.isPaid || parsed.sellerPaid || parsed.buyerPaid),
+        onboarded: Boolean(parsed.sellerOnboarded || parsed.buyerOnboarded || parsed.onboarded),
+        buyerPaid: Boolean(parsed.buyerPaid),
+        buyerOnboarded: Boolean(parsed.buyerOnboarded),
+        sellerPaid: Boolean(parsed.sellerPaid),
+        sellerOnboarded: Boolean(parsed.sellerOnboarded),
         status: parsed.status || "active",
-        buyerData: parsed.buyerData || null,
+        subType: parsed.subType || null,
         sellerData: parsed.sellerData || null,
+        buyerData: parsed.buyerData || null,
         payment: parsed.payment || null,
         buyerPayment: parsed.buyerPayment || null,
         sellerPayment: parsed.sellerPayment || null,

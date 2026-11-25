@@ -9,7 +9,7 @@ import FormInput from "@/components/forms/FormInput";
 import FormSelect from "@/components/forms/FormSelect";
 import DocumentUploader from "@/components/forms/DocumentUploader";
 import { submitApplication } from "@/services/onboardingApi";
-import { submitRolePayment } from "@/services/paymentApi";
+import { submitRolePayment, fetchCurrentUserProfile } from "@/services/paymentApi";
 import { useSessionUser } from "@/services/sessionAuth";
 import PaymentView from "@/components/onboarding/PaymentView";
 import BrandLogo from "@/components/ui/BrandLogo";
@@ -757,10 +757,10 @@ function OnboardingContent({ initialRole }) {
       const checkoutData = {
         transactionId: txId,
         gatewayReference: gwRef,
-        userId: userAuth?.id || `USR_${Date.now().toString().slice(-6)}`,
-        userName: userAuth?.name || "Verified Member",
-        userEmail: userAuth?.email || "member@ulavansanthai.in",
-        userMobile: userAuth?.mobile || "9876543210",
+        userId: userAuth?.id || "",
+        userName: userAuth?.name || "Registered Member",
+        userEmail: userAuth?.email || "",
+        userMobile: userAuth?.mobile || "",
         role: role.toUpperCase(),
         planId: role === "buyer" ? "plan_buyer_base" : "plan_seller_monthly",
         planName: role === "buyer" ? `Buyer Access Plan (${buyerViewLimit} Sellers)` : "Seller Monthly Plan (₹365/mo)",
@@ -777,54 +777,38 @@ function OnboardingContent({ initialRole }) {
 
       await submitRolePayment(checkoutData);
 
-      // 3. Update session user state with role-specific independent completion flags
+      // 3. Sync live user profile directly from backend (/api/user/me)
+      try {
+        const profileRes = await fetchCurrentUserProfile();
+        if (profileRes.success && profileRes.user && typeof window !== "undefined") {
+          sessionStorage.setItem("ulavan_user", JSON.stringify(profileRes.user));
+        }
+      } catch {
+        // Fallback: update status on existing backend session object
+        if (typeof window !== "undefined") {
+          const stored = sessionStorage.getItem("ulavan_user");
+          if (stored) {
+            try {
+              const current = JSON.parse(stored);
+              current.isPaid = true;
+              if (role === "seller") {
+                current.sellerPaid = true;
+                current.sellerOnboarded = true;
+              } else {
+                current.buyerPaid = true;
+                current.buyerOnboarded = true;
+              }
+              sessionStorage.setItem("ulavan_user", JSON.stringify(current));
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
       if (typeof window !== "undefined") {
-        const stored =
-          sessionStorage.getItem("ulavan_user") ||
-          sessionStorage.getItem("ulavan_registered_user") ||
-          localStorage.getItem("ulavan_registered_user");
-        const existing = stored ? JSON.parse(stored) : (userAuth || {});
-
-        const isBuyer = role === "buyer";
-        const paymentRecord = {
-          transactionId: txId,
-          gatewayReference: gwRef,
-          invoiceNumber: invNumber,
-          amount: totalAmount,
-          status: "SUCCESS",
-          paidAt: startDate,
-          planStartDate: startDate,
-          planEndDate: endDate.toISOString(),
-          renewalDueDate,
-          buyerViewLimit,
-          buyerViewed: 0,
-          buyerRemaining: buyerViewLimit,
-        };
-
-        const updatedUser = {
-          ...existing,
-          role: role.charAt(0).toUpperCase() + role.slice(1),
-          activeRole: role,
-          subType: isBuyer ? buyerType : sellerType,
-          status: "active",
-          isPaid: true,
-          // Role-specific completion flags
-          buyerPaid: isBuyer ? true : Boolean(existing.buyerPaid),
-          buyerOnboarded: isBuyer ? true : Boolean(existing.buyerOnboarded),
-          buyerData: isBuyer ? { ...buyerData, buyerType } : existing.buyerData,
-          buyerPayment: isBuyer ? paymentRecord : existing.buyerPayment,
-
-          sellerPaid: !isBuyer ? true : Boolean(existing.sellerPaid),
-          sellerOnboarded: !isBuyer ? true : Boolean(existing.sellerOnboarded),
-          sellerData: !isBuyer ? { ...sellerData, sellerType } : existing.sellerData,
-          sellerPayment: !isBuyer ? paymentRecord : existing.sellerPayment,
-
-          payment: paymentRecord,
-        };
-
-        sessionStorage.setItem("ulavan_user", JSON.stringify(updatedUser));
-        sessionStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
-        localStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
+        sessionStorage.removeItem("ulavan_registered_user");
+        localStorage.removeItem("ulavan_registered_user");
         sessionStorage.setItem("ulavan_latest_app_id", applicationId);
         sessionStorage.setItem("ulavan_latest_payment_id", invNumber);
       }
@@ -2372,11 +2356,11 @@ function OnboardingContent({ initialRole }) {
                           .slice(0, 2)
                           .join("")
                           .toUpperCase()
-                      : "TV"}
+                      : "US"}
                   </div>
                   <div>
                     <h4 className="text-base font-bold text-gray-900 leading-tight">
-                      {userAuth?.name || "Tamil Vibez"}
+                      {userAuth?.name || "Registered Member"}
                     </h4>
                     <p className="text-xs text-gray-400 mt-0.5 font-normal">
                       Full Name / Username
@@ -2396,7 +2380,7 @@ function OnboardingContent({ initialRole }) {
                     <div className="min-w-0 flex-1">
                       <span className="text-xs text-gray-400 block font-normal">Email Address</span>
                       <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                        {userAuth?.email || "trader@ulavansanthai.in"}
+                        {userAuth?.email || "—"}
                       </span>
                     </div>
                   </div>
@@ -2411,7 +2395,7 @@ function OnboardingContent({ initialRole }) {
                     <div className="min-w-0 flex-1">
                       <span className="text-xs text-gray-400 block font-normal">Mobile Number</span>
                       <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                        +91 {userAuth?.mobile || "1234567890"}
+                        {userAuth?.mobile ? `+91 ${userAuth.mobile}` : "—"}
                       </span>
                     </div>
                   </div>

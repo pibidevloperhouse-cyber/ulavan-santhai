@@ -16,7 +16,7 @@ import {
  * 2. Order creation (handles 409 conflict if membership already active)
  * 3. Opening official Razorpay modal
  * 4. Cryptographic HMAC verification
- * 5. Automatic live profile sync via /api/v1/user/me
+ * 5. Automatic live profile sync via /api/user/me
  */
 export function useRazorpayPayment() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -145,7 +145,7 @@ export function useRazorpayPayment() {
                 );
               }
 
-              // 5. Sync Live Profile from Supabase (/api/v1/user/me)
+              // 5. Sync Live Profile from Supabase (/api/user/me)
               let liveUser = null;
               try {
                 const profileRes = await fetchCurrentUserProfile();
@@ -159,50 +159,38 @@ export function useRazorpayPayment() {
                 );
               }
 
-              // 6. Update local session storage cleanly
-              const stored =
-                typeof window !== "undefined"
-                  ? sessionStorage.getItem("ulavan_user") ||
-                    localStorage.getItem("ulavan_registered_user")
-                  : null;
-              const existing = stored ? JSON.parse(stored) : userAuth || {};
-
-              const baseUserData = liveUser || existing;
-              const { password: _p, ...safeUser } = baseUserData;
-
+              // 6. Update local session storage cleanly with backend data
+              const safeUser = liveUser || userAuth || {};
               const invoiceNumber =
                 verifyRes.data?.invoiceNumber ||
                 verifyRes.raw?.invoiceNumber ||
                 `INV-US-2026-${Math.floor(100000 + Math.random() * 900000)}`;
 
-              const updatedUser = {
-                ...safeUser,
-                role: isBuyer ? "Buyer" : "Seller",
-                activeRole: isBuyer ? "buyer" : "seller",
-                status: "active",
-                isPaid: true,
-                buyerPaid: isBuyer ? true : Boolean(safeUser.buyerPaid),
-                buyerOnboarded: isBuyer ? true : Boolean(safeUser.buyerOnboarded),
-                sellerPaid: !isBuyer ? true : Boolean(safeUser.sellerPaid),
-                sellerOnboarded: !isBuyer
-                  ? true
-                  : Boolean(safeUser.sellerOnboarded),
-              };
-
               if (typeof window !== "undefined") {
-                sessionStorage.setItem("ulavan_user", JSON.stringify(updatedUser));
-                sessionStorage.setItem(
-                  "ulavan_registered_user",
-                  JSON.stringify(updatedUser)
-                );
-                localStorage.setItem(
-                  "ulavan_registered_user",
-                  JSON.stringify(updatedUser)
-                );
-                sessionStorage.setItem(
-                  "ulavan_latest_payment_id",
-                  invoiceNumber
-                );
+                if (liveUser && typeof liveUser === "object") {
+                  sessionStorage.setItem("ulavan_user", JSON.stringify(liveUser));
+                } else {
+                  // Fallback: update flags on existing session object until live sync completes
+                  const stored = sessionStorage.getItem("ulavan_user");
+                  if (stored) {
+                    try {
+                      const current = JSON.parse(stored);
+                      current.isPaid = true;
+                      if (isBuyer) {
+                        current.buyerPaid = true;
+                        current.buyerOnboarded = true;
+                      } else {
+                        current.sellerPaid = true;
+                        current.sellerOnboarded = true;
+                      }
+                      sessionStorage.setItem("ulavan_user", JSON.stringify(current));
+                    } catch {
+                      // ignore
+                    }
+                  }
+                }
+                sessionStorage.removeItem("ulavan_registered_user");
+                localStorage.removeItem("ulavan_registered_user");
               }
 
               const resultPayload = {
@@ -223,7 +211,7 @@ export function useRazorpayPayment() {
                 baseAmount: Math.round(amount / 100),
                 totalAmount: Math.round(amount / 100),
                 paymentMethod: `Razorpay (${detectedMethod})`,
-                user: updatedUser,
+                user: safeUser,
               };
 
               setIsProcessing(false);

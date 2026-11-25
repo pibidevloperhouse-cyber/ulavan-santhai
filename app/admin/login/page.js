@@ -15,32 +15,73 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!email.trim() || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
       setError("Please enter your admin email and access key.");
       return;
     }
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Send credentials directly to Express backend via /api/v1/admin/login
+      const res = await fetch("/api/v1/admin/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data || data.success === false) {
+        setIsLoading(false);
+        setError(
+          data?.message ||
+          data?.error ||
+          "Authentication failed. Please verify your administrator credentials."
+        );
+        return;
+      }
+
+      // Store authentic admin data returned by backend
       if (typeof window !== "undefined") {
-        const adminSession = {
-          email,
+        const adminSession = data.user || data.data || {
+          email: cleanEmail,
           role: "Administrator",
           title: "Super Admin Control",
           lastLogin: new Date().toISOString(),
         };
+        const token = data.token || data.accessToken || "";
+
         sessionStorage.setItem("ulavan_admin_user", JSON.stringify(adminSession));
-        localStorage.setItem("ulavan_admin_user", JSON.stringify(adminSession));
+        if (token) {
+          sessionStorage.setItem("ulavan_admin_token", token);
+        }
+
+        if (rememberMe) {
+          localStorage.setItem("ulavan_admin_user", JSON.stringify(adminSession));
+          if (token) {
+            localStorage.setItem("ulavan_admin_token", token);
+          }
+        }
       }
 
       setIsLoading(false);
       router.push("/admin");
-    }, 600);
+    } catch (err) {
+      console.error("Admin login network error:", err);
+      setIsLoading(false);
+      setError("Unable to connect to the backend server. Please verify the backend service is running.");
+    }
   };
 
   const handleQuickDemoFill = () => {

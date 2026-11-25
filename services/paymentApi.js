@@ -87,11 +87,11 @@ export async function submitRolePayment(checkoutData) {
 }
 
 /**
- * Fetch live authenticated user profile from backend (/api/v1/user/me)
+ * Fetch live authenticated user profile from backend (/api/user/me)
  * Used to immediately synchronize Supabase database states (buyerPaid, buyerOnboarded, etc.)
  */
 export async function fetchCurrentUserProfile() {
-  const res = await apiFetch("/api/v1/user/me", { method: "GET" });
+  const res = await apiFetch("/api/user/me", { method: "GET" });
   if (res.success && res.data) {
     const userObj = res.data?.user || res.data?.data || res.data;
     return {

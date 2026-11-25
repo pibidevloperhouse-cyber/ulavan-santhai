@@ -28,7 +28,7 @@ export default function GetStartedPage() {
 
         if (!token) return;
 
-        const res = await fetch("/api/v1/user/me", {
+        const res = await fetch("/api/user/me", {
           headers: {
             Authorization: `Bearer ${token}`,
             "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -43,13 +43,9 @@ export default function GetStartedPage() {
           if (isMounted && userData && typeof userData === "object") {
             setLiveUser(userData);
 
-            // Sync updated values to session storage for seamless cross-page use
+            // Store ONLY the authoritative backend user data received from /api/v1/user/me
             if (typeof window !== "undefined") {
-              const stored = sessionStorage.getItem("ulavan_user");
-              const current = stored ? JSON.parse(stored) : {};
-              current.sellerOnboarded = Boolean(userData.sellerOnboarded);
-              current.buyerOnboarded = Boolean(userData.buyerOnboarded);
-              sessionStorage.setItem("ulavan_user", JSON.stringify(current));
+              sessionStorage.setItem("ulavan_user", JSON.stringify(userData));
             }
           }
         }
@@ -65,11 +61,7 @@ export default function GetStartedPage() {
     };
   }, []);
 
-  const userName =
-    liveUser?.name ||
-    (sessionUser?.name && sessionUser.name !== "Farmer Ramesh Kumar"
-      ? sessionUser.name
-      : "");
+  const userName = liveUser?.name || sessionUser?.name || "";
 
   // 3. Flags derived with live database priority
   const isSellerOnboarded = liveUser
@@ -83,19 +75,17 @@ export default function GetStartedPage() {
   // 4. Role Selection Redirection Handler
   const handleSelectRole = (role, forceEdit = false) => {
     try {
-      const stored =
-        sessionStorage.getItem("ulavan_user") ||
-        sessionStorage.getItem("ulavan_registered_user") ||
-        localStorage.getItem("ulavan_registered_user");
-      let currentUser = stored ? JSON.parse(stored) : {};
+      const stored = sessionStorage.getItem("ulavan_user");
+      const base = stored ? JSON.parse(stored) : (liveUser || sessionUser || {});
 
       const roleCapitalized = role === "buyer" ? "Buyer" : "Seller";
-      currentUser.activeRole = role;
-      currentUser.role = roleCapitalized;
+      const updatedUser = {
+        ...base,
+        activeRole: role,
+        role: roleCapitalized,
+      };
 
-      sessionStorage.setItem("ulavan_user", JSON.stringify(currentUser));
-      sessionStorage.setItem("ulavan_registered_user", JSON.stringify(currentUser));
-      localStorage.setItem("ulavan_registered_user", JSON.stringify(currentUser));
+      sessionStorage.setItem("ulavan_user", JSON.stringify(updatedUser));
 
       if (role === "seller") {
         if (isSellerOnboarded && !forceEdit) {

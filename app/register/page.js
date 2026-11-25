@@ -193,23 +193,11 @@ export default function BasicRegistrationPage() {
   };
 
   const completeRegistrationSuccess = () => {
-    const cleanMobile = formData.mobile.replace(/\D/g, "");
-    const newAccount = {
-      name: formData.fullName.trim(),
-      username: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      mobile: cleanMobile,
-      password: formData.password,
-      role: "unassigned",
-      status: "active",
-      emailVerified: true,
-      onboarded: false,
-      registeredAt: new Date().toISOString(),
-    };
-
+    // Only real data from backend (/api/v1/user/me or /api/auth/login) is stored.
+    // Client-created synthetic user data is not stored in sessionStorage/localStorage.
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("ulavan_registered_user", JSON.stringify(newAccount));
-      localStorage.setItem("ulavan_registered_user", JSON.stringify(newAccount));
+      sessionStorage.removeItem("ulavan_registered_user");
+      localStorage.removeItem("ulavan_registered_user");
     }
 
     setIsEmailModalOpen(false);

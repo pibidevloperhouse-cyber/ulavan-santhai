@@ -90,11 +90,8 @@ function LoginContent() {
         return;
       }
 
-      const userData = {
-        ...data.user,
-        sellerOnboarded: Boolean(data.user?.sellerOnboarded),
-        buyerOnboarded: Boolean(data.user?.buyerOnboarded),
-      };
+      // Strictly store the authoritative user data received from backend
+      const userData = data.user || data.data || data;
       const token = data.token;
 
       // Always direct user to role selection / switching screen (/get-started)
@@ -107,9 +104,11 @@ function LoginContent() {
           sessionStorage.setItem("ulavan_auth_token", token);
           localStorage.setItem("ulavan_auth_token", token);
         }
-        sessionStorage.setItem("ulavan_user", JSON.stringify(userData));
-        sessionStorage.setItem("ulavan_registered_user", JSON.stringify(userData));
-        localStorage.setItem("ulavan_registered_user", JSON.stringify(userData));
+        if (userData && typeof userData === "object") {
+          sessionStorage.setItem("ulavan_user", JSON.stringify(userData));
+        }
+        sessionStorage.removeItem("ulavan_registered_user");
+        localStorage.removeItem("ulavan_registered_user");
       } catch {
         // ignore
       }
