@@ -24,4 +24,8 @@ Thumbs.db
 # Tests (keep local, do not push to remote)
 tests/
 
+# Scripts (keep local, do not push to remote)
+src/scripts/
+scripts/
+
 

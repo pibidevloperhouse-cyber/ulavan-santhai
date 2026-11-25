@@ -27,7 +27,6 @@ export const getUserStatusService = async (userId) => {
   }
 
   const statusPayload = {
-    id: user.id,
     name: user.name,
     email: user.email,
     mobile: user.mobile,
@@ -40,7 +39,6 @@ export const getUserStatusService = async (userId) => {
   return {
     success: true,
     user: statusPayload,
-    data: statusPayload,
   };
 };
 

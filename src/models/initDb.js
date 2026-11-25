@@ -301,6 +301,19 @@ export const initAllTables = async () => {
         is_active = EXCLUDED.is_active,
         updated_at = NOW();
 
+      -- Admin Users Table (Isolated from marketplace users; no name/title columns)
+      CREATE TABLE IF NOT EXISTS public.admin_users (
+        id VARCHAR(64) PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'Administrator',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_admin_users_email ON public.admin_users(email);
+
       CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
       CREATE INDEX IF NOT EXISTS idx_users_mobile ON public.users(mobile);
       CREATE INDEX IF NOT EXISTS idx_buyer_profiles_district ON public.buyer_profiles(district);

@@ -93,7 +93,7 @@ export const generateAuthToken = (user) => {
  * @param {string} input.email
  * @param {string} input.mobile
  * @param {string} input.password
- * @returns {Promise<{ success: boolean, message: string, email: string, userId: string }>}
+ * @returns {Promise<{ success: boolean, message: string, email: string }>}
  */
 export const registerUserService = async ({ name, username, email, mobile, password } = {}) => {
   if (!name || !email || !mobile || !password) {
@@ -286,7 +286,6 @@ export const registerUserService = async ({ name, username, email, mobile, passw
     success: true,
     message: 'Registration initiated. Verification OTP sent to your email.',
     email: cleanEmail,
-    userId: targetUserId,
   };
 };
 

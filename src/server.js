@@ -15,6 +15,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0'; // Binds to all network interfaces on this machine
 
+// Trust reverse proxies securely (1 hop: Next.js dev server, Nginx, Cloudflare, or AWS ALB)
+// Guarantees express-rate-limit identifies authentic client IPs while preventing header spoofing
+app.set('trust proxy', 1);
+
 // Helper: Dynamically get this computer's active LAN IPv4 address
 const getActiveLocalIp = () => {
   const nets = os.networkInterfaces();

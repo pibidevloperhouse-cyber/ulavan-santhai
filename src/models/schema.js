@@ -200,7 +200,7 @@ export const membershipPlans = pgTable('membership_plans', {
 });
 
 /**
- * 7. Product Categories Table
+ * 9. Product Categories Table
  * Dynamic categories loaded from the database so Admins can add or update them.
  */
 export const productCategories = pgTable('product_categories', {
@@ -212,7 +212,7 @@ export const productCategories = pgTable('product_categories', {
 });
 
 /**
- * 8. Products Table
+ * 10. Products Table
  * Full agricultural product listings created by verified Sellers.
  * Supports complete lifecycle (Draft, Submitted, Under Review, Approved, Published, etc.),
  * multi-image gallery with primary selection, origin, MOQ, processing, dynamic attributes & certifications.
@@ -256,3 +256,17 @@ export const products = pgTable('products', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+/**
+ * 11. Admin Users Table
+ * Dedicated administrative credentials and access control (isolated from marketplace users).
+ * Streamlined: omits name and title as requested.
+ */
+export const adminUsers = pgTable('admin_users', {
+  id: varchar('id', { length: 64 }).primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  role: varchar('role', { length: 50 }).default('Administrator').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
