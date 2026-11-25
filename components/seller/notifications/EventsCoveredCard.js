@@ -4,8 +4,8 @@ import React from "react";
 
 export default function EventsCoveredCard() {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 shadow-2xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">Events covered</h2>
         <span className="text-xs text-[#526458] bg-[#F4F1EA] px-2.5 py-0.5 rounded-full font-medium">
           Activity triggers

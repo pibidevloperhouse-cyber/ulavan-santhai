@@ -21,7 +21,7 @@ export default function BrandLogo({
       unoptimized
       priority={priority}
       className={`h-auto object-contain mix-blend-multiply transition-transform duration-200 hover:scale-[1.02] ${className}`}
-      style={{ width: `${width}px` }}
+      style={className && className.includes("w-") ? undefined : { width: `${width}px` }}
     />
   );
 

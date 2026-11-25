@@ -66,15 +66,15 @@ export default function SellerSubscriptionPage() {
       </div>
 
       {/* Top Section: Current Plan & Renew Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <div className="lg:col-span-7 min-w-0">
           <CurrentSubscriptionCard
             subscription={profile.subscription}
             onRenew={handlePay}
           />
         </div>
 
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5 min-w-0">
           <RenewPlanCard
             planPrice="₹365"
             onPay={handlePay}

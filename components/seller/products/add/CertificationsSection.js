@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { Plus, FileText, CheckCircle2, Trash2, Upload } from "lucide-react";
+import SellerSelect from "../../ui/SellerSelect";
 
 export default function CertificationsSection({
   certifications = [],
@@ -68,9 +69,18 @@ export default function CertificationsSection({
     }
   };
 
+  const certOptions = [
+    { value: "", label: "Select certification" },
+    { value: "FSSAI", label: "FSSAI Food Safety" },
+    { value: "NPOP Organic", label: "NPOP Certified Organic" },
+    { value: "Jaivik Bharat", label: "Jaivik Bharat" },
+    { value: "ISO 22000", label: "ISO 22000 Food Management" },
+    { value: "Other", label: "Other Certificate" },
+  ];
+
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-[#1F2922]">
             7. Certifications
@@ -85,30 +95,23 @@ export default function CertificationsSection({
       {certifications.map((cert) => (
         <div
           key={cert.id}
-          className="border border-[#E7E2D7] rounded-xl p-4 bg-[#FCFBF8] space-y-3.5"
+          className="border border-[#E7E2D7] rounded-xl p-3.5 sm:p-4 bg-[#FCFBF8] space-y-3.5 min-w-0"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs font-semibold text-[#38453D] mb-1">
                 Certification name
               </label>
-              <select
+              <SellerSelect
                 value={cert.name}
-                onChange={(e) =>
-                  onUpdateCertification(cert.id, "name", e.target.value)
-                }
-                className="w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B] cursor-pointer"
-              >
-                <option value="">Select certification</option>
-                <option value="FSSAI">FSSAI Food Safety</option>
-                <option value="NPOP Organic">NPOP Certified Organic</option>
-                <option value="Jaivik Bharat">Jaivik Bharat</option>
-                <option value="ISO 22000">ISO 22000 Food Management</option>
-                <option value="Other">Other Certificate</option>
-              </select>
+                onChange={(val) => onUpdateCertification(cert.id, "name", val)}
+                options={certOptions}
+                placeholder="Select certification"
+                ariaLabel="Certification name"
+              />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs font-semibold text-[#38453D] mb-1">
                 Certification number
               </label>
@@ -119,7 +122,7 @@ export default function CertificationsSection({
                 onChange={(e) =>
                   onUpdateCertification(cert.id, "number", e.target.value)
                 }
-                className="w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+                className="w-full min-w-0 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
               />
             </div>
           </div>
@@ -144,18 +147,20 @@ export default function CertificationsSection({
               <label className="block text-xs font-semibold text-[#38453D] mb-1">
                 Validity (From · Until)
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   type="date"
+                  aria-label="Valid from"
                   value={cert.validFrom}
                   onChange={(e) =>
                     onUpdateCertification(cert.id, "validFrom", e.target.value)
                   }
                   className="w-full px-2.5 py-1.5 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
                 />
-                <span className="text-[#8A958E] text-xs">·</span>
+                <span className="hidden sm:inline text-[#8A958E] text-xs">·</span>
                 <input
                   type="date"
+                  aria-label="Valid until"
                   value={cert.validUntil}
                   onChange={(e) =>
                     onUpdateCertification(cert.id, "validUntil", e.target.value)
@@ -184,11 +189,11 @@ export default function CertificationsSection({
             />
 
             {cert.documentName || cert.documentUploaded ? (
-              <div className="flex flex-wrap items-center gap-3 p-3 bg-[#EAF5EC] border border-[#BEE3C8] rounded-lg">
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-[#EAF5EC] border border-[#BEE3C8] rounded-lg min-w-0">
                 <CheckCircle2 className="w-5 h-5 text-[#1D7446] shrink-0" />
-                <div className="flex-1 min-w-[150px]">
+                <div className="flex-1 min-w-0">
                   <p
-                    className="text-xs font-bold text-[#1D7446] truncate max-w-[280px]"
+                    className="text-xs font-bold text-[#1D7446] truncate"
                     title={cert.documentName}
                   >
                     {cert.documentName || "Certificate Document Attached"}

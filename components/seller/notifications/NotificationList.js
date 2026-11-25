@@ -21,11 +21,11 @@ export default function NotificationList({
         <div
           key={notif.id}
           onClick={() => onToggleRead && onToggleRead(notif.id)}
-          className={`p-4 flex items-start justify-between gap-3 cursor-pointer transition-colors ${
+          className={`p-3.5 sm:p-4 flex flex-col xs:flex-row xs:items-start justify-between gap-2.5 xs:gap-3 cursor-pointer transition-colors ${
             notif.unread ? "bg-[#FAF8F2]" : "hover:bg-[#FAF9F6]"
           }`}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
             {/* Unread dot indicator */}
             <span
               className={`mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 ${
@@ -35,8 +35,8 @@ export default function NotificationList({
               }`}
             />
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span className="font-bold text-xs text-[#1F2922]">
                   {notif.title}
                 </span>
@@ -48,7 +48,7 @@ export default function NotificationList({
             </div>
           </div>
 
-          <span className="text-[11px] text-[#8C9890] shrink-0 whitespace-nowrap">
+          <span className="text-[11px] text-[#8C9890] shrink-0 whitespace-nowrap self-end xs:self-auto">
             {notif.time}
           </span>
         </div>

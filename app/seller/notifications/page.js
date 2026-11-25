@@ -37,7 +37,7 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
             Notifications
@@ -50,14 +50,14 @@ export default function NotificationsPage() {
         <button
           type="button"
           onClick={handleMarkAllRead}
-          className="inline-flex items-center justify-center px-3.5 py-1.5 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs self-start sm:self-auto"
+          className="inline-flex items-center justify-center px-3.5 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs w-full sm:w-auto text-center cursor-pointer"
         >
           Mark all as read
         </button>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {[
           { label: "All", key: "All" },
           { label: `Unread (${unreadCount})`, key: "Unread" },
@@ -82,15 +82,15 @@ export default function NotificationsPage() {
       </div>
 
       {/* Split Layout: List & Guide */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <div className="lg:col-span-8 min-w-0">
           <NotificationList
             notifications={filteredNotifications}
             onToggleRead={handleToggleRead}
           />
         </div>
 
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 min-w-0">
           <EventsCoveredCard />
         </div>
       </div>

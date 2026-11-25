@@ -6,10 +6,12 @@
 // Layout Components
 export { default as SellerSidebar } from "./layout/SellerSidebar";
 export { default as SellerHeader } from "./layout/SellerHeader";
+export { default as HeaderAlertsPopover } from "./layout/HeaderAlertsPopover";
 export { SellerProvider, useSeller } from "./layout/SellerContext";
 
 // UI Components
 export { default as StatusBadge } from "./ui/StatusBadge";
+export { default as SellerSelect } from "./ui/SellerSelect";
 
 // Dashboard Components
 export { default as SubscriptionBanner } from "./dashboard/SubscriptionBanner";

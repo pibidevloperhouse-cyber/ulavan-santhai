@@ -14,9 +14,9 @@ export default function EnquiryDetail({
   if (!enquiry) return null;
 
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-5">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-5 min-w-0">
       {/* Detail Header */}
-      <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#F0ECE4]">
+      <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-2.5 pb-3 border-b border-[#F0ECE4]">
         <div>
           <h2 className="text-base font-bold text-[#1F2922]">
             {enquiry.buyerName}
@@ -25,7 +25,9 @@ export default function EnquiryDetail({
             Buyer type: {enquiry.buyerType}
           </p>
         </div>
-        <StatusBadge status={enquiry.status} />
+        <div className="shrink-0">
+          <StatusBadge status={enquiry.status} />
+        </div>
       </div>
 
       {/* Information Grid */}
@@ -110,18 +112,18 @@ export default function EnquiryDetail({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2.5 pt-1">
+        <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-end gap-2.5 pt-1">
           <button
             type="button"
             onClick={onSaveDraft}
-            className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors"
+            className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors text-center cursor-pointer"
           >
             Save reply draft
           </button>
           <button
             type="button"
             onClick={onSendResponse}
-            className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs"
+            className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
           >
             Send response
           </button>

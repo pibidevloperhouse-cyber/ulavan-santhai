@@ -110,8 +110,8 @@ export default function ProductImagesSection({
   };
 
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-[#1F2922]">
             2. Product images
@@ -195,7 +195,7 @@ export default function ProductImagesSection({
           <div className="text-xs font-semibold text-[#38453D]">
             Uploaded Images ({images.length})
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3">
             {images.map((img) => (
               <div
                 key={img.id}
