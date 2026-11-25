@@ -88,6 +88,7 @@ export const sellerPlan = {
   description:
     'List crops, receive verified commercial buyer enquiries, and manage your agricultural sales.',
   benefits: [
+    'You can select multiple classifications. A ₹365 fee applies to each selected classification.',
     '100% Verified Farmer / Producer Badge',
     'Showcase unlimited crop & harvest lots',
     'Receive direct verified commercial buyer enquiries',

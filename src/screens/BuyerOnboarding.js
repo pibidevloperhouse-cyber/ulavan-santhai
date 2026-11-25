@@ -28,6 +28,7 @@ const individualBuyerProofs = [
   ['PAN Card', 'Upload your PAN Card proof document.', 'PAN_CARD'],
 ];
 const benefits = [
+  'You can select multiple classifications. A ₹365 fee applies to each selected classification.',
   '100% Verified Buyer & Procurement Badge',
   'Direct phone & WhatsApp contact with farmers',
   'Direct access to farmer harvest produce listings',
@@ -182,130 +183,134 @@ function Detail({ label, value, icon }) {
   );
 }
 
-function getClassificationReviewRows({ isSeller, profile, fieldValues }) {
+function getClassificationReviewRows({ isSeller, profile, sellerTypes = [], buyerTypes = [], fieldValues }) {
   const locationLabel = isSeller ? 'Farm / Unit Location' : 'Operating District';
   const locationValue = `${profile.district || 'Tamil Nadu'}, Tamil Nadu`;
   const addressParts = [profile.address, profile.city, profile.pinCode].filter(Boolean);
   const rows = [];
 
   if (!isSeller) {
-    const bt = profile.buyerType;
-    if (bt === 'Individual') {
-      rows.push({ label: 'Account Category', value: 'Individual Direct Consumer', icon: 'user' });
-    } else if (bt === 'Business') {
-      rows.push({ label: 'Enterprise Name', value: fieldValues.businessName || '—', icon: 'building' });
-      rows.push({
-        label: 'GST Status',
-        value:
-          fieldValues.businessIsGst === 'Yes' && fieldValues.businessGstin
-            ? fieldValues.businessGstin
-            : 'Unregistered',
-        icon: 'shield',
-      });
-    } else if (bt === 'Manufacturer') {
-      rows.push({
-        label: 'Company & Sector',
-        value: [fieldValues.mfgCompanyName, fieldValues.mfgCategory].filter(Boolean).join(' • ') || '—',
-        icon: 'building',
-      });
-    } else if (bt === 'Reseller') {
-      rows.push({
-        label: 'Mandi Shop / Stall',
-        value: [fieldValues.resellerShopName, fieldValues.resellerType].filter(Boolean).join(' • ') || '—',
-        icon: 'building',
-      });
-    } else {
-      rows.push({
-        label: 'Organization',
-        value: [fieldValues.otherOrgName, fieldValues.otherCategory].filter(Boolean).join(' • ') || '—',
-        icon: 'building',
-      });
-      rows.push({
-        label: 'Buying Purpose',
-        value: fieldValues.otherPurpose || '—',
-        icon: 'doc',
-      });
+    const activeBuyerRoles = buyerTypes.length > 0 ? buyerTypes : [profile.buyerType];
+    for (const bt of activeBuyerRoles) {
+      if (bt === 'Individual') {
+        rows.push({ label: 'Account Category', value: 'Individual Direct Consumer', icon: 'user' });
+      } else if (bt === 'Business') {
+        rows.push({ label: 'Enterprise Name', value: fieldValues.businessName || '—', icon: 'building' });
+        rows.push({
+          label: 'GST Status',
+          value:
+            fieldValues.businessIsGst === 'Yes' && fieldValues.businessGstin
+              ? fieldValues.businessGstin
+              : 'Unregistered',
+          icon: 'shield',
+        });
+      } else if (bt === 'Manufacturer') {
+        rows.push({
+          label: 'Company & Sector',
+          value: [fieldValues.mfgCompanyName, fieldValues.mfgCategory].filter(Boolean).join(' • ') || '—',
+          icon: 'building',
+        });
+      } else if (bt === 'Reseller') {
+        rows.push({
+          label: 'Mandi Shop / Stall',
+          value: [fieldValues.resellerShopName, fieldValues.resellerType].filter(Boolean).join(' • ') || '—',
+          icon: 'building',
+        });
+      } else {
+        rows.push({
+          label: 'Organization',
+          value: [fieldValues.otherOrgName, fieldValues.otherCategory].filter(Boolean).join(' • ') || '—',
+          icon: 'building',
+        });
+        rows.push({
+          label: 'Buying Purpose',
+          value: fieldValues.otherPurpose || '—',
+          icon: 'doc',
+        });
+      }
     }
   } else {
-    const st = profile.sellerType;
-    if (st === 'Farmer') {
-      rows.push({ label: 'Farm Name', value: fieldValues.farmerFarmName || '—', icon: 'home' });
-    } else if (st === 'Agricultural Producer') {
-      rows.push({
-        label: 'FPO / Cooperative',
-        value: fieldValues.fpoName
-          ? fieldValues.fpoStructure
-            ? `${fieldValues.fpoName} (${fieldValues.fpoStructure})`
-            : fieldValues.fpoName
-          : '—',
-        icon: 'building',
-      });
-      rows.push({
-        label: 'Registration Number',
-        value:
-          fieldValues.fpoIsRegistered === 'Yes' && fieldValues.fpoRegNumber
-            ? fieldValues.fpoRegNumber
-            : 'Not Registered',
-        icon: 'shield',
-      });
-    } else if (st === 'Organic Producer') {
-      rows.push({
-        label: 'Organic Farm',
-        value: [fieldValues.organicFarmName, fieldValues.organicCertStatus].filter(Boolean).join(' • ') || '—',
-        icon: 'building',
-      });
-      rows.push({
-        label: 'License / Scope Number',
-        value:
-          fieldValues.organicHasLicense === 'Yes' && fieldValues.organicScopeNumber
-            ? fieldValues.organicScopeNumber
-            : 'No License',
-        icon: 'shield',
-      });
-    } else if (st === 'Raw-Material Provider') {
-      rows.push({
-        label: 'Business / Provider Name',
-        value: fieldValues.rawProviderName || '—',
-        icon: 'building',
-      });
-    } else if (st === 'Ingredient Producer') {
-      rows.push({
-        label: 'Enterprise Name',
-        value: fieldValues.ingProducerName || '—',
-        icon: 'building',
-      });
-      rows.push({
-        label: 'FSSAI License',
-        value:
-          fieldValues.ingHasFssai === 'Yes' && fieldValues.ingFssaiNumber
-            ? fieldValues.ingFssaiNumber
-            : 'No FSSAI License',
-        icon: 'shield',
-      });
-    } else if (st === 'Manufacturer') {
-      rows.push({ label: 'Company Name', value: fieldValues.mfgSellerName || '—', icon: 'building' });
-      rows.push({
-        label: 'FSSAI & GSTIN',
-        value: `${fieldValues.mfgHasFssai === 'Yes' && fieldValues.mfgFssaiNumber ? `FSSAI: ${fieldValues.mfgFssaiNumber}` : 'No FSSAI'} • ${fieldValues.mfgIsGst === 'Yes' && fieldValues.mfgGstin ? `GST: ${fieldValues.mfgGstin}` : 'No GST'}`,
-        icon: 'shield',
-      });
-    } else if (st === 'Value-Added Manufacturer') {
-      rows.push({ label: 'Brand Name', value: fieldValues.vaBrandName || '—', icon: 'building' });
-      rows.push({
-        label: 'FSSAI License',
-        value:
-          fieldValues.vaHasFssai === 'Yes' && fieldValues.vaFssaiNumber
-            ? fieldValues.vaFssaiNumber
-            : 'No FSSAI License',
-        icon: 'shield',
-      });
-    } else {
-      rows.push({ label: 'Enterprise Name', value: fieldValues.otherSellerName || 'N/A', icon: 'building' });
-      rows.push({
-        label: 'GSTIN & Activity',
-        value: `${fieldValues.otherIsGst === 'Yes' && fieldValues.otherGstin ? fieldValues.otherGstin : 'Not GST Registered'}${fieldValues.otherActivity ? ` • ${fieldValues.otherActivity}` : ''}`,
-        icon: 'doc',
-      });
+    const activeRoles = sellerTypes.length > 0 ? sellerTypes : [profile.sellerType];
+    for (const st of activeRoles) {
+      if (st === 'Farmer') {
+        rows.push({ label: 'Farm Name', value: fieldValues.farmerFarmName || '—', icon: 'home' });
+      } else if (st === 'Agricultural Producer') {
+        rows.push({
+          label: 'FPO / Cooperative',
+          value: fieldValues.fpoName
+            ? fieldValues.fpoStructure
+              ? `${fieldValues.fpoName} (${fieldValues.fpoStructure})`
+              : fieldValues.fpoName
+            : '—',
+          icon: 'building',
+        });
+        rows.push({
+          label: 'Registration Number',
+          value:
+            fieldValues.fpoIsRegistered === 'Yes' && fieldValues.fpoRegNumber
+              ? fieldValues.fpoRegNumber
+              : 'Not Registered',
+          icon: 'shield',
+        });
+      } else if (st === 'Organic Producer') {
+        rows.push({
+          label: 'Organic Farm',
+          value: [fieldValues.organicFarmName, fieldValues.organicCertStatus].filter(Boolean).join(' • ') || '—',
+          icon: 'building',
+        });
+        rows.push({
+          label: 'License / Scope Number',
+          value:
+            fieldValues.organicHasLicense === 'Yes' && fieldValues.organicScopeNumber
+              ? fieldValues.organicScopeNumber
+              : 'No License',
+          icon: 'shield',
+        });
+      } else if (st === 'Raw-Material Provider') {
+        rows.push({
+          label: 'Business / Provider Name',
+          value: fieldValues.rawProviderName || '—',
+          icon: 'building',
+        });
+      } else if (st === 'Ingredient Producer') {
+        rows.push({
+          label: 'Enterprise Name',
+          value: fieldValues.ingProducerName || '—',
+          icon: 'building',
+        });
+        rows.push({
+          label: 'FSSAI License',
+          value:
+            fieldValues.ingHasFssai === 'Yes' && fieldValues.ingFssaiNumber
+              ? fieldValues.ingFssaiNumber
+              : 'No FSSAI License',
+          icon: 'shield',
+        });
+      } else if (st === 'Manufacturer') {
+        rows.push({ label: 'Company Name', value: fieldValues.mfgSellerName || '—', icon: 'building' });
+        rows.push({
+          label: 'FSSAI & GSTIN',
+          value: `${fieldValues.mfgHasFssai === 'Yes' && fieldValues.mfgFssaiNumber ? `FSSAI: ${fieldValues.mfgFssaiNumber}` : 'No FSSAI'} • ${fieldValues.mfgIsGst === 'Yes' && fieldValues.mfgGstin ? `GST: ${fieldValues.mfgGstin}` : 'No GST'}`,
+          icon: 'shield',
+        });
+      } else if (st === 'Value-Added Manufacturer') {
+        rows.push({ label: 'Brand Name', value: fieldValues.vaBrandName || '—', icon: 'building' });
+        rows.push({
+          label: 'FSSAI License',
+          value:
+            fieldValues.vaHasFssai === 'Yes' && fieldValues.vaFssaiNumber
+              ? fieldValues.vaFssaiNumber
+              : 'No FSSAI License',
+          icon: 'shield',
+        });
+      } else {
+        rows.push({ label: 'Enterprise Name', value: fieldValues.otherSellerName || 'N/A', icon: 'building' });
+        rows.push({
+          label: 'GSTIN & Activity',
+          value: `${fieldValues.otherIsGst === 'Yes' && fieldValues.otherGstin ? fieldValues.otherGstin : 'Not GST Registered'}${fieldValues.otherActivity ? ` • ${fieldValues.otherActivity}` : ''}`,
+          icon: 'doc',
+        });
+      }
     }
   }
 
@@ -337,6 +342,9 @@ export default function BuyerOnboarding({
     city: '',
     pinCode: '',
   });
+  const [sellerTypes, setSellerTypes] = useState(['Farmer']);
+  const [buyerTypes, setBuyerTypes] = useState(['Individual']);
+  const [showMultiRoleModal, setShowMultiRoleModal] = useState(false);
   const [answers, setAnswers] = useState({});
   const [files, setFiles] = useState({});
   const [uploadingDocs, setUploadingDocs] = useState({});
@@ -351,48 +359,74 @@ export default function BuyerOnboarding({
 
   const activeToken = token || getSessionCache()?.token || null;
   const isUploadingAny = Object.keys(uploadingDocs).length > 0;
-  const sellerForm = sellerForms[profile.sellerType] || sellerForms.Farmer;
-  const form = isSeller ? sellerClassifications[profile.sellerType] : buyerClassifications[profile.buyerType];
-  const visibleFields = (form?.fields || []).filter(field => !field.when || answers[field.when] === 'Yes');
+  const selectedRoles = isSeller ? sellerTypes : buyerTypes;
+  const roleOptions = isSeller ? Object.keys(sellerForms) : types;
+  const roleSchemas = isSeller ? sellerClassifications : buyerClassifications;
+  const activeRoleForms = selectedRoles
+    .map(role => ({ role, config: roleSchemas[role] }))
+    .filter(entry => entry.config);
+  const activeFormsList = activeRoleForms.map(entry => entry.config);
+  const visibleFields = activeFormsList.flatMap(f =>
+    (f.fields || []).filter(field => !field.when || answers[field.when] === 'Yes')
+  );
   const fieldValues = Object.fromEntries(visibleFields.map(field => [
     field.key, answers[field.key]?.trim() || (field.radio ? 'No' : ''),
   ]));
   const selectedField = visibleFields.find(field => field.key === selector);
-  const options = selectedField?.options || (selector === 'district' ? districts : isSeller ? Object.keys(sellerForms) : types);
-  const isIndividualBuyer = !isSeller && profile.buyerType === 'Individual';
+  const options = selectedField?.options || (selector === 'district' ? districts : roleOptions);
   const hasBuyerGst =
     !isSeller &&
-    (answers.businessIsGst === 'Yes' || answers.mfgIsGst === 'Yes');
-  const buyerProofs = isIndividualBuyer
-    ? individualBuyerProofs
-    : hasBuyerGst
-      ? [
-          ...proofs,
-          [
-            'GST Registration Certificate (Form REG-06)',
-            'Upload valid GST registration certificate for your business.',
-            'GST_CERTIFICATE',
-          ],
-        ]
-      : proofs;
-  const activeProofs = isSeller
-    ? profile.sellerType === 'Ingredient Producer' && answers.ingHasFssai === 'Yes'
-      ? [
-          ...sellerForm.proofs,
-          [
-            'FSSAI Food Safety License Certificate',
-            'Mandatory state or central FSSAI registration certificate for food products.',
-            'FSSAI_LICENSE',
-          ],
-        ]
-      : sellerForm.proofs
-    : buyerProofs;
+    ((buyerTypes.includes('Business') && answers.businessIsGst === 'Yes') ||
+      (buyerTypes.includes('Manufacturer') && answers.mfgIsGst === 'Yes'));
+
+  const buyerProofsMap = new Map();
+  if (!isSeller) {
+    for (const bt of buyerTypes) {
+      const formProofs = bt === 'Individual' ? individualBuyerProofs : proofs;
+      for (const proof of formProofs) {
+        const key = proof[2] || proof[0];
+        if (!buyerProofsMap.has(key)) {
+          buyerProofsMap.set(key, proof);
+        }
+      }
+    }
+    if (hasBuyerGst && !buyerProofsMap.has('GST_CERTIFICATE')) {
+      buyerProofsMap.set('GST_CERTIFICATE', [
+        'GST Registration Certificate (Form REG-06)',
+        'Upload valid GST registration certificate for your business.',
+        'GST_CERTIFICATE',
+      ]);
+    }
+  }
+
+  const sellerProofsMap = new Map();
+  if (isSeller) {
+    for (const st of sellerTypes) {
+      const formProofs = sellerForms[st]?.proofs || [];
+      for (const proof of formProofs) {
+        const key = proof[2] || proof[0];
+        if (!sellerProofsMap.has(key)) {
+          sellerProofsMap.set(key, proof);
+        }
+      }
+      if (st === 'Ingredient Producer' && answers.ingHasFssai === 'Yes' && !sellerProofsMap.has('FSSAI_LICENSE')) {
+        sellerProofsMap.set('FSSAI_LICENSE', [
+          'FSSAI Food Safety License Certificate',
+          'Mandatory state or central FSSAI registration certificate for food products.',
+          'FSSAI_LICENSE',
+        ]);
+      }
+    }
+  }
+  const activeProofs = isSeller ? Array.from(sellerProofsMap.values()) : Array.from(buyerProofsMap.values());
+  const roleCount = selectedRoles.length;
+  const totalAmount = roleCount * 365;
   const planName = isSeller ? sellerPlan.name : titles[3];
   const classification = isSeller ? 'Seller Classification' : 'Buyer Classification';
   const heading = isSeller ? ['Seller profile', 'Required Verification Documents', titles[2], planName] : titles;
   const descriptions = isSeller ? [
     subtitles[0],
-    `Upload verification proofs required for your selected classification (${profile.sellerType}). Allowed formats: PDF, JPG, PNG up to 5 MB.`,
+    `Upload verification proofs required for your selected classification${sellerTypes.length > 1 ? 's' : ''} (${sellerTypes.join(', ')}). Allowed formats: PDF, JPG, PNG up to 5 MB.`,
     subtitles[2],
     'Activate your producer workspace for 1 full year to showcase crops & receive direct commercial buyer orders.',
   ] : subtitles;
@@ -418,6 +452,32 @@ export default function BuyerOnboarding({
     setAnswers(previous => ({ ...previous, [key]: value }));
     setCertified(false);
     setError('');
+  }
+
+  function handleRoleTap(role) {
+    const setRoles = isSeller ? setSellerTypes : setBuyerTypes;
+    const profileKey = isSeller ? 'sellerType' : 'buyerType';
+    const isAlreadySelected = selectedRoles.includes(role);
+    if (isAlreadySelected) {
+      if (selectedRoles.length > 1) {
+        const nextRoles = selectedRoles.filter(r => r !== role);
+        setRoles(nextRoles);
+        setProfile(previous => ({ ...previous, [profileKey]: nextRoles[0] }));
+        setCertified(false);
+        setError('');
+        return;
+      }
+      // Single selected role tapped: keep selected and open Multiple Roles Supported popup
+      setShowMultiRoleModal(true);
+      return;
+    }
+
+    const nextRoles = [...selectedRoles, role];
+    setRoles(nextRoles);
+    setProfile(previous => ({ ...previous, [profileKey]: nextRoles[0] }));
+    setCertified(false);
+    setError('');
+    setShowMultiRoleModal(true);
   }
 
   function back() {
@@ -468,11 +528,14 @@ export default function BuyerOnboarding({
       if (!profile.email?.trim() || !profile.email.includes('@')) return setError('Enter a valid email address.');
       if (!profile.mobile?.trim() || profile.mobile.replace(/\D/g, '').length < 10) return setError('Enter a valid 10-digit mobile number.');
     }
-    for (const field of visibleFields) {
-      const value = fieldValues[field.key];
-      if ((field === form.fields[0] || field.when) && !value) return setError('Enter your ' + field.label + '.');
-      if (field.key.endsWith('Gstin') && !/^[0-9A-Z]{15}$/i.test(value)) return setError('Enter a 15-character GSTIN.');
-      if (field.key.endsWith('FssaiNumber') && !/^\d{14}$/.test(value)) return setError('Enter a 14-digit FSSAI license number.');
+    for (const roleForm of activeFormsList) {
+      const roleFields = (roleForm.fields || []).filter(field => !field.when || answers[field.when] === 'Yes');
+      for (const field of roleFields) {
+        const value = fieldValues[field.key];
+        if ((field === roleForm.fields[0] || field.when) && !value) return setError('Enter your ' + field.label + '.');
+        if (field.key.endsWith('Gstin') && !/^[0-9A-Z]{15}$/i.test(value)) return setError('Enter a 15-character GSTIN.');
+        if (field.key.endsWith('FssaiNumber') && !/^\d{14}$/.test(value)) return setError('Enter a 14-digit FSSAI license number.');
+      }
     }
     if (!profile.district) return setError('Select your operating district.');
     if (profile.pinCode && !/^[1-9][0-9]{5}$/.test(profile.pinCode)) return setError('Enter a valid six-digit PIN code.');
@@ -500,7 +563,9 @@ export default function BuyerOnboarding({
       try {
         if (isSeller) {
           await post('onboarding/seller', {
-            sellerType: profile.sellerType,
+            sellerType: sellerTypes[0] || profile.sellerType,
+            sellerTypes,
+            roleCount,
             ...fieldValues,
             district: profile.district,
             village: profile.city,
@@ -512,14 +577,22 @@ export default function BuyerOnboarding({
           const { sellerType, ...buyerProfile } = profile;
           await post('onboarding/buyer', {
             ...buyerProfile,
+            buyerType: buyerTypes[0] || profile.buyerType,
+            buyerTypes,
+            roleCount,
             ...fieldValues,
             userName: user?.name || profile.name,
             documents: Object.values(files).map(file => file.documentId).filter(Boolean),
           });
         }
-        const created = await post('payments/create-order', { planId: isSeller ? 'SELLER_ANNUAL' : 'BUYER_ANNUAL' });
-        if (!created.orderId || !created.keyId || Number(created.amount) !== 36500 || created.currency !== 'INR') {
-          throw new Error('The gateway order does not match the displayed ₹365 plan.');
+        const expectedPaise = totalAmount * 100;
+        const created = await post('payments/create-order', {
+          planId: isSeller ? 'SELLER_ANNUAL' : 'BUYER_ANNUAL',
+          roleCount,
+          amount: totalAmount,
+        });
+        if (!created.orderId || !created.keyId || Number(created.amount) !== expectedPaise || created.currency !== 'INR') {
+          throw new Error(`The gateway order does not match the displayed ₹${totalAmount} plan.`);
         }
         setOrder(created);
       } catch (e) {
@@ -528,7 +601,7 @@ export default function BuyerOnboarding({
           setOrder({
             orderId: 'order_demo_' + Date.now(),
             keyId: 'rzp_test_demo',
-            amount: 36500,
+            amount: totalAmount * 100,
             currency: 'INR',
           });
         } else {
@@ -662,39 +735,65 @@ export default function BuyerOnboarding({
                 </View>
               )}
 
-              <Field
-                label={classification}
-                value={isSeller ? profile.sellerType : profile.buyerType}
-                required
-                select={() => setSelector(isSeller ? 'sellerType' : 'buyerType')}
-              />
-
-              {form && (
-                <View style={s.farmPanel}>
-                  <Text style={s.farmHeading}>{form.heading}</Text>
-                  {visibleFields.map(field => field.radio ? (
-                    <View style={s.field} key={field.key}>
-                      <Text style={s.label}>{field.label}</Text>
-                      <View style={s.radioRow}>
-                        {['Yes', 'No'].map(option => (
-                          <Pressable key={option} accessibilityRole="radio"
-                            accessibilityLabel={field.label + ' ' + option}
-                            accessibilityState={{ checked: fieldValues[field.key] === option }}
-                            style={s.radioOption} onPress={() => editAnswer(field.key, option)}>
-                            <Text style={s.radioMark}>{fieldValues[field.key] === option ? '◉' : '○'}</Text>
-                            <Text style={s.value}>{option}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  ) : (
-                    <Field key={field.key} label={field.label} value={answers[field.key] || ''}
-                      required={field === form.fields[0] || !!field.when} placeholder={field.placeholder}
-                      select={field.options ? () => setSelector(field.key) : undefined}
-                      onChangeText={value => editAnswer(field.key, value)} />
-                  ))}
+              <View style={s.field}>
+                <View style={s.multiHeaderRow}>
+                  <Text style={s.label}>
+                    {classification}
+                    <Text style={s.req}> *</Text>
+                  </Text>
+                  <View style={s.multiHintPill}>
+                    <Text style={s.multiHintText}>ⓘ You can select multiple roles that apply to you</Text>
+                  </View>
                 </View>
-              )}
+                <View style={s.roleGrid}>
+                  {roleOptions.map(role => {
+                    const active = selectedRoles.includes(role);
+                    return (
+                      <Pressable
+                        key={role}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: active }}
+                        style={[s.roleChip, active && s.roleChipActive]}
+                        onPress={() => handleRoleTap(role)}
+                      >
+                        <Text style={[s.roleChipText, active && s.roleChipTextActive]}>
+                          {active ? `✓ ${role}` : role}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {activeRoleForms.map(({ role, config }) => {
+                const panelFields = (config.fields || []).filter(field => !field.when || answers[field.when] === 'Yes');
+                return (
+                  <View key={role} style={s.farmPanel}>
+                    <Text style={s.farmHeading}>{config.heading}</Text>
+                    {panelFields.map(field => field.radio ? (
+                      <View style={s.field} key={field.key}>
+                        <Text style={s.label}>{field.label}</Text>
+                        <View style={s.radioRow}>
+                          {['Yes', 'No'].map(option => (
+                            <Pressable key={option} accessibilityRole="radio"
+                              accessibilityLabel={field.label + ' ' + option}
+                              accessibilityState={{ checked: fieldValues[field.key] === option }}
+                              style={s.radioOption} onPress={() => editAnswer(field.key, option)}>
+                              <Text style={s.radioMark}>{fieldValues[field.key] === option ? '◉' : '○'}</Text>
+                              <Text style={s.value}>{option}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    ) : (
+                      <Field key={field.key} label={field.label} value={answers[field.key] || ''}
+                        required={field === config.fields[0] || !!field.when} placeholder={field.placeholder}
+                        select={field.options ? () => setSelector(field.key) : undefined}
+                        onChangeText={value => editAnswer(field.key, value)} />
+                    ))}
+                  </View>
+                );
+              })}
 
               <Text style={s.section}>Location Details</Text>
               <Field
@@ -795,15 +894,17 @@ export default function BuyerOnboarding({
                   <Text style={s.classificationTitle}>
                     {isSeller ? 'Seller classification' : 'Buyer classification'}
                   </Text>
-                  <View style={s.classificationPill}>
-                    <Text style={s.classificationPillText}>
-                      {isSeller ? profile.sellerType : profile.buyerType}
-                    </Text>
+                  <View style={s.classificationPillsWrap}>
+                    {selectedRoles.map(role => (
+                      <View key={role} style={s.classificationPill}>
+                        <Text style={s.classificationPillText}>{role}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
 
-                {getClassificationReviewRows({ isSeller, profile, fieldValues }).map((row) => (
-                  <Detail key={row.label} label={row.label} value={row.value} icon={row.icon} />
+                {getClassificationReviewRows({ isSeller, profile, sellerTypes, buyerTypes, fieldValues }).map((row, index) => (
+                  <Detail key={`${row.label}-${index}`} label={row.label} value={row.value} icon={row.icon} />
                 ))}
               </View>
 
@@ -852,7 +953,8 @@ export default function BuyerOnboarding({
                 </View>
                 <Detail label="Invoice ID" value={receipt.razorpay_payment_id || 'INV-' + Date.now()} />
                 <Detail label="Plan" value={isSeller ? sellerPlan.name : 'Buyer Verified Plan'} />
-                <Detail label="Amount Paid" value="₹365.00" />
+                <Detail label={isSeller ? 'Seller Roles' : 'Buyer Roles'} value={selectedRoles.join(', ')} />
+                <Detail label="Amount Paid" value={`₹${totalAmount}.00`} />
                 <Detail label="Status" value="Verified & Active" />
 
                 <View style={{ marginTop: 24, gap: 10 }}>
@@ -869,9 +971,11 @@ export default function BuyerOnboarding({
                 <View style={s.card}>
                   <View style={s.row}>
                     <Text style={s.pill}>{isSeller ? sellerPlan.badge : 'Buyer Membership'}</Text>
-                    <Text style={s.price}>₹365</Text>
+                    <Text style={s.price}>₹{totalAmount}</Text>
                   </View>
-                  <Text style={[s.muted, { textAlign: 'right' }]}>/ Year (₹1.00/day)</Text>
+                  <Text style={[s.muted, { textAlign: 'right' }]}>
+                    {roleCount > 1 ? `/ Year (${roleCount} roles × ₹365)` : '/ Year (₹1.00/day)'}
+                  </Text>
                   <Text style={s.planTitle}>
                     {isSeller ? sellerPlan.title : 'Verified Buyer Platform Access'}
                   </Text>
@@ -891,8 +995,10 @@ export default function BuyerOnboarding({
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Payment Summary</Text>
                   <View style={s.summary}>
-                    <Text style={s.muted}>Annual Membership (365 Days)</Text>
-                    <Text style={s.label}>₹365</Text>
+                    <Text style={s.muted}>
+                      {roleCount > 1 ? `${isSeller ? 'Seller' : 'Buyer'} Roles (${roleCount} × ₹365)` : 'Annual Membership (365 Days)'}
+                    </Text>
+                    <Text style={s.label}>₹{totalAmount}</Text>
                   </View>
                   <View style={s.row}>
                     <Text style={s.muted}>Taxes &amp; Platform Fees</Text>
@@ -900,10 +1006,10 @@ export default function BuyerOnboarding({
                   </View>
                   <View style={[s.row, s.total]}>
                     <Text style={s.label}>Total Payable</Text>
-                    <Text style={s.price}>₹365</Text>
+                    <Text style={s.price}>₹{totalAmount}</Text>
                   </View>
                   <Action disabled={busy} onPress={pay}>
-                    {busy ? 'Please wait…' : 'Subscribe & Pay ₹365  →'}
+                    {busy ? 'Please wait…' : `Subscribe & Pay ₹${totalAmount}  →`}
                   </Action>
                   <Text style={s.center}>Official Gateway (UPI, Cards, NetBanking)</Text>
                 </View>
@@ -963,6 +1069,41 @@ export default function BuyerOnboarding({
               ))}
             </ScrollView>
             <Action secondary onPress={() => setSelector(null)}>Cancel</Action>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Multiple Roles Info Modal */}
+      <Modal
+        transparent
+        visible={showMultiRoleModal}
+        animationType="fade"
+        onRequestClose={() => setShowMultiRoleModal(false)}
+      >
+        <View style={s.multiModalOverlay}>
+          <View style={s.multiModalCard}>
+            <View style={s.multiModalBadge}>
+              <Text style={s.multiModalBadgeText}>₹</Text>
+            </View>
+            <Text style={s.multiModalTitle}>Multiple Roles Supported</Text>
+            <Text style={s.multiModalSubtitle}>
+              You can select{' '}
+              <Text style={s.multiModalSubtitleBold}>one or more</Text>{' '}
+              {isSeller ? 'Seller Classifications' : 'Buyer Classifications'} that match your business.
+            </Text>
+            <View style={s.multiModalPriceBox}>
+              <Text style={s.multiModalPriceText}>₹365 per role / month</Text>
+              <Text style={s.multiModalPriceSub}>
+                {roleCount} {roleCount === 1 ? 'role' : 'roles'} selected • Total: ₹{totalAmount} / month
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              style={s.multiModalBtn}
+              onPress={() => setShowMultiRoleModal(false)}
+            >
+              <Text style={s.multiModalBtnText}>Got it, Continue</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -1351,6 +1492,151 @@ const s = StyleSheet.create({
   classificationPillText: {
     color: '#065F46',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  classificationPillsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'flex-end',
+    flexShrink: 1,
+  },
+  multiHeaderRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: 4,
+  },
+  multiHintPill: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  multiHintText: {
+    color: '#065F46',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  roleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  roleChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  roleChipActive: {
+    backgroundColor: green,
+    borderColor: green,
+  },
+  roleChipText: {
+    color: '#1E293B',
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  roleChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  multiModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.48)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  multiModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  multiModalBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  multiModalBadgeText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: green,
+  },
+  multiModalTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  multiModalSubtitle: {
+    fontSize: 13.5,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  multiModalSubtitleBold: {
+    fontWeight: '700',
+    color: '#334155',
+  },
+  multiModalPriceBox: {
+    width: '100%',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  multiModalPriceText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#14532D',
+    marginBottom: 4,
+  },
+  multiModalPriceSub: {
+    fontSize: 12.5,
+    color: '#166534',
+    textAlign: 'center',
+  },
+  multiModalBtn: {
+    width: '100%',
+    backgroundColor: green,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  multiModalBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '700',
   },
 });

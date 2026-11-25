@@ -116,6 +116,7 @@ export default function GetStartedScreen({
       image: require('../../assets/images/get-started/buyer-wholesale.jpg'),
       alt: 'Wholesale APMC agriculture mandi with buyers inspecting crates of fresh produce',
       benefits: [
+        'You can select multiple classifications. A ₹365 fee applies to each selected classification.',
         'Find verified agricultural products.',
         'Discover direct farm producers.',
         'Connect directly with suppliers.',
@@ -132,6 +133,7 @@ export default function GetStartedScreen({
       image: require('../../assets/images/get-started/seller-farmer.jpg'),
       alt: 'Smiling Indian farmer in paddy field holding freshly harvested crops',
       benefits: [
+        'You can select multiple classifications. A ₹365 fee applies to each selected classification.',
         'Showcase your agricultural crops & harvest.',
         'Connect directly with bulk verified buyers.',
         'Receive direct farm-gate payments.',

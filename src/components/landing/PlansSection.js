@@ -43,6 +43,15 @@ export default function PlansSection({ onNavigateToRegister }) {
               <View style={[styles.checkCircle, styles.buyerCheck]}>
                 <Text style={styles.checkText}>✓</Text>
               </View>
+              <Text style={styles.benefitText}>
+                You can select multiple classifications. A ₹365 fee applies to each selected classification.
+              </Text>
+            </View>
+
+            <View style={styles.benefitRow}>
+              <View style={[styles.checkCircle, styles.buyerCheck]}>
+                <Text style={styles.checkText}>✓</Text>
+              </View>
               <Text style={styles.benefitText}>Access to 10 sellers</Text>
             </View>
 
@@ -104,6 +113,15 @@ export default function PlansSection({ onNavigateToRegister }) {
 
           {/* Benefits */}
           <View style={styles.benefitsList}>
+            <View style={styles.benefitRow}>
+              <View style={[styles.checkCircle, styles.sellerCheck]}>
+                <Text style={styles.sellerCheckText}>✓</Text>
+              </View>
+              <Text style={[styles.benefitText, styles.sellerBenefitText]}>
+                You can select multiple classifications. A ₹365 fee applies to each selected classification.
+              </Text>
+            </View>
+
             <View style={styles.benefitRow}>
               <View style={[styles.checkCircle, styles.sellerCheck]}>
                 <Text style={styles.sellerCheckText}>✓</Text>
