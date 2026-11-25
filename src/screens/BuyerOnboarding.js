@@ -84,73 +84,84 @@ function Field({ label, value, onChangeText, placeholder, numeric, required, sel
   );
 }
 
-function ReviewIcon({ name }) {
+function ReviewIcon({ name, color = green }) {
+  if (name === 'card') {
+    return (
+      <View style={[ri.cardBox, { borderColor: color }]}>
+        <View style={[ri.cardStripe, { backgroundColor: color }]} />
+        <View style={ri.cardDots}>
+          <View style={[ri.cardDot, { backgroundColor: color }]} />
+          <View style={[ri.cardDot, { backgroundColor: color }]} />
+        </View>
+      </View>
+    );
+  }
   if (name === 'building') {
     return (
-      <View style={ri.building}>
+      <View style={[ri.building, { borderColor: color }]}>
         <View style={ri.winRow}>
-          <View style={ri.win} />
-          <View style={ri.win} />
+          <View style={[ri.win, { backgroundColor: color }]} />
+          <View style={[ri.win, { backgroundColor: color }]} />
         </View>
         <View style={ri.winRow}>
-          <View style={ri.win} />
-          <View style={ri.win} />
+          <View style={[ri.win, { backgroundColor: color }]} />
+          <View style={[ri.win, { backgroundColor: color }]} />
         </View>
-        <View style={ri.door} />
+        <View style={[ri.door, { borderColor: color }]} />
       </View>
     );
   }
   if (name === 'shield') {
     return (
-      <View style={ri.shield}>
-        <Text style={ri.shieldTick}>✓</Text>
+      <View style={[ri.shield, { borderColor: color }]}>
+        <Text style={[ri.shieldTick, { color }]}>✓</Text>
       </View>
     );
   }
   if (name === 'pin') {
     return (
       <View style={ri.pinWrap}>
-        <View style={ri.pinCircle}>
-          <View style={ri.pinDot} />
+        <View style={[ri.pinCircle, { borderColor: color }]}>
+          <View style={[ri.pinDot, { borderColor: color }]} />
         </View>
-        <View style={ri.pinTip} />
+        <View style={[ri.pinTip, { borderColor: color }]} />
       </View>
     );
   }
   if (name === 'mail') {
     return (
-      <View style={ri.mailBox}>
-        <View style={ri.mailFlap} />
+      <View style={[ri.mailBox, { borderColor: color }]}>
+        <View style={[ri.mailFlap, { borderColor: color }]} />
       </View>
     );
   }
   if (name === 'phone') {
     return (
-      <View style={ri.phoneBox}>
-        <View style={ri.phoneBtn} />
+      <View style={[ri.phoneBox, { borderColor: color }]}>
+        <View style={[ri.phoneBtn, { backgroundColor: color }]} />
       </View>
     );
   }
   if (name === 'user') {
     return (
       <View style={ri.userWrap}>
-        <View style={ri.userHead} />
-        <View style={ri.userBody} />
+        <View style={[ri.userHead, { borderColor: color }]} />
+        <View style={[ri.userBody, { borderColor: color }]} />
       </View>
     );
   }
   if (name === 'home') {
     return (
       <View style={ri.homeWrap}>
-        <View style={ri.homeRoof} />
-        <View style={ri.homeBase} />
+        <View style={[ri.homeRoof, { borderColor: color }]} />
+        <View style={[ri.homeBase, { borderColor: color }]} />
       </View>
     );
   }
   return (
-    <View style={ri.docBox}>
-      <View style={ri.docLine} />
-      <View style={[ri.docLine, { width: 7 }]} />
+    <View style={[ri.docBox, { borderColor: color }]}>
+      <View style={[ri.docLine, { backgroundColor: color }]} />
+      <View style={[ri.docLine, { width: 7, backgroundColor: color }]} />
     </View>
   );
 }
@@ -607,22 +618,10 @@ export default function BuyerOnboarding({
 
         {/* Content Body */}
         <View style={s.content} key={step}>
-          {step === 3 && (
-            <Pressable
-              style={s.seller}
-              onPress={onSwitchRole}
-              disabled={busy || !!receipt}
-            >
-              <Text style={s.linkText}>
-                {isSeller ? 'Switch to Buyer Onboarding' : 'Switch to Seller Onboarding'}
-              </Text>
-            </Pressable>
-          )}
-
           {/* Heading Section */}
           <View style={s.intro}>
             <View style={s.icon}>
-              <Text style={s.iconText}>{['👤', '📄', '🔍', '💳'][step]}</Text>
+              <ReviewIcon name={['user', 'doc', 'user', 'card'][step]} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.title}>{heading[step]}</Text>
@@ -869,7 +868,7 @@ export default function BuyerOnboarding({
               <>
                 <View style={s.card}>
                   <View style={s.row}>
-                    <Text style={s.pill}>{isSeller ? sellerPlan.badge : 'Buyer Verified Plan'}</Text>
+                    <Text style={s.pill}>{isSeller ? sellerPlan.badge : 'Buyer Membership'}</Text>
                     <Text style={s.price}>₹365</Text>
                   </View>
                   <Text style={[s.muted, { textAlign: 'right' }]}>/ Year (₹1.00/day)</Text>
@@ -1266,16 +1265,6 @@ const s = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
   },
-  seller: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 16,
-  },
   pill: {
     color: 'white',
     backgroundColor: green,
@@ -1367,6 +1356,30 @@ const s = StyleSheet.create({
 });
 
 const ri = StyleSheet.create({
+  cardBox: {
+    width: 21,
+    height: 15,
+    borderWidth: 1.8,
+    borderRadius: 3.5,
+    justifyContent: 'space-between',
+    paddingBottom: 2.5,
+    overflow: 'hidden',
+  },
+  cardStripe: {
+    width: '100%',
+    height: 2,
+    marginTop: 3,
+  },
+  cardDots: {
+    flexDirection: 'row',
+    gap: 2.5,
+    paddingLeft: 3,
+  },
+  cardDot: {
+    width: 2.5,
+    height: 2.5,
+    borderRadius: 1.5,
+  },
   building: {
     width: 15,
     height: 17,
