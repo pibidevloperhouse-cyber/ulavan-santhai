@@ -4,7 +4,7 @@ import Link from "next/link";
 import "./plans.css";
 const plans = [
  { title:"Buyer access", description:"Find produce and connect with agricultural suppliers.", items:["Access to 10 sellers", "Discover agricultural products", "Send enquiries directly to sellers"], action:"Join as a buyer" },
- { title:"Seller plan", description:"Showcase your products and reach interested buyers.", items:["Create your seller profile", "Submit products for approval", "Be discovered by potential buyers"], action:"Join as a seller" },
+ { title:"Seller plan", description:"Showcase your products and reach interested buyers.", items:["You can select multiple classifications. A ₹365 fee applies to each selected classification.", "Create your seller profile", "Submit products for approval", "Be discovered by potential buyers"], action:"Join as a seller" },
 ];
 export default function ReferencePlans() {
  const root=useRef(null);

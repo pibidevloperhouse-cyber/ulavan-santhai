@@ -14,8 +14,8 @@ export default function SpecificationsSection({
   onUpdateOtherAttribute,
 }) {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-5">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">
           6. Specifications and other attributes
         </h2>
@@ -32,7 +32,10 @@ export default function SpecificationsSection({
         </label>
 
         {specifications.map((spec) => (
-          <div key={spec.id} className="flex items-center gap-2">
+          <div
+            key={spec.id}
+            className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:p-0 bg-[#FAF9F6] sm:bg-transparent rounded-lg border sm:border-0 border-[#EAE5DB]"
+          >
             <input
               type="text"
               placeholder="Specification name"
@@ -40,25 +43,27 @@ export default function SpecificationsSection({
               onChange={(e) =>
                 onUpdateSpecification(spec.id, "name", e.target.value)
               }
-              className="flex-1 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+              className="flex-1 w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
             />
-            <input
-              type="text"
-              placeholder="Value"
-              value={spec.value}
-              onChange={(e) =>
-                onUpdateSpecification(spec.id, "value", e.target.value)
-              }
-              className="flex-1 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
-            />
-            <button
-              type="button"
-              onClick={() => onRemoveSpecification(spec.id)}
-              className="p-2 text-[#7A877E] hover:text-[#C53030] rounded-md"
-              aria-label="Remove specification"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2 w-full sm:flex-1">
+              <input
+                type="text"
+                placeholder="Value"
+                value={spec.value}
+                onChange={(e) =>
+                  onUpdateSpecification(spec.id, "value", e.target.value)
+                }
+                className="flex-1 w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+              />
+              <button
+                type="button"
+                onClick={() => onRemoveSpecification(spec.id)}
+                className="p-2 text-[#7A877E] hover:text-[#C53030] rounded-md shrink-0 cursor-pointer"
+                aria-label="Remove specification"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -82,7 +87,10 @@ export default function SpecificationsSection({
         </label>
 
         {otherAttributes.map((attr) => (
-          <div key={attr.id} className="flex items-center gap-2">
+          <div
+            key={attr.id}
+            className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:p-0 bg-[#FAF9F6] sm:bg-transparent rounded-lg border sm:border-0 border-[#EAE5DB]"
+          >
             <input
               type="text"
               placeholder="Attribute name"
@@ -90,25 +98,27 @@ export default function SpecificationsSection({
               onChange={(e) =>
                 onUpdateOtherAttribute(attr.id, "name", e.target.value)
               }
-              className="flex-1 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+              className="flex-1 w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
             />
-            <input
-              type="text"
-              placeholder="Value"
-              value={attr.value}
-              onChange={(e) =>
-                onUpdateOtherAttribute(attr.id, "value", e.target.value)
-              }
-              className="flex-1 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
-            />
-            <button
-              type="button"
-              onClick={() => onRemoveOtherAttribute(attr.id)}
-              className="p-2 text-[#7A877E] hover:text-[#C53030] rounded-md"
-              aria-label="Remove attribute"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2 w-full sm:flex-1">
+              <input
+                type="text"
+                placeholder="Value"
+                value={attr.value}
+                onChange={(e) =>
+                  onUpdateOtherAttribute(attr.id, "value", e.target.value)
+                }
+                className="flex-1 w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+              />
+              <button
+                type="button"
+                onClick={() => onRemoveOtherAttribute(attr.id)}
+                className="p-2 text-[#7A877E] hover:text-[#C53030] rounded-md shrink-0 cursor-pointer"
+                aria-label="Remove attribute"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
 

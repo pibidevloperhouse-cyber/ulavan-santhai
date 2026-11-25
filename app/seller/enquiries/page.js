@@ -70,11 +70,11 @@ export default function BuyerEnquiriesPage() {
       {/* Tabs & Search Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Filter Pills */}
-        <div className="inline-flex p-1 bg-[#EBE7DD] rounded-lg gap-1">
+        <div className="flex flex-wrap p-1 bg-[#EBE7DD] rounded-lg gap-1 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setFilterTab("ALL")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
               filterTab === "ALL"
                 ? "bg-[#24583B] text-white shadow-xs"
                 : "text-[#4B5A50] hover:text-[#1F2922]"
@@ -85,7 +85,7 @@ export default function BuyerEnquiriesPage() {
           <button
             type="button"
             onClick={() => setFilterTab("NEW")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
               filterTab === "NEW"
                 ? "bg-[#24583B] text-white shadow-xs"
                 : "text-[#4B5A50] hover:text-[#1F2922]"
@@ -96,7 +96,7 @@ export default function BuyerEnquiriesPage() {
           <button
             type="button"
             onClick={() => setFilterTab("REPLIED")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
               filterTab === "REPLIED"
                 ? "bg-[#24583B] text-white shadow-xs"
                 : "text-[#4B5A50] hover:text-[#1F2922]"
@@ -120,8 +120,8 @@ export default function BuyerEnquiriesPage() {
       </div>
 
       {/* Split Master-Detail Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <div className="lg:col-span-5 min-w-0">
           <EnquiryList
             enquiries={filteredList}
             selectedId={selectedId}
@@ -129,7 +129,7 @@ export default function BuyerEnquiriesPage() {
           />
         </div>
 
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 min-w-0">
           <EnquiryDetail
             enquiry={selectedEnquiry}
             replyText={replyText}

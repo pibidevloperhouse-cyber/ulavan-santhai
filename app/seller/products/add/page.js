@@ -27,6 +27,7 @@ function AddProductFormContent() {
   // Basic Information State
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("");
+  const [productSubcategory, setProductSubcategory] = useState("");
   const [productType, setProductType] = useState("");
   const [variety, setVariety] = useState("");
   const [qualityGrade, setQualityGrade] = useState("Select grade");
@@ -86,6 +87,7 @@ function AddProductFormContent() {
           const p = res.data.product;
           setProductName(p.name || "");
           setProductCategory(p.category || "");
+          setProductSubcategory(p.subcategory || p.productSubcategory || "");
           setProductType(p.productType || "");
           setVariety(p.variety || "");
           setQualityGrade(p.qualityGrade || "Select grade");
@@ -241,6 +243,7 @@ function AddProductFormContent() {
       const formData = {
         productName,
         productCategory,
+        productSubcategory,
         productType,
         variety,
         qualityGrade,
@@ -320,18 +323,18 @@ function AddProductFormContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => handleSubmit("draft")}
-              className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
             >
               Save as draft
             </button>
             <button
               type="button"
               onClick={() => handleSubmit("review")}
-              className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
             >
               {isEditing ? "Save & submit changes" : "Submit for review"}
             </button>
@@ -346,14 +349,16 @@ function AddProductFormContent() {
       )}
 
       {/* Main Grid: Form Sections (Left) & Status Stepper (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-8 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        <div className="lg:col-span-8 space-y-5 sm:space-y-6 min-w-0">
           {/* Section 1: Basic Information */}
           <BasicInfoSection
             productName={productName}
             onProductNameChange={setProductName}
             productCategory={productCategory}
             onProductCategoryChange={setProductCategory}
+            productSubcategory={productSubcategory}
+            onProductSubcategoryChange={setProductSubcategory}
             productType={productType}
             onProductTypeChange={setProductType}
             variety={variety}
@@ -430,24 +435,24 @@ function AddProductFormContent() {
           />
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-end gap-3 pt-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3 pt-3">
             <Link
               href="/seller/products"
-              className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors"
+              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors"
             >
               Cancel
             </Link>
             <button
               type="button"
               onClick={() => handleSubmit("draft")}
-              className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Save as draft
             </button>
             <button
               type="button"
               onClick={() => handleSubmit("review")}
-              className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+              className="w-full sm:w-auto text-center px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
             >
               {isEditing ? "Save & submit changes" : "Submit for review"}
             </button>
@@ -455,7 +460,7 @@ function AddProductFormContent() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 min-w-0">
           <ListingStatusSidebar />
         </div>
       </div>

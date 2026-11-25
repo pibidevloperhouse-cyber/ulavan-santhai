@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BrandLogo from "@/components/ui/BrandLogo";
 import HandshakeLoader from "@/components/ui/HandshakeLoader";
+import MobileRegistrationHeader from "@/components/onboarding/MobileRegistrationHeader";
 import Stepper from "@/components/forms/Stepper";
 import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
@@ -16,6 +17,8 @@ import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
  */
 export default function PaymentView({
   role = "buyer",
+  selectedRoles = [],
+  payableAmount,
   onRoleChange,
   userAuth = {},
   onBack,
@@ -42,6 +45,8 @@ export default function PaymentView({
   const isProcessing = isHookProcessing || isProcessingExternal;
   const activeResult = externalPaymentResult || paymentResult;
   const isBuyer = currentRole === "buyer";
+  const sellerRoleCount = selectedRoles.length > 0 ? selectedRoles.length : 1;
+  const effectiveAmount = isBuyer ? 365 : (payableAmount || sellerRoleCount * 365);
 
   const handleRoleToggle = (newRole) => {
     if (onRoleChange) {
@@ -79,6 +84,7 @@ export default function PaymentView({
       planId,
       role: currentRole,
       userAuth,
+      amount: effectiveAmount,
       onSuccess: async (resultPayload) => {
         setPaymentResult(resultPayload);
 
@@ -112,13 +118,22 @@ export default function PaymentView({
     { id: 4, title: "Payment" },
   ];
 
+  const handleStepClick = (s) => {
+    if (onStepClick) {
+      onStepClick(s);
+    } else if (s < 4 && onBack) {
+      onBack();
+    }
+  };
+
   return (
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#1F4D36] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
+      <MobileRegistrationHeader currentStep={4} onStepClick={handleStepClick} onLogout={handleLogout} />
       {/* Panoramic landscape footer strip */}
       <div
-        className="fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
+        className="hidden lg:block fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
         style={{
           backgroundImage: "url('/images/onboarding-landscape-strip.png')",
           backgroundSize: "auto 30px",
@@ -129,7 +144,7 @@ export default function PaymentView({
       {/* ======================================================== */}
       {/* LEFT PANEL: Brand, Stepper & Tree Visual on Nature BG   */}
       {/* ======================================================== */}
-      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
+      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full hidden lg:flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
         {/* Top Brand & Welcome */}
         <div>
           <BrandLogo width={160} priority />
@@ -148,13 +163,7 @@ export default function PaymentView({
               currentStep={4}
               steps={steps}
               orientation="vertical"
-              onStepClick={(s) => {
-                if (onStepClick) {
-                  onStepClick(s);
-                } else if (s < 4 && onBack) {
-                  onBack();
-                }
-              }}
+              onStepClick={handleStepClick}
             />
           </div>
 
@@ -176,9 +185,9 @@ export default function PaymentView({
       {/* ======================================================== */}
       {/* RIGHT PANEL: Form Controls on Shared Nature BG         */}
       {/* ======================================================== */}
-      <div className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-8 pb-32 sm:pb-36 px-5 sm:px-10 xl:px-16 flex flex-col justify-between relative bg-transparent scroll-smooth">
+      <div className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-5 lg:pt-8 pb-10 lg:pb-36 px-4 sm:px-10 xl:px-16 flex flex-col lg:justify-between relative bg-transparent scroll-smooth">
         {/* Top Floating Actions: Home & Logout */}
-        <div className="flex items-center justify-end gap-2.5 pb-6">
+        <div className="mx-auto w-full max-w-2xl lg:max-w-none flex items-center justify-end gap-2.5 pb-4 lg:pb-6">
           <button
             type="button"
             onClick={() => handleRoleToggle(isBuyer ? "seller" : "buyer")}
@@ -189,7 +198,7 @@ export default function PaymentView({
 
           <Link
             href="/"
-            className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
+            className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer hidden lg:flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
           >
             <svg className="w-3.5 h-3.5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -200,7 +209,7 @@ export default function PaymentView({
           <button
             type="button"
             onClick={handleLogout}
-            className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
+            className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer hidden lg:flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
           >
             <svg className="w-3.5 h-3.5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -336,9 +345,13 @@ export default function PaymentView({
                         {isBuyer ? "Buyer Verified Plan" : "Seller Membership"}
                       </span>
                       <div className="text-right shrink-0">
-                        <span className="text-2xl sm:text-3xl font-black text-gray-900">₹365</span>
+                        <span className="text-2xl sm:text-3xl font-black text-gray-900">₹{effectiveAmount}</span>
                         <span className="text-xs text-gray-500 font-semibold block mt-0.5">
-                          / Year (₹1.00/day)
+                          {isBuyer
+                            ? "/ Year (₹1.00/day)"
+                            : sellerRoleCount > 1
+                            ? `/ Year (${sellerRoleCount} Roles @ ₹365/ea)`
+                            : "/ Year (₹1.00/day)"}
                         </span>
                       </div>
                     </div>
@@ -365,6 +378,7 @@ export default function PaymentView({
                             "Zero middleman brokerage & trade commission",
                           ]
                         : [
+                            "You can select multiple classifications. A ₹365 fee applies to each selected classification.",
                             "100% Verified Farmer / Producer Badge",
                             "Showcase unlimited crop & harvest lots",
                             "Receive direct verified commercial buyer enquiries",
@@ -372,8 +386,8 @@ export default function PaymentView({
                             "Direct farmer-to-buyer transparent communication",
                           ]
                       ).map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-800">
-                          <span className="w-4 h-4 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-[10px] font-bold">
+                        <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm font-semibold text-gray-800">
+                          <span className="w-4 h-4 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">
                             ✓
                           </span>
                           <span>{feature}</span>
@@ -408,8 +422,14 @@ export default function PaymentView({
                     <h4 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">Payment Summary</h4>
                     <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex justify-between items-center text-gray-600">
-                        <span>Annual Membership (365 Days)</span>
-                        <span className="font-bold text-gray-900">₹365</span>
+                        <span>
+                          {isBuyer
+                            ? "Annual Membership (365 Days)"
+                            : sellerRoleCount > 1
+                            ? `Annual Membership (${sellerRoleCount} Roles @ ₹365/ea)`
+                            : "Annual Membership (365 Days)"}
+                        </span>
+                        <span className="font-bold text-gray-900">₹{effectiveAmount}</span>
                       </div>
                       <div className="flex justify-between items-center text-gray-600">
                         <span>Taxes &amp; Platform Fees</span>
@@ -417,7 +437,7 @@ export default function PaymentView({
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between items-baseline">
                         <span className="text-sm sm:text-base font-bold text-gray-900">Total Payable</span>
-                        <span className="text-2xl font-black text-[#174B35]">₹365</span>
+                        <span className="text-2xl font-black text-[#174B35]">₹{effectiveAmount}</span>
                       </div>
                     </div>
                   </div>
@@ -467,7 +487,7 @@ export default function PaymentView({
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                             />
                           </svg>
-                          <span>Subscribe &amp; Pay ₹365</span>
+                          <span>Subscribe &amp; Pay ₹{effectiveAmount}</span>
                           <span className="text-base font-bold">&rarr;</span>
                         </>
                       )}
@@ -485,17 +505,17 @@ export default function PaymentView({
               </div>
 
               {/* Action Bar matching Steps 1-3 */}
-              <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
+              <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row sm:justify-between sm:gap-4 sm:pt-6">
                 <button
                   type="button"
                   onClick={handleBackAction}
-                  className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer flex items-center gap-2"
+                  className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
                 >
                   <span>&larr; Back to Review</span>
                 </button>
 
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-                  <svg className="w-3.5 h-3.5 text-[#174B35]"
+                <div className="flex items-center justify-center gap-2 text-center text-xs font-medium text-gray-600">
+                  <svg aria-hidden="true" className="size-4 shrink-0 text-[#174B35]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

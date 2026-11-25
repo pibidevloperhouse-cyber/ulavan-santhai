@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import MobileRegistrationHeader from "@/components/onboarding/MobileRegistrationHeader";
 import Stepper from "@/components/forms/Stepper";
 import FormInput from "@/components/forms/FormInput";
 import FormSelect from "@/components/forms/FormSelect";
@@ -279,7 +280,13 @@ function OnboardingContent({ initialRole }) {
 
   // Selected sub-type
   const [buyerType, setBuyerType] = useState("Individual");
-  const [sellerType, setSellerType] = useState("Farmer");
+  const [sellerType, setSellerType] = useState("");
+  const [selectedSellerTypes, setSelectedSellerTypes] = useState([]);
+  const [showMultiRoleModal, setShowMultiRoleModal] = useState(false);
+
+  const hasSellerRole = (type) => selectedSellerTypes.includes(type);
+  const selectedCustomSellerTypes = selectedSellerTypes.filter((t) => !SELLER_TYPES.includes(t));
+  const activeCustomSellerType = selectedCustomSellerTypes[0] || "";
 
   // Live dynamic categories synchronized with Admin Portal
   const [dynamicSellerCats, setDynamicSellerCats] = useState(getSellerCategories);
@@ -310,7 +317,7 @@ function OnboardingContent({ initialRole }) {
   const finalSellerTypes = Array.from(new Set([...displayedSellerTypes, ...SELLER_TYPES]));
 
   const selectedSellerCategoryObj = dynamicSellerCats.find(
-    (c) => (c.code || c.name) === sellerType || c.name === sellerType
+    (c) => (c.code || c.name) === activeCustomSellerType || c.name === activeCustomSellerType
   );
   const selectedBuyerCategoryObj = dynamicBuyerCats.find(
     (c) => (c.code || c.name) === buyerType || c.name === buyerType
@@ -356,13 +363,43 @@ function OnboardingContent({ initialRole }) {
     }
   };
 
-  const handleSellerTypeChange = (type) => {
-    if (type !== sellerType) {
-      setSellerType(type);
-      setUploadedDocs({});
-      setFormError("");
-    }
+  const handleSellerTypeToggle = (type) => {
+    const isAlreadySelected = selectedSellerTypes.includes(type);
+    const nextSelected = isAlreadySelected
+      ? selectedSellerTypes.filter((t) => t !== type)
+      : [...selectedSellerTypes, type];
+
+    setSelectedSellerTypes(nextSelected);
+    setSellerType(isAlreadySelected ? (nextSelected[0] || "") : type);
+    setShowMultiRoleModal(nextSelected.length > 0);
+    setUploadedDocs({});
+    setFormError("");
   };
+
+  const handleSellerTypeChange = (type) => {
+    handleSellerTypeToggle(type);
+  };
+
+  // Combined document requirement flags across all selected seller classifications
+  const needLandProof = role === "seller" && hasSellerRole("Farmer");
+  const needFpoCert = role === "seller" && hasSellerRole("Agricultural Producer");
+  const needOrganicCert = role === "seller" && hasSellerRole("Organic Producer");
+  const needIdProof =
+    role === "seller" && (hasSellerRole("Other") || selectedCustomSellerTypes.length > 0);
+  const needBankPassbook = role === "seller" && selectedCustomSellerTypes.length > 0;
+  const needFssaiCert =
+    role === "seller" &&
+    ((hasSellerRole("Ingredient Producer") && sellerData.ingHasFssai === "Yes") ||
+      hasSellerRole("Manufacturer") ||
+      hasSellerRole("Value-Added Manufacturer"));
+  const needGstCert =
+    role === "seller" &&
+    (hasSellerRole("Raw-Material Provider") ||
+      hasSellerRole("Ingredient Producer") ||
+      hasSellerRole("Manufacturer") ||
+      hasSellerRole("Other") ||
+      (selectedCustomSellerTypes.length > 0 && sellerData.otherIsGst === "Yes") ||
+      (hasSellerRole("Agricultural Producer") && sellerData.fpoIsGst === "Yes"));
 
   // Stage 4: Razorpay Payment States
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -373,7 +410,14 @@ function OnboardingContent({ initialRole }) {
     {
       id: 1,
       title: "Profile Details",
-      subtitle: role === "buyer" ? `${buyerType} Form` : `${sellerType} Form`,
+      subtitle:
+        role === "buyer"
+          ? `${buyerType} Form`
+          : selectedSellerTypes.length > 1
+            ? `${selectedSellerTypes.length} Roles Selected`
+            : selectedSellerTypes.length === 1
+              ? `${selectedSellerTypes[0]} Form`
+              : "Choose Seller Type",
     },
     {
       id: 2,
@@ -388,7 +432,10 @@ function OnboardingContent({ initialRole }) {
     {
       id: 4,
       title: "Payment",
-      subtitle: "₹365 Membership",
+      subtitle:
+        role === "buyer"
+          ? "₹365 Membership"
+          : `₹${(Math.max(1, selectedSellerTypes.length) * 365).toLocaleString("en-IN")} Membership`,
     },
   ];
 
@@ -421,64 +468,68 @@ function OnboardingContent({ initialRole }) {
         return;
       }
     } else {
+      if (selectedSellerTypes.length === 0) {
+        setFormError("Please select at least one Seller Classification.");
+        return;
+      }
       if (!sellerData.district) {
         setFormError("Please select your farm/operating district.");
         return;
       }
-      if (sellerType === "Farmer" && !sellerData.farmerFarmName?.trim()) {
+      if (hasSellerRole("Farmer") && !sellerData.farmerFarmName?.trim()) {
         setFormError("Please enter your Farm Name.");
         return;
       }
-      if (sellerType === "Agricultural Producer" && !sellerData.fpoName.trim()) {
+      if (hasSellerRole("Agricultural Producer") && !sellerData.fpoName.trim()) {
         setFormError("Please enter your Producer Organization / FPO Name.");
         return;
       }
-      if (sellerType === "Organic Producer" && !sellerData.organicFarmName?.trim()) {
+      if (hasSellerRole("Organic Producer") && !sellerData.organicFarmName?.trim()) {
         setFormError("Please enter your Organic Farm / Brand Name.");
         return;
       }
-      if (sellerType === "Raw-Material Provider" && !sellerData.rawProviderName?.trim()) {
+      if (hasSellerRole("Raw-Material Provider") && !sellerData.rawProviderName?.trim()) {
         setFormError("Please enter your Business / Enterprise Name.");
         return;
       }
-      if (sellerType === "Ingredient Producer" && !sellerData.ingProducerName?.trim()) {
+      if (hasSellerRole("Ingredient Producer") && !sellerData.ingProducerName?.trim()) {
         setFormError("Please enter your Enterprise Name.");
         return;
       }
-      if (sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes" && !sellerData.ingFssaiNumber?.trim()) {
+      if (hasSellerRole("Ingredient Producer") && sellerData.ingHasFssai === "Yes" && !sellerData.ingFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Manufacturer" && !sellerData.mfgSellerName?.trim()) {
+      if (hasSellerRole("Manufacturer") && !sellerData.mfgSellerName?.trim()) {
         setFormError("Please enter your Company Name.");
         return;
       }
-      if (sellerType === "Manufacturer" && sellerData.mfgHasFssai === "Yes" && !sellerData.mfgFssaiNumber?.trim()) {
+      if (hasSellerRole("Manufacturer") && sellerData.mfgHasFssai === "Yes" && !sellerData.mfgFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes" && !sellerData.mfgGstin?.trim()) {
+      if (hasSellerRole("Manufacturer") && sellerData.mfgIsGst === "Yes" && !sellerData.mfgGstin?.trim()) {
         setFormError("Please enter your 15-digit GSTIN.");
         return;
       }
-      if (sellerType === "Value-Added Manufacturer" && !sellerData.vaBrandName?.trim()) {
+      if (hasSellerRole("Value-Added Manufacturer") && !sellerData.vaBrandName?.trim()) {
         setFormError("Please enter your Brand / Enterprise Name.");
         return;
       }
-      if (sellerType === "Value-Added Manufacturer" && sellerData.vaHasFssai === "Yes" && !sellerData.vaFssaiNumber?.trim()) {
+      if (hasSellerRole("Value-Added Manufacturer") && sellerData.vaHasFssai === "Yes" && !sellerData.vaFssaiNumber?.trim()) {
         setFormError("Please enter your 14-digit FSSAI Food License Number.");
         return;
       }
-      if (sellerType === "Other" && !sellerData.otherSellerName?.trim()) {
+      if (hasSellerRole("Other") && !sellerData.otherSellerName?.trim()) {
         setFormError("Please enter your Enterprise Name.");
         return;
       }
-      if (sellerType === "Other" && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
+      if (hasSellerRole("Other") && sellerData.otherIsGst === "Yes" && !sellerData.otherGstin?.trim()) {
         setFormError("Please enter your 15-digit GSTIN.");
         return;
       }
-      if (!SELLER_TYPES.includes(sellerType) && !sellerData.otherSellerName?.trim() && !sellerData.farmerFarmName?.trim()) {
-        setFormError(`Please enter your Enterprise or Farm Name for ${sellerType}.`);
+      if (selectedCustomSellerTypes.length > 0 && !sellerData.otherSellerName?.trim() && !sellerData.farmerFarmName?.trim()) {
+        setFormError(`Please enter your Enterprise or Farm Name for ${selectedCustomSellerTypes[0]}.`);
         return;
       }
     }
@@ -491,114 +542,6 @@ function OnboardingContent({ initialRole }) {
   const handleNextFromStep2 = () => {
     setFormError("");
 
-    // For Farmer, only Patta / Chitta (LAND_PROOF) is required
-    if (role === "seller" && sellerType === "Farmer") {
-      if (!uploadedDocs["LAND_PROOF"]) {
-        setFormError("Please upload your Patta / Chitta document to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Agricultural Producer, only FPO Registration Certificate is required
-    if (role === "seller" && sellerType === "Agricultural Producer") {
-      if (!uploadedDocs["FPO_CERTIFICATE"]) {
-        setFormError("Please upload your FPO / Cooperative Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Organic Producer, only NPOP Organic Certificate is required
-    if (role === "seller" && sellerType === "Organic Producer") {
-      if (!uploadedDocs["ORGANIC_CERTIFICATE"]) {
-        setFormError("Please upload your NPOP Organic Certificate document to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Raw-Material Provider, only GST Certificate is required
-    if (role === "seller" && sellerType === "Raw-Material Provider") {
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Ingredient Producer, FSSAI (if has license) and GST Certificate are required
-    if (role === "seller" && sellerType === "Ingredient Producer") {
-      if (sellerData.ingHasFssai === "Yes" && !uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Manufacturer, GST and FSSAI are required
-    if (role === "seller" && sellerType === "Manufacturer") {
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      if (!uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Value-Added Manufacturer, only FSSAI is required
-    if (role === "seller" && sellerType === "Value-Added Manufacturer") {
-      if (!uploadedDocs["FSSAI_LICENSE"]) {
-        setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
-    // For Other seller, only PAN (ID_PROOF) and GST Certificate are required
-    if (role === "seller" && sellerType === "Other") {
-      if (!uploadedDocs["ID_PROOF"]) {
-        setFormError("Please upload your PAN Card / Government Identity Proof to continue.");
-        return;
-      }
-      if (!uploadedDocs["GST_CERTIFICATE"]) {
-        setFormError("Please upload your GST Registration Certificate to continue.");
-        return;
-      }
-      setCurrentStep(3);
-      setReviewSubStep(1);
-      scrollToTop();
-      return;
-    }
-
     // For Buyers, document upload is optional (not mandatory)
     if (role === "buyer") {
       setCurrentStep(3);
@@ -607,18 +550,40 @@ function OnboardingContent({ initialRole }) {
       return;
     }
 
-    if (!uploadedDocs["ID_PROOF"]) {
-      setFormError("Please upload your Government Identity Proof to continue.");
+    // Validate combined document requirements across all selected seller classifications
+    if (needLandProof && !uploadedDocs["LAND_PROOF"]) {
+      setFormError("Please upload your Patta / Chitta document to continue.");
       return;
     }
-    if (role === "seller" && !uploadedDocs["BANK_PASSBOOK"]) {
+    if (needFpoCert && !uploadedDocs["FPO_CERTIFICATE"]) {
+      setFormError("Please upload your FPO / Cooperative Registration Certificate to continue.");
+      return;
+    }
+    if (needOrganicCert && !uploadedDocs["ORGANIC_CERTIFICATE"]) {
+      setFormError("Please upload your NPOP Organic Certificate document to continue.");
+      return;
+    }
+    if (needIdProof && !uploadedDocs["ID_PROOF"]) {
+      setFormError(
+        hasSellerRole("Other")
+          ? "Please upload your PAN Card / Government Identity Proof to continue."
+          : "Please upload your Government Identity Proof to continue."
+      );
+      return;
+    }
+    if (needBankPassbook && !uploadedDocs["BANK_PASSBOOK"]) {
       setFormError("Bank Account Proof / Passbook is required for direct farm-gate settlement.");
       return;
     }
-    if (isGstProvided && !uploadedDocs["GST_CERTIFICATE"]) {
-      setFormError("Please upload your GST Registration Certificate (Form REG-06) to continue.");
+    if (needGstCert && !uploadedDocs["GST_CERTIFICATE"]) {
+      setFormError("Please upload your GST Registration Certificate to continue.");
       return;
     }
+    if (needFssaiCert && !uploadedDocs["FSSAI_LICENSE"]) {
+      setFormError("Please upload your FSSAI Food Safety License Certificate to continue.");
+      return;
+    }
+
     setCurrentStep(3);
     setReviewSubStep(1);
     scrollToTop();
@@ -654,7 +619,7 @@ function OnboardingContent({ initialRole }) {
     setFormError("");
     setIsProcessingPayment(true);
 
-    const baseAmount = 365;
+    const baseAmount = role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365;
     const addonAmount = role === "buyer" ? addonBlocks * 10 : 0;
     const totalAmount = baseAmount + addonAmount;
 
@@ -707,7 +672,7 @@ function OnboardingContent({ initialRole }) {
     setIsProcessingPayment(true);
     setIsRazorpayModalOpen(false);
 
-    const baseAmount = 365;
+    const baseAmount = role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365;
     const addonAmount = role === "buyer" ? addonBlocks * 10 : 0;
     const totalAmount = baseAmount + addonAmount;
     const buyerViewLimit = role === "buyer" ? 10 + addonBlocks * 10 : null;
@@ -728,23 +693,17 @@ function OnboardingContent({ initialRole }) {
 
     const applicationId = `US_${role.toUpperCase()}_${Date.now().toString().slice(-6)}`;
 
-    const sanitizedProfile =
-      role === "buyer"
-        ? buyerData
-        : getSanitizedSellerProfile(sellerType, sellerData);
+    const resolvedSellerTypes = selectedSellerTypes.length > 0 ? selectedSellerTypes : [sellerType || "Farmer"];
+    const sellerTypesLabel = resolvedSellerTypes.join(", ");
 
     // 1. Submit Application Data
     const fullPayload = {
       applicationId,
       role: role.toUpperCase(),
-      account: {
-        id: userAuth?.id || "",
-        name: userAuth?.name || "",
-        email: userAuth?.email || "",
-        mobile: userAuth?.mobile || "",
-      },
-      subType: role === "buyer" ? buyerType : sellerType,
-      profile: sanitizedProfile,
+      account: userAuth,
+      subType: role === "buyer" ? buyerType : sellerTypesLabel,
+      selectedSellerTypes: role === "seller" ? resolvedSellerTypes : [sellerType],
+      profile: role === "buyer" ? buyerData : sellerData,
       documents: uploadedDocs,
       status: "active",
       submittedAt: startDate,
@@ -762,8 +721,16 @@ function OnboardingContent({ initialRole }) {
         userEmail: userAuth?.email || "",
         userMobile: userAuth?.mobile || "",
         role: role.toUpperCase(),
-        planId: role === "buyer" ? "plan_buyer_base" : "plan_seller_monthly",
-        planName: role === "buyer" ? `Buyer Access Plan (${buyerViewLimit} Sellers)` : "Seller Monthly Plan (₹365/mo)",
+        planId:
+          role === "buyer"
+            ? "plan_buyer_base"
+            : resolvedSellerTypes.length > 1
+              ? `plan_seller_multi_${resolvedSellerTypes.length}`
+              : "plan_seller_monthly",
+        planName:
+          role === "buyer"
+            ? `Buyer Access Plan (${buyerViewLimit} Sellers)`
+            : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""} - ₹${resolvedSellerTypes.length * 365})`,
         baseAmount,
         taxAmount: 0,
         totalAmount,
@@ -777,38 +744,54 @@ function OnboardingContent({ initialRole }) {
 
       await submitRolePayment(checkoutData);
 
-      // 3. Sync live user profile directly from backend (/api/user/me)
-      try {
-        const profileRes = await fetchCurrentUserProfile();
-        if (profileRes.success && profileRes.user && typeof window !== "undefined") {
-          sessionStorage.setItem("ulavan_user", JSON.stringify(profileRes.user));
-        }
-      } catch {
-        // Fallback: update status on existing backend session object
-        if (typeof window !== "undefined") {
-          const stored = sessionStorage.getItem("ulavan_user");
-          if (stored) {
-            try {
-              const current = JSON.parse(stored);
-              current.isPaid = true;
-              if (role === "seller") {
-                current.sellerPaid = true;
-                current.sellerOnboarded = true;
-              } else {
-                current.buyerPaid = true;
-                current.buyerOnboarded = true;
-              }
-              sessionStorage.setItem("ulavan_user", JSON.stringify(current));
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-
+      // 3. Update session user state with role-specific independent completion flags
       if (typeof window !== "undefined") {
-        sessionStorage.removeItem("ulavan_registered_user");
-        localStorage.removeItem("ulavan_registered_user");
+        const stored =
+          sessionStorage.getItem("ulavan_user") ||
+          sessionStorage.getItem("ulavan_registered_user") ||
+          localStorage.getItem("ulavan_registered_user");
+        const existing = stored ? JSON.parse(stored) : (userAuth || {});
+
+        const isBuyer = role === "buyer";
+        const paymentRecord = {
+          transactionId: txId,
+          gatewayReference: gwRef,
+          invoiceNumber: invNumber,
+          amount: totalAmount,
+          status: "SUCCESS",
+          paidAt: startDate,
+          planStartDate: startDate,
+          planEndDate: endDate.toISOString(),
+          renewalDueDate,
+          buyerViewLimit,
+          buyerViewed: 0,
+          buyerRemaining: buyerViewLimit,
+        };
+
+        const updatedUser = {
+          ...existing,
+          role: role.charAt(0).toUpperCase() + role.slice(1),
+          activeRole: role,
+          subType: isBuyer ? buyerType : sellerTypesLabel,
+          status: "active",
+          isPaid: true,
+          // Role-specific completion flags
+          buyerPaid: isBuyer ? true : Boolean(existing.buyerPaid),
+          buyerOnboarded: isBuyer ? true : Boolean(existing.buyerOnboarded),
+          buyerData: isBuyer ? { ...buyerData, buyerType } : existing.buyerData,
+          buyerPayment: isBuyer ? paymentRecord : existing.buyerPayment,
+
+          sellerPaid: !isBuyer ? true : Boolean(existing.sellerPaid),
+          sellerOnboarded: !isBuyer ? true : Boolean(existing.sellerOnboarded),
+          sellerData: !isBuyer ? { ...sellerData, sellerType: resolvedSellerTypes[0], sellerTypes: resolvedSellerTypes } : existing.sellerData,
+          sellerPayment: !isBuyer ? paymentRecord : existing.sellerPayment,
+
+          payment: paymentRecord,
+        };
+
+        sessionStorage.setItem("ulavan_user", JSON.stringify(updatedUser));
+        sessionStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
+        localStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
         sessionStorage.setItem("ulavan_latest_app_id", applicationId);
         sessionStorage.setItem("ulavan_latest_payment_id", invNumber);
       }
@@ -823,8 +806,8 @@ function OnboardingContent({ initialRole }) {
         planStartDate: now.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         planEndDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         renewalDueDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
-        role: role === "buyer" ? `Buyer (${buyerType})` : `Seller (${sellerType})`,
-        planName: role === "buyer" ? "Buyer Access Plan (10 Verified Sellers)" : "Seller Monthly Plan (Unlimited Listings)",
+        role: role === "buyer" ? `Buyer (${buyerType})` : `Seller (${sellerTypesLabel})`,
+        planName: role === "buyer" ? "Buyer Access Plan (10 Verified Sellers)" : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""})`,
         baseAmount,
         addonAmount,
         totalAmount,
@@ -853,22 +836,19 @@ function OnboardingContent({ initialRole }) {
         (buyerType === "Manufacturer" && buyerData.mfgIsGst === "Yes") ||
         (buyerType === "Reseller" && buyerData.resellerIsGst === "Yes") ||
         (buyerType === "Other" && buyerData.otherIsGst === "Yes"))
-      : (sellerType === "Agricultural Producer" && sellerData.fpoIsGst === "Yes") ||
-      (sellerType === "Raw-Material Provider" && sellerData.rawIsGst === "Yes") ||
-      (sellerType === "Ingredient Producer" && sellerData.ingIsGst === "Yes") ||
-      (sellerType === "Manufacturer" && sellerData.mfgIsGst === "Yes") ||
-      (sellerType === "Value-Added Manufacturer" && sellerData.vaIsGst === "Yes") ||
-      (sellerType === "Other" && sellerData.otherIsGst === "Yes");
+      : needGstCert;
 
   const isFssaiRequired =
     role === "buyer"
       ? false
-      : sellerType === "Ingredient Producer" || sellerType === "Value-Added Manufacturer" || sellerType === "Manufacturer";
+      : needFssaiCert;
 
   if (currentStep === 4) {
     return (
       <PaymentView
         role={role}
+        selectedRoles={selectedSellerTypes}
+        payableAmount={role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365}
         onRoleChange={(nextRole) => {
           setRole(nextRole);
           setCurrentStep(1);
@@ -876,6 +856,8 @@ function OnboardingContent({ initialRole }) {
           setPreviewDoc(null);
           setFormError("");
           setTermsAgreed(false);
+          setSelectedSellerTypes([]);
+          setSellerType("");
           setBuyerData(createInitialBuyerData());
           setSellerData(createInitialSellerData());
           router.replace(`/onboarding?role=${nextRole}&step=1`);
@@ -931,13 +913,20 @@ function OnboardingContent({ initialRole }) {
     router.push("/login");
   };
 
+  const handleStepClick = (s) => {
+    setCurrentStep(s);
+    if (s === 3) setReviewSubStep(1);
+    scrollToTop();
+  };
+
   return (
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#174B35] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
+      <MobileRegistrationHeader currentStep={currentStep} onStepClick={handleStepClick} onLogout={handleLogout} />
       {/* Panoramic landscape footer strip in sequence without any clipping */}
       <div
-        className="fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
+        className="hidden lg:block fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
         style={{
           backgroundImage: "url('/images/onboarding-landscape-strip.png')",
           backgroundSize: "auto 30px",
@@ -948,7 +937,7 @@ function OnboardingContent({ initialRole }) {
       {/* ======================================================== */}
       {/* LEFT PANEL: Brand, Stepper & Plant Visual on Nature BG  */}
       {/* ======================================================== */}
-      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
+      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] shrink-0 lg:h-full hidden lg:flex flex-col justify-between p-6 sm:p-7 xl:p-9 pb-8 lg:pb-12 z-10 lg:overflow-hidden select-none">
         {/* Top Brand & Welcome */}
         <div>
           <BrandLogo width={160} priority />
@@ -968,11 +957,7 @@ function OnboardingContent({ initialRole }) {
               currentStep={currentStep}
               steps={steps}
               orientation="vertical"
-              onStepClick={(s) => {
-                setCurrentStep(s);
-                if (s === 3) setReviewSubStep(1);
-                scrollToTop();
-              }}
+              onStepClick={handleStepClick}
             />
           </div>
 
@@ -980,9 +965,8 @@ function OnboardingContent({ initialRole }) {
           <div className="relative w-[210px] sm:w-[240px] xl:w-[270px] 2xl:w-[300px] h-[230px] sm:h-[260px] xl:h-[290px] 2xl:h-[320px] shrink-0 flex items-end justify-center pointer-events-none translate-x-3 sm:translate-x-6 xl:translate-x-8">
             <div
               key={currentStep}
-              className={`relative w-full h-full transition-all duration-700 ease-out transform origin-bottom animate-in fade-in duration-300 ${
-                stepVisualConfigs[currentStep]?.scale || "scale-100"
-              }`}
+              className={`relative w-full h-full transition-all duration-700 ease-out transform origin-bottom animate-in fade-in duration-300 ${stepVisualConfigs[currentStep]?.scale || "scale-100"
+                }`}
             >
               <Image
                 src={activeBackground}
@@ -1000,9 +984,9 @@ function OnboardingContent({ initialRole }) {
       {/* ======================================================== */}
       {/* RIGHT PANEL: Form Controls on Shared Nature BG         */}
       {/* ======================================================== */}
-      <div ref={rightPanelRef} className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-8 pb-32 sm:pb-36 px-5 sm:px-10 xl:px-16 flex flex-col justify-between relative bg-transparent scroll-smooth">
+      <div ref={rightPanelRef} className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-5 lg:pt-8 pb-10 lg:pb-36 px-4 sm:px-10 xl:px-16 flex flex-col lg:justify-between relative bg-transparent scroll-smooth">
         {/* Top Floating Actions: Home, Logout & User Avatar */}
-        <div className="flex items-center justify-end gap-2.5 pb-6">
+        <div className="hidden lg:flex items-center justify-end gap-2.5 pb-6">
           <Link
             href="/"
             className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
@@ -1026,1412 +1010,1462 @@ function OnboardingContent({ initialRole }) {
         </div>
 
         {/* Form fits directly onto the natural cream background with leaf and tractor elements */}
-        <main className="w-full max-w-2xl mx-auto space-y-6 my-auto [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
-            {/* Error notification */}
-            {formError && (
-              <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 animate-in fade-in">
-                <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-xs sm:text-sm font-semibold text-red-800">{formError}</p>
-              </div>
-            )}
+        <main className="w-full max-w-2xl mx-auto space-y-6 lg:my-auto [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
+          {/* Error notification */}
+          {formError && (
+            <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 animate-in fade-in">
+              <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs sm:text-sm font-semibold text-red-800">{formError}</p>
+            </div>
+          )}
 
-            {/* ======================================================== */}
-            {/* STEP 1: DYNAMIC PROFILE DETAILS BY TYPE                 */}
-            {/* ======================================================== */}
-            {currentStep === 1 && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                {/* Header with User Icon Badge matching reference image */}
-                <div className="flex items-start gap-3.5">
-                  <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                      {role === "buyer" ? "Select Your Buyer Type & Details" : "Select Your Seller Type & Details"}
-                    </h2>
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                      Choose your specific classification below. The form will dynamically update with the exact fields tailored to your role.
-                    </p>
-                  </div>
+          {/* ======================================================== */}
+          {/* STEP 1: DYNAMIC PROFILE DETAILS BY TYPE                 */}
+          {/* ======================================================== */}
+          {currentStep === 1 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header with User Icon Badge matching reference image */}
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
-
-            {/* ======================================================== */}
-            {/* ROLE: BUYER - 7 DYNAMIC BUYER TYPES                     */}
-            {/* ======================================================== */}
-            {role === "buyer" && (
-              <div className="space-y-6">
-                {/* 5 Buyer Types Selection Pills / Cards */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2.5">
-                    Buyer Classification <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-                    {finalBuyerTypes.map((type) => {
-                      const isSelected = buyerType === type;
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => handleBuyerTypeChange(type)}
-                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
-                            ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
-                            : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
-                            }`}
-                        >
-                          <span className="leading-tight">{type}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
+                    {role === "buyer" ? "Buyer profile" : "Seller profile"}
+                  </h2>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
+                    Choose your type, then enter your details.
+                  </p>
                 </div>
+              </div>
 
-                {/* Sub-form 2: Business */}
-                {buyerType === "Business" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Commercial Enterprise Buyer Form</span>
-                    </div>
-                    <FormInput
-                      label="Business / Enterprise Name"
-                      required
-                      placeholder="e.g. Kongu Agri Traders"
-                      value={buyerData.businessName}
-                      onChange={(e) => setBuyerData((p) => ({ ...p, businessName: e.target.value }))}
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="businessIsGst"
-                              value="Yes"
-                              checked={buyerData.businessIsGst === "Yes"}
-                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="businessIsGst"
-                              value="No"
-                              checked={buyerData.businessIsGst === "No"}
-                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "No", businessGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {buyerData.businessIsGst === "Yes" && (
-                        <FormInput
-                          label="GSTIN (15 Digits)"
-                          required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={buyerData.businessGstin}
-                          onChange={(e) => setBuyerData((p) => ({ ...p, businessGstin: e.target.value.toUpperCase() }))}
-                        />
-                      )}
+              {/* ======================================================== */}
+              {/* ROLE: BUYER - 7 DYNAMIC BUYER TYPES                     */}
+              {/* ======================================================== */}
+              {role === "buyer" && (
+                <div className="space-y-6">
+                  {/* 5 Buyer Types Selection Pills / Cards */}
+                  <div>
+                    <label htmlFor="buyer-classification" className="block text-sm font-bold text-gray-800 mb-2.5">
+                      Buyer Classification <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="buyer-classification"
+                      value={buyerType}
+                      onChange={(event) => handleBuyerTypeChange(event.target.value)}
+                      className="min-h-12 w-full rounded-xl border border-[#cbd8cb] bg-white px-3 text-base font-semibold text-[#174B35] focus:outline-2 focus:outline-[#246146] sm:hidden"
+                    >
+                      {BUYER_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                    <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                      {BUYER_TYPES.map((type) => {
+                        const isSelected = buyerType === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => handleBuyerTypeChange(type)}
+                            className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
+                              ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
+                              : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
+                              }`}
+                          >
+                            <span className="leading-tight">{type}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
 
-                {/* Sub-form 3: Manufacturer */}
-                {buyerType === "Manufacturer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Industrial Manufacturer Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Legal Company Name"
-                        required
-                        placeholder="e.g. Apex Bio-Industries Pvt Ltd"
-                        value={buyerData.mfgCompanyName}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, mfgCompanyName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Manufacturing Category"
-                        value={buyerData.mfgCategory}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, mfgCategory: e.target.value }))}
-                        options={[
-                          "Food & Beverage", "Textiles & Cotton", "Animal & Cattle Feed",
-                          "Herbal & Ayurvedic Extracts", "Starch & Derivatives", "Bio-Energy"
-                        ]}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgIsGst"
-                              value="Yes"
-                              checked={buyerData.mfgIsGst === "Yes"}
-                              onChange={() => setBuyerData((p) => ({ ...p, mfgIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgIsGst"
-                              value="No"
-                              checked={buyerData.mfgIsGst === "No"}
-                              onChange={() => setBuyerData((p) => ({ ...p, mfgIsGst: "No", mfgGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {buyerData.mfgIsGst === "Yes" && (
-                        <FormInput
-                          label="Company GSTIN (15 Digits)"
-                          required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={buyerData.mfgGstin}
-                          onChange={(e) => setBuyerData((p) => ({ ...p, mfgGstin: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 4: Reseller */}
-                {buyerType === "Reseller" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Mandi Reseller &amp; Retail Merchant Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Shop / Mandi Stall Name"
-                        required
-                        placeholder="e.g. Madurai Vegetable Mandi Stall No. 24"
-                        value={buyerData.resellerShopName}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, resellerShopName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Reseller Type"
-                        value={buyerData.resellerType}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, resellerType: e.target.value }))}
-                        options={["Mandi Wholesale Commission Agent", "Retail Grocery / Supermarket", "Vegetable Vendor Group", "Mobile Delivery Van"]}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 7: Other */}
-                {buyerType === "Other" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Custom Institution / Buyer Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Organization / Applicant Name"
-                        required
-                        placeholder="e.g. Sri Krishna Educational Trust Hostel"
-                        value={buyerData.otherOrgName}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, otherOrgName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Applicant Category / Sector"
-                        placeholder="e.g. Hostel, Temple Trust, NGO, Exporter"
-                        value={buyerData.otherCategory}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, otherCategory: e.target.value }))}
-                      />
-                    </div>
-                    <FormInput
-                      label="Purpose of Agricultural Purchase"
-                      placeholder="e.g. Daily meals procurement for 500 hostel students"
-                      value={buyerData.otherPurpose}
-                      onChange={(e) => setBuyerData((p) => ({ ...p, otherPurpose: e.target.value }))}
-                    />
-                  </div>
-                )}
-
-                {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
-                {!BUYER_TYPES.includes(buyerType) && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center justify-between">
+                  {/* Sub-form 2: Business */}
+                  {buyerType === "Business" && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                       <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                        <span>{buyerType} Procurement Form</span>
+                        <span>Commercial Enterprise Buyer Form</span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
-                        Admin Synced Category
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormInput
                         label="Business / Enterprise Name"
                         required
-                        placeholder={`e.g. Prime ${buyerType} Enterprises`}
+                        placeholder="e.g. Kongu Agri Traders"
                         value={buyerData.businessName}
                         onChange={(e) => setBuyerData((p) => ({ ...p, businessName: e.target.value }))}
                       />
-                      <FormInput
-                        label="Designation / Role"
-                        placeholder="e.g. Managing Partner / Procurement Lead"
-                        value={buyerData.businessDesignation}
-                        onChange={(e) => setBuyerData((p) => ({ ...p, businessDesignation: e.target.value }))}
-                      />
-                    </div>
 
-                    {/* Dynamic subcategory pills if configured by Admin */}
-                    {selectedBuyerCategoryObj?.subcategories?.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Commodities &amp; Products of Interest:
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedBuyerCategoryObj.subcategories.map((sub) => {
-                            const isChecked = buyerData.businessCommodities?.includes(sub);
-                            return (
-                              <button
-                                key={sub}
-                                type="button"
-                                onClick={() => {
-                                  setBuyerData((prev) => {
-                                    const current = prev.businessCommodities || [];
-                                    const next = current.includes(sub)
-                                      ? current.filter((c) => c !== sub)
-                                      : [...current, sub];
-                                    return { ...prev, businessCommodities: next };
-                                  });
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                                  isChecked
-                                    ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
-                                    : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
-                                }`}
-                              >
-                                {isChecked && "✓ "}
-                                {sub}
-                              </button>
-                            );
-                          })}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="businessIsGst"
+                                value="Yes"
+                                checked={buyerData.businessIsGst === "Yes"}
+                                onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="businessIsGst"
+                                value="No"
+                                checked={buyerData.businessIsGst === "No"}
+                                onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "No", businessGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="customBuyerIsGst"
-                              value="Yes"
-                              checked={buyerData.businessIsGst === "Yes"}
-                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="customBuyerIsGst"
-                              value="No"
-                              checked={buyerData.businessIsGst === "No"}
-                              onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "No", businessGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {buyerData.businessIsGst === "Yes" && (
-                        <FormInput
-                          label="GSTIN (15 Digits)"
-                          required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={buyerData.businessGstin}
-                          onChange={(e) => setBuyerData((p) => ({ ...p, businessGstin: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Common Location Details for Buyer */}
-                <div className="pt-4 border-t border-gray-200/80 space-y-4">
-                  <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
-                  <FormInput
-                    label="Street Address"
-                    placeholder="e.g. Shop No. 12, Main Bazaar Road, Near Bus Stand"
-                    value={buyerData.address}
-                    onChange={(e) => setBuyerData((p) => ({ ...p, address: e.target.value }))}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <FormSelect
-                      label="District"
-                      required
-                      value={buyerData.district}
-                      onChange={(e) => setBuyerData((p) => ({ ...p, district: e.target.value }))}
-                      options={TAMIL_NADU_DISTRICTS}
-                    />
-                    <FormInput
-                      label="City / Town"
-                      placeholder="e.g. Pollachi"
-                      value={buyerData.city}
-                      onChange={(e) => setBuyerData((p) => ({ ...p, city: e.target.value }))}
-                    />
-                    <FormInput
-                      label="PIN Code"
-                      placeholder="e.g. 642001"
-                      maxLength={6}
-                      value={buyerData.pinCode}
-                      onChange={(e) => setBuyerData((p) => ({ ...p, pinCode: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ======================================================== */}
-            {/* ROLE: SELLER - 8 DYNAMIC SELLER TYPES                   */}
-            {/* ======================================================== */}
-            {role === "seller" && (
-              <div className="space-y-6">
-                {/* 8 Seller Types Selection Pills / Cards */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2.5">
-                    Seller Classification <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                    {finalSellerTypes.map((type) => {
-                      const isSelected = sellerType === type;
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => handleSellerTypeChange(type)}
-                          className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
-                            ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
-                            : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
-                            }`}
-                        >
-                          <span className="leading-tight">{type}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Sub-form 1: Farmer */}
-                {sellerType === "Farmer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Direct Farmer &amp; Cultivator Form</span>
-                    </div>
-
-                    <FormInput
-                      label="Farm Name"
-                      required
-                      placeholder="e.g. Sri Murugan Thottam"
-                      value={sellerData.farmerFarmName}
-                      onChange={(e) => setSellerData((p) => ({ ...p, farmerFarmName: e.target.value }))}
-                    />
-                  </div>
-                )}
-
-                {/* Sub-form 2: Agricultural Producer (FPO / Society) */}
-                {sellerType === "Agricultural Producer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>FPO &amp; Agricultural Cooperative Form</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="FPO / Society Legal Name"
-                        required
-                        placeholder="e.g. Kongu Uzhavar Producer Co Ltd"
-                        value={sellerData.fpoName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, fpoName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Organization Structure"
-                        value={sellerData.fpoStructure}
-                        onChange={(e) => setSellerData((p) => ({ ...p, fpoStructure: e.target.value }))}
-                        options={["Farmer Producer Company (FPC)", "Registered Cooperative Society", "Joint Liability Group (JLG)", "Self Help Group (SHG)"]}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Do you have Registration Number?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="fpoIsRegistered"
-                              value="Yes"
-                              checked={sellerData.fpoIsRegistered === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="fpoIsRegistered"
-                              value="No"
-                              checked={sellerData.fpoIsRegistered === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "No", fpoRegNumber: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {sellerData.fpoIsRegistered === "Yes" && (
-                        <FormInput
-                          label="Registration No (CIN / Society Reg)"
-                          required
-                          placeholder="e.g. U01409TZ2021PTC028491"
-                          value={sellerData.fpoRegNumber}
-                          onChange={(e) => setSellerData((p) => ({ ...p, fpoRegNumber: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 3: Organic Producer */}
-                {sellerType === "Organic Producer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Organic Certified Producer Form</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Organic Farm / Brand Name"
-                        required
-                        placeholder="e.g. Pristine Nature Organic Farm"
-                        value={sellerData.organicFarmName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, organicFarmName: e.target.value }))}
-                      />
-                      <FormSelect
-                        label="Certification Status"
-                        value={sellerData.organicCertStatus}
-                        onChange={(e) => setSellerData((p) => ({ ...p, organicCertStatus: e.target.value }))}
-                        options={["Certified Organic (NPOP)", "In-Conversion (C1 / C2)", "PGS-India Green / Organic", "Natural Farming (Uncertified)"]}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Do you have License Number?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="organicHasLicense"
-                              value="Yes"
-                              checked={sellerData.organicHasLicense === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="organicHasLicense"
-                              value="No"
-                              checked={sellerData.organicHasLicense === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "No", organicScopeNumber: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {sellerData.organicHasLicense === "Yes" && (
-                        <FormInput
-                          label="Certificate Scope / License No"
-                          placeholder="e.g. NPOP/NAB/0017/ORG-2024"
-                          value={sellerData.organicScopeNumber}
-                          onChange={(e) => setSellerData((p) => ({ ...p, organicScopeNumber: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 4: Raw-Material Provider */}
-                {sellerType === "Raw-Material Provider" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Bulk Raw-Material Provider Form</span>
-                    </div>
-
-                    <FormInput
-                      label="Business / Provider Name"
-                      required
-                      placeholder="e.g. Cauvery Raw Agri Commodities"
-                      value={sellerData.rawProviderName}
-                      onChange={(e) => setSellerData((p) => ({ ...p, rawProviderName: e.target.value }))}
-                    />
-                  </div>
-                )}
-
-                {/* Sub-form 5: Ingredient Producer */}
-                {sellerType === "Ingredient Producer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Agri-Ingredient Producer Form</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <FormInput
-                        label="Enterprise Name"
-                        required
-                        placeholder="e.g. Kongu Traditional Chekku Oils"
-                        value={sellerData.ingProducerName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, ingProducerName: e.target.value }))}
-                      />
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Do you have FSSAI Food License?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="ingHasFssai"
-                              value="Yes"
-                              checked={sellerData.ingHasFssai === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="ingHasFssai"
-                              value="No"
-                              checked={sellerData.ingHasFssai === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "No", ingFssaiNumber: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
+                        {buyerData.businessIsGst === "Yes" && (
+                          <FormInput
+                            label="GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={buyerData.businessGstin}
+                            onChange={(e) => setBuyerData((p) => ({ ...p, businessGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
                       </div>
                     </div>
+                  )}
 
-                    {sellerData.ingHasFssai === "Yes" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormInput
-                          label="FSSAI Food License (14 Digits)"
-                          required
-                          maxLength={14}
-                          placeholder="e.g. 10020042000789"
-                          value={sellerData.ingFssaiNumber}
-                          onChange={(e) => setSellerData((p) => ({ ...p, ingFssaiNumber: e.target.value }))}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Sub-form 6: Manufacturer */}
-                {sellerType === "Manufacturer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Industrial Agro-Manufacturer Form</span>
-                    </div>
-
-                    <FormInput
-                      label="Company Name"
-                      required
-                      placeholder="e.g. Salem Agro Refineries Ltd"
-                      value={sellerData.mfgSellerName}
-                      onChange={(e) => setSellerData((p) => ({ ...p, mfgSellerName: e.target.value }))}
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Do you have FSSAI Food License?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgHasFssai"
-                              value="Yes"
-                              checked={sellerData.mfgHasFssai === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgHasFssai"
-                              value="No"
-                              checked={sellerData.mfgHasFssai === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "No", mfgFssaiNumber: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {sellerData.mfgHasFssai === "Yes" && (
-                        <FormInput
-                          label="FSSAI Food License (14 Digits)"
-                          required
-                          maxLength={14}
-                          placeholder="e.g. 10020042000789"
-                          value={sellerData.mfgFssaiNumber}
-                          onChange={(e) => setSellerData((p) => ({ ...p, mfgFssaiNumber: e.target.value }))}
-                        />
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgIsGst"
-                              value="Yes"
-                              checked={sellerData.mfgIsGst === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="mfgIsGst"
-                              value="No"
-                              checked={sellerData.mfgIsGst === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "No", mfgGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {sellerData.mfgIsGst === "Yes" && (
-                        <FormInput
-                          label="GSTIN (15 Digits)"
-                          required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={sellerData.mfgGstin}
-                          onChange={(e) => setSellerData((p) => ({ ...p, mfgGstin: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form 7: Value-Added Manufacturer */}
-                {sellerType === "Value-Added Manufacturer" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Value-Added Food Products Form</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <FormInput
-                        label="Brand / Enterprise Name"
-                        required
-                        placeholder="e.g. Madurai Traditional Pickles & Snacks"
-                        value={sellerData.vaBrandName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, vaBrandName: e.target.value }))}
-                      />
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Do you have FSSAI Food License?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="vaHasFssai"
-                              value="Yes"
-                              checked={sellerData.vaHasFssai === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="vaHasFssai"
-                              value="No"
-                              checked={sellerData.vaHasFssai === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "No", vaFssaiNumber: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {sellerData.vaHasFssai === "Yes" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <FormInput
-                          label="FSSAI License (14 Digits)"
-                          required
-                          maxLength={14}
-                          placeholder="e.g. 10020042000999"
-                          value={sellerData.vaFssaiNumber}
-                          onChange={(e) => setSellerData((p) => ({ ...p, vaFssaiNumber: e.target.value }))}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Sub-form 8: Other */}
-                {sellerType === "Other" && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                      <span>Specialized Farm Enterprise Form</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormInput
-                        label="Enterprise Name"
-                        required
-                        placeholder="e.g. Thanjavur Coconut Saplings Nursery"
-                        value={sellerData.otherSellerName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Enterprise Activity"
-                        placeholder="e.g. Grafted Fruit Saplings, Honey Apiculture, Mushrooms"
-                        value={sellerData.otherActivity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="otherIsGst"
-                              value="Yes"
-                              checked={sellerData.otherIsGst === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="otherIsGst"
-                              value="No"
-                              checked={sellerData.otherIsGst === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {sellerData.otherIsGst === "Yes" && (
-                        <FormInput
-                          label="GSTIN (15 Digits)"
-                          required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={sellerData.otherGstin}
-                          onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
-                {!SELLER_TYPES.includes(sellerType) && (
-                  <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
-                    <div className="flex items-center justify-between">
+                  {/* Sub-form 3: Manufacturer */}
+                  {buyerType === "Manufacturer" && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
                       <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
-                        <span>{sellerType} Specialized Form</span>
+                        <span>Industrial Manufacturer Form</span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
-                        Admin Synced Category
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Legal Company Name"
+                          required
+                          placeholder="e.g. Apex Bio-Industries Pvt Ltd"
+                          value={buyerData.mfgCompanyName}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, mfgCompanyName: e.target.value }))}
+                        />
+                        <FormSelect
+                          label="Manufacturing Category"
+                          value={buyerData.mfgCategory}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, mfgCategory: e.target.value }))}
+                          options={[
+                            "Food & Beverage", "Textiles & Cotton", "Animal & Cattle Feed",
+                            "Herbal & Ayurvedic Extracts", "Starch & Derivatives", "Bio-Energy"
+                          ]}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgIsGst"
+                                value="Yes"
+                                checked={buyerData.mfgIsGst === "Yes"}
+                                onChange={() => setBuyerData((p) => ({ ...p, mfgIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgIsGst"
+                                value="No"
+                                checked={buyerData.mfgIsGst === "No"}
+                                onChange={() => setBuyerData((p) => ({ ...p, mfgIsGst: "No", mfgGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {buyerData.mfgIsGst === "Yes" && (
+                          <FormInput
+                            label="Company GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={buyerData.mfgGstin}
+                            onChange={(e) => setBuyerData((p) => ({ ...p, mfgGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form 4: Reseller */}
+                  {buyerType === "Reseller" && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Mandi Reseller &amp; Retail Merchant Form</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Shop / Mandi Stall Name"
+                          required
+                          placeholder="e.g. Madurai Vegetable Mandi Stall No. 24"
+                          value={buyerData.resellerShopName}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, resellerShopName: e.target.value }))}
+                        />
+                        <FormSelect
+                          label="Reseller Type"
+                          value={buyerData.resellerType}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, resellerType: e.target.value }))}
+                          options={["Mandi Wholesale Commission Agent", "Retail Grocery / Supermarket", "Vegetable Vendor Group", "Mobile Delivery Van"]}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form 7: Other */}
+                  {buyerType === "Other" && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Custom Institution / Buyer Form</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Organization / Applicant Name"
+                          required
+                          placeholder="e.g. Sri Krishna Educational Trust Hostel"
+                          value={buyerData.otherOrgName}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, otherOrgName: e.target.value }))}
+                        />
+                        <FormInput
+                          label="Applicant Category / Sector"
+                          placeholder="e.g. Hostel, Temple Trust, NGO, Exporter"
+                          value={buyerData.otherCategory}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, otherCategory: e.target.value }))}
+                        />
+                      </div>
+                      <FormInput
+                        label="Purpose of Agricultural Purchase"
+                        placeholder="e.g. Daily meals procurement for 500 hostel students"
+                        value={buyerData.otherPurpose}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, otherPurpose: e.target.value }))}
+                      />
+                    </div>
+                  )}
+
+                  {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
+                  {!BUYER_TYPES.includes(buyerType) && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                          <span>{buyerType} Procurement Form</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
+                          Admin Synced Category
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Business / Enterprise Name"
+                          required
+                          placeholder={`e.g. Prime ${buyerType} Enterprises`}
+                          value={buyerData.businessName}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, businessName: e.target.value }))}
+                        />
+                        <FormInput
+                          label="Designation / Role"
+                          placeholder="e.g. Managing Partner / Procurement Lead"
+                          value={buyerData.businessDesignation}
+                          onChange={(e) => setBuyerData((p) => ({ ...p, businessDesignation: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Dynamic subcategory pills if configured by Admin */}
+                      {selectedBuyerCategoryObj?.subcategories?.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Commodities &amp; Products of Interest:
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedBuyerCategoryObj.subcategories.map((sub) => {
+                              const isChecked = buyerData.businessCommodities?.includes(sub);
+                              return (
+                                <button
+                                  key={sub}
+                                  type="button"
+                                  onClick={() => {
+                                    setBuyerData((prev) => {
+                                      const current = prev.businessCommodities || [];
+                                      const next = current.includes(sub)
+                                        ? current.filter((c) => c !== sub)
+                                        : [...current, sub];
+                                      return { ...prev, businessCommodities: next };
+                                    });
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${isChecked
+                                      ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
+                                      : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
+                                    }`}
+                                >
+                                  {isChecked && "✓ "}
+                                  {sub}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="customBuyerIsGst"
+                                value="Yes"
+                                checked={buyerData.businessIsGst === "Yes"}
+                                onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="customBuyerIsGst"
+                                value="No"
+                                checked={buyerData.businessIsGst === "No"}
+                                onChange={() => setBuyerData((p) => ({ ...p, businessIsGst: "No", businessGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {buyerData.businessIsGst === "Yes" && (
+                          <FormInput
+                            label="GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={buyerData.businessGstin}
+                            onChange={(e) => setBuyerData((p) => ({ ...p, businessGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Common Location Details for Buyer */}
+                  <div className="pt-4 border-t border-gray-200/80 space-y-4">
+                    <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
+                    <FormInput
+                      label="Street Address"
+                      placeholder="e.g. Shop No. 12, Main Bazaar Road, Near Bus Stand"
+                      value={buyerData.address}
+                      onChange={(e) => setBuyerData((p) => ({ ...p, address: e.target.value }))}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <FormSelect
+                        label="District"
+                        required
+                        value={buyerData.district}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, district: e.target.value }))}
+                        options={TAMIL_NADU_DISTRICTS}
+                      />
+                      <FormInput
+                        label="City / Town"
+                        placeholder="e.g. Pollachi"
+                        value={buyerData.city}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, city: e.target.value }))}
+                      />
+                      <FormInput
+                        label="PIN Code"
+                        placeholder="e.g. 642001"
+                        maxLength={6}
+                        value={buyerData.pinCode}
+                        onChange={(e) => setBuyerData((p) => ({ ...p, pinCode: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* ROLE: SELLER - 8 DYNAMIC SELLER TYPES                   */}
+              {/* ======================================================== */}
+              {role === "seller" && (
+                <div className="space-y-6">
+                  {/* 8 Seller Types Selection Pills / Cards */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label htmlFor="seller-classification" className="block text-sm font-bold text-gray-800">
+                          Seller Classification <span className="text-red-500">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowMultiRoleModal(true)}
+                          className="text-xs text-gray-500 hover:text-[#174B35] flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Click to view multi-role pricing"
+                        >
+                          <span className="w-3.5 h-3.5 rounded-full border border-gray-400 text-[10px] flex items-center justify-center font-bold text-gray-500 leading-none">i</span>
+                          <span>You can select multiple roles that apply to you</span>
+                        </button>
+                      </div>
+                      <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
+                        {selectedSellerTypes.length} selected
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {finalSellerTypes.map((type) => {
+                        const isSelected = selectedSellerTypes.includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => handleSellerTypeToggle(type)}
+                            className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
+                                ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
+                                : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
+                              }`}
+                          >
+                            <span className="leading-tight">{type}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Sub-form 1: Farmer */}
+                  {hasSellerRole("Farmer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Direct Farmer &amp; Cultivator Form</span>
+                      </div>
+
                       <FormInput
-                        label="Farm / Enterprise Legal Name"
+                        label="Farm Name"
                         required
-                        placeholder={`e.g. Kongu ${sellerType} Collective`}
-                        value={sellerData.otherSellerName}
-                        onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
-                      />
-                      <FormInput
-                        label="Primary Agricultural Activity"
-                        placeholder="e.g. Cultivation, processing & direct producer supply"
-                        value={sellerData.otherActivity}
-                        onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
+                        placeholder="e.g. Sri Murugan Thottam"
+                        value={sellerData.farmerFarmName}
+                        onChange={(e) => setSellerData((p) => ({ ...p, farmerFarmName: e.target.value }))}
                       />
                     </div>
+                  )}
 
-                    {/* Dynamic subcategory pills if configured by Admin */}
-                    {selectedSellerCategoryObj?.subcategories?.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Available Crops / Produce / Products:
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedSellerCategoryObj.subcategories.map((sub) => {
-                            const isChecked = sellerData.farmerCrops?.includes(sub);
-                            return (
-                              <button
-                                key={sub}
-                                type="button"
-                                onClick={() => {
-                                  setSellerData((prev) => {
-                                    const current = prev.farmerCrops || [];
-                                    const next = current.includes(sub)
-                                      ? current.filter((c) => c !== sub)
-                                      : [...current, sub];
-                                    return { ...prev, farmerCrops: next };
-                                  });
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                                  isChecked
-                                    ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
-                                    : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
-                                }`}
-                              >
-                                {isChecked && "✓ "}
-                                {sub}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">
-                          Are you GST Registered?
-                        </label>
-                        <div className="flex items-center gap-6 h-11">
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="customSellerIsGst"
-                              value="Yes"
-                              checked={sellerData.otherIsGst === "Yes"}
-                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">Yes</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="radio"
-                              name="customSellerIsGst"
-                              value="No"
-                              checked={sellerData.otherIsGst === "No"}
-                              onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
-                              className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
-                            />
-                            <span className="text-sm font-semibold text-gray-800">No</span>
-                          </label>
-                        </div>
+                  {/* Sub-form 2: Agricultural Producer (FPO / Society) */}
+                  {hasSellerRole("Agricultural Producer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>FPO &amp; Agricultural Cooperative Form</span>
                       </div>
 
-                      {sellerData.otherIsGst === "Yes" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormInput
-                          label="GSTIN (15 Digits)"
+                          label="FPO / Society Legal Name"
                           required
-                          maxLength={15}
-                          placeholder="e.g. 33AAAAA0000A1Z5"
-                          value={sellerData.otherGstin}
-                          onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
+                          placeholder="e.g. Kongu Uzhavar Producer Co Ltd"
+                          value={sellerData.fpoName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, fpoName: e.target.value }))}
                         />
+                        <FormSelect
+                          label="Organization Structure"
+                          value={sellerData.fpoStructure}
+                          onChange={(e) => setSellerData((p) => ({ ...p, fpoStructure: e.target.value }))}
+                          options={["Farmer Producer Company (FPC)", "Registered Cooperative Society", "Joint Liability Group (JLG)", "Self Help Group (SHG)"]}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Do you have Registration Number?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="fpoIsRegistered"
+                                value="Yes"
+                                checked={sellerData.fpoIsRegistered === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="fpoIsRegistered"
+                                value="No"
+                                checked={sellerData.fpoIsRegistered === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, fpoIsRegistered: "No", fpoRegNumber: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.fpoIsRegistered === "Yes" && (
+                          <FormInput
+                            label="Registration No (CIN / Society Reg)"
+                            required
+                            placeholder="e.g. U01409TZ2021PTC028491"
+                            value={sellerData.fpoRegNumber}
+                            onChange={(e) => setSellerData((p) => ({ ...p, fpoRegNumber: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form 3: Organic Producer */}
+                  {hasSellerRole("Organic Producer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Organic Certified Producer Form</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Organic Farm / Brand Name"
+                          required
+                          placeholder="e.g. Pristine Nature Organic Farm"
+                          value={sellerData.organicFarmName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, organicFarmName: e.target.value }))}
+                        />
+                        <FormSelect
+                          label="Certification Status"
+                          value={sellerData.organicCertStatus}
+                          onChange={(e) => setSellerData((p) => ({ ...p, organicCertStatus: e.target.value }))}
+                          options={["Certified Organic (NPOP)", "In-Conversion (C1 / C2)", "PGS-India Green / Organic", "Natural Farming (Uncertified)"]}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Do you have License Number?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="organicHasLicense"
+                                value="Yes"
+                                checked={sellerData.organicHasLicense === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="organicHasLicense"
+                                value="No"
+                                checked={sellerData.organicHasLicense === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, organicHasLicense: "No", organicScopeNumber: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.organicHasLicense === "Yes" && (
+                          <FormInput
+                            label="Certificate Scope / License No"
+                            placeholder="e.g. NPOP/NAB/0017/ORG-2024"
+                            value={sellerData.organicScopeNumber}
+                            onChange={(e) => setSellerData((p) => ({ ...p, organicScopeNumber: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form 4: Raw-Material Provider */}
+                  {hasSellerRole("Raw-Material Provider") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Bulk Raw-Material Provider Form</span>
+                      </div>
+
+                      <FormInput
+                        label="Business / Provider Name"
+                        required
+                        placeholder="e.g. Cauvery Raw Agri Commodities"
+                        value={sellerData.rawProviderName}
+                        onChange={(e) => setSellerData((p) => ({ ...p, rawProviderName: e.target.value }))}
+                      />
+                    </div>
+                  )}
+
+                  {/* Sub-form 5: Ingredient Producer */}
+                  {hasSellerRole("Ingredient Producer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Agri-Ingredient Producer Form</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <FormInput
+                          label="Enterprise Name"
+                          required
+                          placeholder="e.g. Kongu Traditional Chekku Oils"
+                          value={sellerData.ingProducerName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, ingProducerName: e.target.value }))}
+                        />
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Do you have FSSAI Food License?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="ingHasFssai"
+                                value="Yes"
+                                checked={sellerData.ingHasFssai === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="ingHasFssai"
+                                value="No"
+                                checked={sellerData.ingHasFssai === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, ingHasFssai: "No", ingFssaiNumber: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {sellerData.ingHasFssai === "Yes" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormInput
+                            label="FSSAI Food License (14 Digits)"
+                            required
+                            maxLength={14}
+                            placeholder="e.g. 10020042000789"
+                            value={sellerData.ingFssaiNumber}
+                            onChange={(e) => setSellerData((p) => ({ ...p, ingFssaiNumber: e.target.value }))}
+                          />
+                        </div>
                       )}
                     </div>
+                  )}
+
+                  {/* Sub-form 6: Manufacturer */}
+                  {hasSellerRole("Manufacturer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Industrial Agro-Manufacturer Form</span>
+                      </div>
+
+                      <FormInput
+                        label="Company Name"
+                        required
+                        placeholder="e.g. Salem Agro Refineries Ltd"
+                        value={sellerData.mfgSellerName}
+                        onChange={(e) => setSellerData((p) => ({ ...p, mfgSellerName: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Do you have FSSAI Food License?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgHasFssai"
+                                value="Yes"
+                                checked={sellerData.mfgHasFssai === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgHasFssai"
+                                value="No"
+                                checked={sellerData.mfgHasFssai === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, mfgHasFssai: "No", mfgFssaiNumber: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.mfgHasFssai === "Yes" && (
+                          <FormInput
+                            label="FSSAI Food License (14 Digits)"
+                            required
+                            maxLength={14}
+                            placeholder="e.g. 10020042000789"
+                            value={sellerData.mfgFssaiNumber}
+                            onChange={(e) => setSellerData((p) => ({ ...p, mfgFssaiNumber: e.target.value }))}
+                          />
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgIsGst"
+                                value="Yes"
+                                checked={sellerData.mfgIsGst === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="mfgIsGst"
+                                value="No"
+                                checked={sellerData.mfgIsGst === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, mfgIsGst: "No", mfgGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.mfgIsGst === "Yes" && (
+                          <FormInput
+                            label="GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={sellerData.mfgGstin}
+                            onChange={(e) => setSellerData((p) => ({ ...p, mfgGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form 7: Value-Added Manufacturer */}
+                  {hasSellerRole("Value-Added Manufacturer") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Value-Added Food Products Form</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <FormInput
+                          label="Brand / Enterprise Name"
+                          required
+                          placeholder="e.g. Madurai Traditional Pickles & Snacks"
+                          value={sellerData.vaBrandName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, vaBrandName: e.target.value }))}
+                        />
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Do you have FSSAI Food License?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="vaHasFssai"
+                                value="Yes"
+                                checked={sellerData.vaHasFssai === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="vaHasFssai"
+                                value="No"
+                                checked={sellerData.vaHasFssai === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, vaHasFssai: "No", vaFssaiNumber: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {sellerData.vaHasFssai === "Yes" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <FormInput
+                            label="FSSAI License (14 Digits)"
+                            required
+                            maxLength={14}
+                            placeholder="e.g. 10020042000999"
+                            value={sellerData.vaFssaiNumber}
+                            onChange={(e) => setSellerData((p) => ({ ...p, vaFssaiNumber: e.target.value }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-form 8: Other */}
+                  {hasSellerRole("Other") && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                        <span>Specialized Farm Enterprise Form</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Enterprise Name"
+                          required
+                          placeholder="e.g. Thanjavur Coconut Saplings Nursery"
+                          value={sellerData.otherSellerName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
+                        />
+                        <FormInput
+                          label="Enterprise Activity"
+                          placeholder="e.g. Grafted Fruit Saplings, Honey Apiculture, Mushrooms"
+                          value={sellerData.otherActivity}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="otherIsGst"
+                                value="Yes"
+                                checked={sellerData.otherIsGst === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="otherIsGst"
+                                value="No"
+                                checked={sellerData.otherIsGst === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.otherIsGst === "Yes" && (
+                          <FormInput
+                            label="GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={sellerData.otherGstin}
+                            onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-form: Dynamic Custom Category Added via Admin Portal */}
+                  {selectedCustomSellerTypes.length > 0 && (
+                    <div className="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-4 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[#174B35] uppercase tracking-wider">
+                          <span>{activeCustomSellerType} Specialized Form</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 bg-[#E8F0E3] px-2 py-0.5 rounded-md border border-[#729B59]/40">
+                          Admin Synced Category
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormInput
+                          label="Farm / Enterprise Legal Name"
+                          required
+                          placeholder={`e.g. Kongu ${activeCustomSellerType} Collective`}
+                          value={sellerData.otherSellerName}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherSellerName: e.target.value }))}
+                        />
+                        <FormInput
+                          label="Primary Agricultural Activity"
+                          placeholder="e.g. Cultivation, processing & direct producer supply"
+                          value={sellerData.otherActivity}
+                          onChange={(e) => setSellerData((p) => ({ ...p, otherActivity: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Dynamic subcategory pills if configured by Admin */}
+                      {selectedSellerCategoryObj?.subcategories?.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Available Crops / Produce / Products:
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedSellerCategoryObj.subcategories.map((sub) => {
+                              const isChecked = sellerData.farmerCrops?.includes(sub);
+                              return (
+                                <button
+                                  key={sub}
+                                  type="button"
+                                  onClick={() => {
+                                    setSellerData((prev) => {
+                                      const current = prev.farmerCrops || [];
+                                      const next = current.includes(sub)
+                                        ? current.filter((c) => c !== sub)
+                                        : [...current, sub];
+                                      return { ...prev, farmerCrops: next };
+                                    });
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${isChecked
+                                      ? "bg-[#174B35] text-white border-[#174B35] shadow-xs"
+                                      : "bg-white text-gray-700 border-gray-200 hover:border-[#174B35]/40"
+                                    }`}
+                                >
+                                  {isChecked && "✓ "}
+                                  {sub}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-800 mb-2">
+                            Are you GST Registered?
+                          </label>
+                          <div className="flex items-center gap-6 h-11">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="customSellerIsGst"
+                                value="Yes"
+                                checked={sellerData.otherIsGst === "Yes"}
+                                onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "Yes" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">Yes</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="radio"
+                                name="customSellerIsGst"
+                                value="No"
+                                checked={sellerData.otherIsGst === "No"}
+                                onChange={() => setSellerData((p) => ({ ...p, otherIsGst: "No", otherGstin: "" }))}
+                                className="w-4 h-4 text-[#174B35] focus:ring-[#174B35] accent-[#174B35] cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-gray-800">No</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {sellerData.otherIsGst === "Yes" && (
+                          <FormInput
+                            label="GSTIN (15 Digits)"
+                            required
+                            maxLength={15}
+                            placeholder="e.g. 33AAAAA0000A1Z5"
+                            value={sellerData.otherGstin}
+                            onChange={(e) => setSellerData((p) => ({ ...p, otherGstin: e.target.value.toUpperCase() }))}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Common Location Details for Seller */}
+                  <div className="pt-4 border-t border-gray-200/80 space-y-4">
+                    <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
+                    <FormInput
+                      label="Street Address"
+                      placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
+                      value={sellerData.farmAddress}
+                      onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <FormSelect
+                        label="District"
+                        required
+                        value={sellerData.district}
+                        onChange={(e) => setSellerData((p) => ({ ...p, district: e.target.value }))}
+                        options={TAMIL_NADU_DISTRICTS}
+                      />
+                      <FormInput
+                        label="Village / Taluk"
+                        placeholder="e.g. Anaimalai"
+                        value={sellerData.village}
+                        onChange={(e) => setSellerData((p) => ({ ...p, village: e.target.value }))}
+                      />
+                      <FormInput
+                        label="PIN Code"
+                        placeholder="e.g. 642001"
+                        maxLength={6}
+                        value={sellerData.pinCode}
+                        onChange={(e) => setSellerData((p) => ({ ...p, pinCode: e.target.value }))}
+                      />
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {/* Action Bar */}
+              <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
+                <button
+                  type="button"
+                  onClick={handleNextFromStep1}
+                  className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
+                >
+                  <span className="sm:hidden">Continue to documents</span>
+                  <span className="hidden sm:inline">Continue to Document Upload</span>
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+                <Link
+                  href="/get-started"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                >
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                  </svg>
+                  Change Role
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* STEP 2: DYNAMIC DOCUMENT VERIFICATION                    */}
+          {/* ======================================================== */}
+          {currentStep === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header with Document Badge */}
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
+                    {role === "buyer" ? "Verification Documents (Optional)" : "Required Verification Documents"}
+                  </h2>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
+                    {role === "buyer"
+                      ? "Upload identity or business verification documents (optional). Allowed formats: PDF, JPG, PNG up to 5MB."
+                      : <>Upload verification proofs required for your selected classification (<strong className="text-gray-900 font-bold">{selectedSellerTypes.join(", ")}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.</>}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Individual Buyer: Aadhaar Card & PAN Card */}
+                {role === "buyer" && buyerType === "Individual" && (
+                  <>
+                    <DocumentUploader
+                      documentType="AADHAAR_CARD"
+                      title="Aadhaar Card"
+                      description="Upload your Aadhaar Card (Front & Back) or valid Government ID proof."
+                      required={false}
+                      uploadedDoc={uploadedDocs["AADHAAR_CARD"]}
+                      onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, AADHAAR_CARD: doc }))}
+                      onRemove={() =>
+                        setUploadedDocs((prev) => {
+                          const next = { ...prev };
+                          delete next.AADHAAR_CARD;
+                          return next;
+                        })
+                      }
+                    />
+                    <DocumentUploader
+                      documentType="PAN_CARD"
+                      title="PAN Card"
+                      description="Upload your PAN Card proof document."
+                      required={false}
+                      uploadedDoc={uploadedDocs["PAN_CARD"]}
+                      onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, PAN_CARD: doc }))}
+                      onRemove={() =>
+                        setUploadedDocs((prev) => {
+                          const next = { ...prev };
+                          delete next.PAN_CARD;
+                          return next;
+                        })
+                      }
+                    />
+                  </>
                 )}
 
-                {/* Common Location Details for Seller */}
-                <div className="pt-4 border-t border-gray-200/80 space-y-4">
-                  <h3 className="text-sm font-bold text-[#174B35]">Location</h3>
-                  <FormInput
-                    label="Street Address"
-                    placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
-                    value={sellerData.farmAddress}
-                    onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <FormSelect
-                      label="District"
-                      required
-                      value={sellerData.district}
-                      onChange={(e) => setSellerData((p) => ({ ...p, district: e.target.value }))}
-                      options={TAMIL_NADU_DISTRICTS}
-                    />
-                    <FormInput
-                      label="Village / Taluk"
-                      placeholder="e.g. Anaimalai"
-                      value={sellerData.village}
-                      onChange={(e) => setSellerData((p) => ({ ...p, village: e.target.value }))}
-                    />
-                    <FormInput
-                      label="PIN Code"
-                      placeholder="e.g. 642001"
-                      maxLength={6}
-                      value={sellerData.pinCode}
-                      onChange={(e) => setSellerData((p) => ({ ...p, pinCode: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <Link
-                href="/get-started"
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all"
-              >
-                &larr; Change Role
-              </Link>
-              <button
-                type="button"
-                onClick={handleNextFromStep1}
-                className="px-6 py-3 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Continue to Document Upload</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* STEP 2: DYNAMIC DOCUMENT VERIFICATION                    */}
-        {/* ======================================================== */}
-        {currentStep === 2 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Header with Document Badge */}
-            <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                  {role === "buyer" ? "Verification Documents (Optional)" : "Required Verification Documents"}
-                </h2>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                  {role === "buyer"
-                    ? "Upload identity or business verification documents (optional). Allowed formats: PDF, JPG, PNG up to 5MB."
-                    : <>Upload verification proofs required for your selected classification (<strong className="text-gray-900 font-bold">{sellerType}</strong>). Allowed formats: PDF, JPG, PNG up to 5MB.</>}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {/* Individual Buyer: Aadhaar Card & PAN Card */}
-              {role === "buyer" && buyerType === "Individual" && (
-                <>
+                {/* Common: PAN / Government ID for other buyers or Other/Custom sellers */}
+                {((role === "buyer" && buyerType !== "Individual") || needIdProof) && (
                   <DocumentUploader
-                    documentType="AADHAAR_CARD"
-                    title="Aadhaar Card"
-                    description="Upload your Aadhaar Card (Front & Back) or valid Government ID proof."
-                    required={false}
-                    uploadedDoc={uploadedDocs["AADHAAR_CARD"]}
-                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, AADHAAR_CARD: doc }))}
+                    documentType="ID_PROOF"
+                    title={
+                      role === "seller" && hasSellerRole("Other")
+                        ? "PAN Card / Government Identity Proof"
+                        : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
+                    }
+                    description={
+                      role === "seller" && hasSellerRole("Other")
+                        ? "Upload valid Business or Proprietor PAN Card proof."
+                        : "Government identity proof of the account owner or registered business."
+                    }
+                    required={role !== "buyer"}
+                    uploadedDoc={uploadedDocs["ID_PROOF"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ID_PROOF: doc }))}
                     onRemove={() =>
                       setUploadedDocs((prev) => {
                         const next = { ...prev };
-                        delete next.AADHAAR_CARD;
+                        delete next.ID_PROOF;
                         return next;
                       })
                     }
                   />
+                )}
+
+                {/* Seller: Bank Account Proof for custom admin categories */}
+                {needBankPassbook && (
                   <DocumentUploader
-                    documentType="PAN_CARD"
-                    title="PAN Card"
-                    description="Upload your PAN Card proof document."
-                    required={false}
-                    uploadedDoc={uploadedDocs["PAN_CARD"]}
-                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, PAN_CARD: doc }))}
+                    documentType="BANK_PASSBOOK"
+                    title="Bank Account Passbook / Cancelled Cheque"
+                    description="Required for direct farm-gate payments from buyers with 0% platform commission."
+                    required
+                    uploadedDoc={uploadedDocs["BANK_PASSBOOK"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, BANK_PASSBOOK: doc }))}
                     onRemove={() =>
                       setUploadedDocs((prev) => {
                         const next = { ...prev };
-                        delete next.PAN_CARD;
+                        delete next.BANK_PASSBOOK;
                         return next;
                       })
                     }
                   />
-                </>
-              )}
+                )}
 
-              {/* Common: PAN / Government ID for other roles (not for Individual Buyer, and not for Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer) */}
-              {!(role === "buyer" && buyerType === "Individual") && !(role === "seller" && (sellerType === "Farmer" || sellerType === "Agricultural Producer" || sellerType === "Organic Producer" || sellerType === "Raw-Material Provider" || sellerType === "Ingredient Producer" || sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer")) && (
-                <DocumentUploader
-                  documentType="ID_PROOF"
-                  title={
-                    role === "seller" && sellerType === "Other"
-                      ? "PAN Card / Government Identity Proof"
-                      : "Identity Proof (Aadhaar Card / Voter ID / PAN)"
-                  }
-                  description={
-                    role === "seller" && sellerType === "Other"
-                      ? "Upload valid Business or Proprietor PAN Card proof."
-                      : "Government identity proof of the account owner or registered business."
-                  }
-                  required={role !== "buyer"}
-                  uploadedDoc={uploadedDocs["ID_PROOF"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ID_PROOF: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.ID_PROOF;
-                      return next;
-                    })
-                  }
-                />
-              )}
+                {/* Farmer: Land Records (Patta / Chitta) */}
+                {needLandProof && (
+                  <DocumentUploader
+                    documentType="LAND_PROOF"
+                    title="Patta / Chitta Document"
+                    description="Upload your official Patta / Chitta document for farm cultivation verification."
+                    required
+                    uploadedDoc={uploadedDocs["LAND_PROOF"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, LAND_PROOF: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.LAND_PROOF;
+                        return next;
+                      })
+                    }
+                  />
+                )}
 
-              {/* Seller: Bank Account Proof for Direct Payments (excluding Farmer, Agricultural Producer, Organic Producer, Raw-Material Provider, Ingredient Producer, Manufacturer, Value-Added Manufacturer, Other) */}
-              {role === "seller" && sellerType !== "Farmer" && sellerType !== "Agricultural Producer" && sellerType !== "Organic Producer" && sellerType !== "Raw-Material Provider" && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer" && sellerType !== "Other" && (
-                <DocumentUploader
-                  documentType="BANK_PASSBOOK"
-                  title="Bank Account Passbook / Cancelled Cheque"
-                  description="Required for direct farm-gate payments from buyers with 0% platform commission."
-                  required
-                  uploadedDoc={uploadedDocs["BANK_PASSBOOK"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, BANK_PASSBOOK: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.BANK_PASSBOOK;
-                      return next;
-                    })
-                  }
-                />
-              )}
+                {/* Organic Producer: Organic Certificate (NPOP) */}
+                {needOrganicCert && (
+                  <DocumentUploader
+                    documentType="ORGANIC_CERTIFICATE"
+                    title="Organic Certification Document (NPOP / PGS-India)"
+                    description="Upload valid NPOP scope certificate from accredited organic certification agency."
+                    required
+                    uploadedDoc={uploadedDocs["ORGANIC_CERTIFICATE"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ORGANIC_CERTIFICATE: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.ORGANIC_CERTIFICATE;
+                        return next;
+                      })
+                    }
+                  />
+                )}
 
-              {/* Farmer: Land Records (Patta / Chitta) */}
-              {role === "seller" && sellerType === "Farmer" && (
-                <DocumentUploader
-                  documentType="LAND_PROOF"
-                  title="Patta / Chitta Document"
-                  description="Upload your official Patta / Chitta document for farm cultivation verification."
-                  required
-                  uploadedDoc={uploadedDocs["LAND_PROOF"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, LAND_PROOF: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.LAND_PROOF;
-                      return next;
-                    })
-                  }
-                />
-              )}
+                {/* Agricultural Producer: FPO / Society Reg */}
+                {needFpoCert && (
+                  <DocumentUploader
+                    documentType="FPO_CERTIFICATE"
+                    title="FPO / Cooperative Registration Certificate"
+                    description="Certificate of Incorporation or Society Registration proof."
+                    required
+                    uploadedDoc={uploadedDocs["FPO_CERTIFICATE"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FPO_CERTIFICATE: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.FPO_CERTIFICATE;
+                        return next;
+                      })
+                    }
+                  />
+                )}
 
-              {/* Organic Producer: Organic Certificate (NPOP) */}
-              {role === "seller" && sellerType === "Organic Producer" && (
-                <DocumentUploader
-                  documentType="ORGANIC_CERTIFICATE"
-                  title="Organic Certification Document (NPOP / PGS-India)"
-                  description="Upload valid NPOP scope certificate from accredited organic certification agency."
-                  required
-                  uploadedDoc={uploadedDocs["ORGANIC_CERTIFICATE"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, ORGANIC_CERTIFICATE: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.ORGANIC_CERTIFICATE;
-                      return next;
-                    })
-                  }
-                />
-              )}
+                {/* FSSAI Certificate */}
+                {needFssaiCert && (
+                  <DocumentUploader
+                    documentType="FSSAI_LICENSE"
+                    title="FSSAI Food Safety License Certificate"
+                    description="Mandatory state or central FSSAI registration certificate for food products."
+                    required
+                    uploadedDoc={uploadedDocs["FSSAI_LICENSE"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FSSAI_LICENSE: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.FSSAI_LICENSE;
+                        return next;
+                      })
+                    }
+                  />
+                )}
 
-              {/* Agricultural Producer: FPO / Society Reg */}
-              {role === "seller" && sellerType === "Agricultural Producer" && (
-                <DocumentUploader
-                  documentType="FPO_CERTIFICATE"
-                  title="FPO / Cooperative Registration Certificate"
-                  description="Certificate of Incorporation or Society Registration proof."
-                  required
-                  uploadedDoc={uploadedDocs["FPO_CERTIFICATE"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FPO_CERTIFICATE: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.FPO_CERTIFICATE;
-                      return next;
-                    })
-                  }
-                />
-              )}
+                {/* GST Certificate */}
+                {(role === "buyer" ? isGstProvided : needGstCert) && (
+                  <DocumentUploader
+                    documentType="GST_CERTIFICATE"
+                    title="GST Registration Certificate (Form REG-06)"
+                    description="Upload valid GST registration certificate for your business."
+                    required={role !== "buyer"}
+                    uploadedDoc={uploadedDocs["GST_CERTIFICATE"]}
+                    onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, GST_CERTIFICATE: doc }))}
+                    onRemove={() =>
+                      setUploadedDocs((prev) => {
+                        const next = { ...prev };
+                        delete next.GST_CERTIFICATE;
+                        return next;
+                      })
+                    }
+                  />
+                )}
+              </div>
 
-              {/* FSSAI Certificate if food processor / food business / ingredient producer / manufacturer / value-added */}
-              {((isFssaiRequired && sellerType !== "Ingredient Producer" && sellerType !== "Manufacturer" && sellerType !== "Value-Added Manufacturer") ||
-                (role === "seller" && sellerType === "Ingredient Producer" && sellerData.ingHasFssai === "Yes") ||
-                (role === "seller" && (sellerType === "Manufacturer" || sellerType === "Value-Added Manufacturer"))) && (
-                <DocumentUploader
-                  documentType="FSSAI_LICENSE"
-                  title="FSSAI Food Safety License Certificate"
-                  description="Mandatory state or central FSSAI registration certificate for food products."
-                  required={
-                    role === "seller" && sellerType === "Ingredient Producer"
-                      ? sellerData.ingHasFssai === "Yes"
-                      : true
-                  }
-                  uploadedDoc={uploadedDocs["FSSAI_LICENSE"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, FSSAI_LICENSE: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.FSSAI_LICENSE;
-                      return next;
-                    })
-                  }
-                />
-              )}
-
-              {/* GST Certificate if GST registered, Raw-Material Provider, Ingredient Producer, Manufacturer, or Other */}
-              {sellerType !== "Value-Added Manufacturer" && (isGstProvided ||
-                (role === "seller" &&
-                  (sellerType === "Raw-Material Provider" ||
-                    sellerType === "Ingredient Producer" ||
-                    sellerType === "Manufacturer" ||
-                    sellerType === "Other"))) && (
-                <DocumentUploader
-                  documentType="GST_CERTIFICATE"
-                  title="GST Registration Certificate (Form REG-06)"
-                  description="Upload valid GST registration certificate for your business."
-                  required={role !== "buyer"}
-                  uploadedDoc={uploadedDocs["GST_CERTIFICATE"]}
-                  onUploadSuccess={(doc) => setUploadedDocs((prev) => ({ ...prev, GST_CERTIFICATE: doc }))}
-                  onRemove={() =>
-                    setUploadedDocs((prev) => {
-                      const next = { ...prev };
-                      delete next.GST_CERTIFICATE;
-                      return next;
-                    })
-                  }
-                />
-              )}
+              {/* Action Bar */}
+              <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
+                <button
+                  type="button"
+                  onClick={handleNextFromStep2}
+                  className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
+                >
+                  <span className="sm:hidden">Continue to review</span>
+                  <span className="hidden sm:inline">Continue to Review &amp; Submit</span>
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(1)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                >
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                  </svg>
+                  <span className="sm:hidden">Back to profile</span>
+                  <span className="hidden sm:inline">Back to Profile Details</span>
+                </button>
+              </div>
             </div>
+          )}
 
-            {/* Action Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-              >
-                &larr; Back to Profile Details
-              </button>
-              <button
-                type="button"
-                onClick={handleNextFromStep2}
-                className="px-6 py-3 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Continue to Review &amp; Submit</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* STEP 3: REVIEW & SUBMIT                                  */}
-        {/* ======================================================== */}
-        {currentStep === 3 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Header with Profile Icon Badge */}
-            <div className="flex items-start gap-3.5">
-                  <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                      Review &amp; Finalize Registration
-                    </h2>
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                      Verify your tailored profile details before activating direct trade on Ulavan Santhai.
-                    </p>
-                  </div>
+          {/* ======================================================== */}
+          {/* STEP 3: REVIEW & SUBMIT                                  */}
+          {/* ======================================================== */}
+          {currentStep === 3 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header with Profile Icon Badge */}
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
-
-                <div className="space-y-4">
-                  {/* Account Credentials Card */}
-                  <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                      <span className="text-sm sm:text-base font-bold text-gray-900">
-                    Account credentials
-                  </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    From registration
-                  </span>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
+                    Review &amp; Finalize Registration
+                  </h2>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
+                    Verify your tailored profile details before activating direct trade on Ulavan Santhai.
+                  </p>
                 </div>
+              </div>
 
-                {/* Avatar & User Name */}
-                <div suppressHydrationWarning className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-full bg-[#174B35] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-                    {userAuth?.name
-                      ? userAuth.name
+              <div className="space-y-4">
+                {/* Account Credentials Card */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <span className="text-sm sm:text-base font-bold text-gray-900">
+                      Account credentials
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      From registration
+                    </span>
+                  </div>
+
+                  {/* Avatar & User Name */}
+                  <div suppressHydrationWarning className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-full bg-[#174B35] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                      {userAuth?.name
+                        ? userAuth.name
                           .split(" ")
                           .filter(Boolean)
                           .map((w) => w[0])
                           .slice(0, 2)
                           .join("")
                           .toUpperCase()
-                      : "US"}
-                  </div>
-                  <div>
-                    <h4 className="text-base font-bold text-gray-900 leading-tight">
-                      {userAuth?.name || "Registered Member"}
-                    </h4>
-                    <p className="text-xs text-gray-400 mt-0.5 font-normal">
-                      Full Name / Username
-                    </p>
-                  </div>
-                </div>
-
-                {/* Email & Mobile Sub-cards */}
-                <div suppressHydrationWarning className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {/* Email */}
-                  <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                        : "US"}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs text-gray-400 block font-normal">Email Address</span>
-                      <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                        {userAuth?.email || "—"}
-                      </span>
+                    <div>
+                      <h4 className="text-base font-bold text-gray-900 leading-tight">
+                        {userAuth?.name || "Registered Member"}
+                      </h4>
+                      <p className="text-xs text-gray-400 mt-0.5 font-normal">
+                        Full Name / Username
+                      </p>
                     </div>
                   </div>
 
-                  {/* Mobile Number */}
-                  <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs text-gray-400 block font-normal">Mobile Number</span>
-                      <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                        {userAuth?.mobile ? `+91 ${userAuth.mobile}` : "—"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Classification Card */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <span className="text-sm sm:text-base font-bold text-gray-900">
-                    {role === "buyer" ? "Buyer classification" : "Seller classification"}
-                  </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                    {role === "buyer" ? buyerType : sellerType}
-                  </span>
-                </div>
-
-                {role === "buyer" ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {buyerType === "Individual" && (
-                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Account Category</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            Individual Direct Consumer
-                          </span>
-                        </div>
+                  {/* Email & Mobile Sub-cards */}
+                  <div suppressHydrationWarning className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Email */}
+                    <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
                       </div>
-                    )}
-                    {buyerType === "Business" && (
-                      <>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs text-gray-400 block font-normal">Email Address</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                          {userAuth?.email || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Number */}
+                    <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs text-gray-400 block font-normal">Mobile Number</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                          {userAuth?.mobile ? `+91 ${userAuth.mobile}` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Classification Card */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <span className="text-sm sm:text-base font-bold text-gray-900">
+                      {role === "buyer" ? "Buyer classification" : "Seller classification"}
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                      {role === "buyer" ? buyerType : selectedSellerTypes.join(", ")}
+                    </span>
+                  </div>
+
+                  {role === "buyer" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {buyerType === "Individual" && (
+                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">Account Category</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              Individual Direct Consumer
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {buyerType === "Business" && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {buyerData.businessName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">GST Status</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {buyerData.businessIsGst === "Yes" ? buyerData.businessGstin : "Unregistered"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {buyerType === "Manufacturer" && (
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2439,59 +2473,14 @@ function OnboardingContent({ initialRole }) {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
+                            <span className="text-xs text-gray-400 block font-normal">Company &amp; Sector</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.businessName}
+                              {buyerData.mfgCompanyName} • {buyerData.mfgCategory}
                             </span>
                           </div>
                         </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">GST Status</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.businessIsGst === "Yes" ? buyerData.businessGstin : "Unregistered"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {buyerType === "Manufacturer" && (
-                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Company &amp; Sector</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {buyerData.mfgCompanyName} • {buyerData.mfgCategory}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {buyerType === "Reseller" && (
-                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Mandi Shop / Stall</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {buyerData.resellerShopName} • {buyerData.resellerType}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {buyerType === "Other" && (
-                      <>
+                      )}
+                      {buyerType === "Reseller" && (
                         <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2499,299 +2488,315 @@ function OnboardingContent({ initialRole }) {
                             </svg>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Organization</span>
+                            <span className="text-xs text-gray-400 block font-normal">Mandi Shop / Stall</span>
                             <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.otherOrgName} • {buyerData.otherCategory}
+                              {buyerData.resellerShopName} • {buyerData.resellerType}
                             </span>
                           </div>
                         </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                      )}
+                      {buyerType === "Other" && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Organization</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {buyerData.otherOrgName} • {buyerData.otherCategory}
+                              </span>
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Buying Purpose</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {buyerData.otherPurpose}
-                            </span>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Buying Purpose</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {buyerData.otherPurpose}
+                              </span>
+                            </div>
                           </div>
+                        </>
+                      )}
+                      {/* Operating District Card */}
+                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
                         </div>
-                      </>
-                    )}
-                    {/* Operating District Card */}
-                    <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs text-gray-400 block font-normal">Operating District</span>
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                            {buyerData.district}, Tamil Nadu
+                          </span>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs text-gray-400 block font-normal">Operating District</span>
-                        <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                          {buyerData.district}, Tamil Nadu
-                        </span>
-                      </div>
-                    </div>
 
-                    {buyerData.address && (
-                      <div className="sm:col-span-2 p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                          </svg>
+                      {buyerData.address && (
+                        <div className="sm:col-span-2 p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">Street Address</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              {buyerData.address}
+                            </span>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Street Address</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {buyerData.address}
-                          </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {hasSellerRole("Farmer") && (
+                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">Farm Name</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              {sellerData.farmerFarmName}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    {sellerType === "Farmer" && (
+                      )}
+                      {hasSellerRole("Agricultural Producer") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">FPO / Cooperative</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.fpoName} ({sellerData.fpoStructure})
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Registration Number</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.fpoIsRegistered === "Yes" && sellerData.fpoRegNumber
+                                  ? sellerData.fpoRegNumber
+                                  : "Not Registered"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {hasSellerRole("Organic Producer") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 19V6m0 0l-4 4m4-4l4 4M5 21h14" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Organic Farm</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.organicFarmName} • {sellerData.organicCertStatus}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">License / Scope Number</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.organicHasLicense === "Yes" && sellerData.organicScopeNumber
+                                  ? sellerData.organicScopeNumber
+                                  : "No License"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {hasSellerRole("Raw-Material Provider") && (
+                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-gray-400 block font-normal">Business / Provider Name</span>
+                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                              {sellerData.rawProviderName}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {hasSellerRole("Ingredient Producer") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.ingProducerName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.ingHasFssai === "Yes" && sellerData.ingFssaiNumber
+                                  ? sellerData.ingFssaiNumber
+                                  : "No FSSAI License"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {hasSellerRole("Manufacturer") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Company Name</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.mfgSellerName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">FSSAI &amp; GSTIN</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.mfgHasFssai === "Yes" && sellerData.mfgFssaiNumber ? `FSSAI: ${sellerData.mfgFssaiNumber}` : "No FSSAI"}
+                                {" • "}
+                                {sellerData.mfgIsGst === "Yes" && sellerData.mfgGstin ? `GST: ${sellerData.mfgGstin}` : "No GST"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {hasSellerRole("Value-Added Manufacturer") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Brand Name</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.vaBrandName}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.vaHasFssai === "Yes" && sellerData.vaFssaiNumber
+                                  ? sellerData.vaFssaiNumber
+                                  : "No FSSAI License"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {hasSellerRole("Other") && (
+                        <>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.otherSellerName || "N/A"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-gray-400 block font-normal">GSTIN & Activity</span>
+                              <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
+                                {sellerData.otherIsGst === "Yes" && sellerData.otherGstin ? sellerData.otherGstin : "Not GST Registered"}
+                                {sellerData.otherActivity ? ` • ${sellerData.otherActivity}` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      )}
                       <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Farm Name</span>
+                          <span className="text-xs text-gray-400 block font-normal">Farm / Unit Location</span>
                           <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {sellerData.farmerFarmName}
+                            {sellerData.village}, {sellerData.district}, Tamil Nadu
                           </span>
                         </div>
-                      </div>
-                    )}
-                    {sellerType === "Agricultural Producer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FPO / Cooperative</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.fpoName} ({sellerData.fpoStructure})
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Registration Number</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.fpoIsRegistered === "Yes" && sellerData.fpoRegNumber
-                                ? sellerData.fpoRegNumber
-                                : "Not Registered"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {sellerType === "Organic Producer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 19V6m0 0l-4 4m4-4l4 4M5 21h14" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Organic Farm</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.organicFarmName} • {sellerData.organicCertStatus}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">License / Scope Number</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.organicHasLicense === "Yes" && sellerData.organicScopeNumber
-                                ? sellerData.organicScopeNumber
-                                : "No License"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {sellerType === "Raw-Material Provider" && (
-                      <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs text-gray-400 block font-normal">Business / Provider Name</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {sellerData.rawProviderName}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {sellerType === "Ingredient Producer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.ingProducerName}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.ingHasFssai === "Yes" && sellerData.ingFssaiNumber
-                                ? sellerData.ingFssaiNumber
-                                : "No FSSAI License"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {sellerType === "Manufacturer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Company Name</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.mfgSellerName}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FSSAI &amp; GSTIN</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.mfgHasFssai === "Yes" && sellerData.mfgFssaiNumber ? `FSSAI: ${sellerData.mfgFssaiNumber}` : "No FSSAI"}
-                              {" • "}
-                              {sellerData.mfgIsGst === "Yes" && sellerData.mfgGstin ? `GST: ${sellerData.mfgGstin}` : "No GST"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {sellerType === "Value-Added Manufacturer" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Brand Name</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.vaBrandName}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">FSSAI License</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.vaHasFssai === "Yes" && sellerData.vaFssaiNumber
-                                ? sellerData.vaFssaiNumber
-                                : "No FSSAI License"}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {sellerType === "Other" && (
-                      <>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">Enterprise Name</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.otherSellerName || "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-gray-400 block font-normal">GSTIN & Activity</span>
-                            <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                              {sellerData.otherIsGst === "Yes" && sellerData.otherGstin ? sellerData.otherGstin : "Not GST Registered"}
-                              {sellerData.otherActivity ? ` • ${sellerData.otherActivity}` : ""}
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    <div className="p-3.5 rounded-2xl bg-white border border-gray-200/80 flex items-center gap-3 shadow-2xs sm:col-span-2">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs text-gray-400 block font-normal">Farm / Unit Location</span>
-                        <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                          {sellerData.village}, {sellerData.district}, Tamil Nadu
-                        </span>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
                 {/* Uploaded Documents Card */}
                 <div className="p-5 sm:p-6 rounded-3xl bg-white border border-gray-200/80 shadow-2xs space-y-4">
@@ -2846,11 +2851,10 @@ function OnboardingContent({ initialRole }) {
               {/* Declaration Checkbox */}
               <div className="pt-2">
                 <label
-                  className={`flex items-start sm:items-center gap-3 p-4 rounded-2xl bg-white border transition-colors cursor-pointer select-none ${
-                    !termsAgreed && formError
+                  className={`flex items-start sm:items-center gap-3 p-4 rounded-2xl bg-white border transition-colors cursor-pointer select-none ${!termsAgreed && formError
                       ? "border-red-400 bg-red-50/30 ring-2 ring-red-200"
                       : "border-gray-200/80 hover:border-emerald-300"
-                  } shadow-2xs`}
+                    } shadow-2xs`}
                 >
                   <input
                     type="checkbox"
@@ -2873,30 +2877,30 @@ function OnboardingContent({ initialRole }) {
               </div>
 
               {/* Action Bar */}
-              <div className="pt-6 border-t border-gray-200/80 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentStep(2);
-                    scrollToTop();
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-white hover:bg-gray-50 text-[#174B35] font-bold text-sm shadow-xs border border-gray-200 transition-all cursor-pointer"
-                >
-                  &larr; Back to Documents
-                </button>
+              <div className="flex flex-col items-center gap-2 border-t border-gray-200/80 pt-4 sm:flex-row-reverse sm:justify-between sm:gap-4 sm:pt-6">
                 <button
                   type="button"
                   onClick={handleProceedToPayment}
-                  className="px-8 py-3.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
                 >
                   <span>Proceed to Payment</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepClick(2)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                >
+                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                  </svg>
+                  <span>Back to Documents</span>
+                </button>
               </div>
-      </div>
-    )}
+            </div>
+          )}
 
         </main>
       </div>
@@ -2987,6 +2991,55 @@ function OnboardingContent({ initialRole }) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MULTIPLE ROLES SUPPORTED MODAL (SELLER CLASSIFICATION)  */}
+      {/* ======================================================== */}
+      {showMultiRoleModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowMultiRoleModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ₹ Rupee Icon Circle */}
+            <div className="w-14 h-14 rounded-full bg-[#EAF5EC] flex items-center justify-center mx-auto mb-4 text-[#174B35]">
+              <span className="text-2xl font-black leading-none">₹</span>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mb-2">
+              Multiple Roles Supported
+            </h3>
+
+            {/* Subtitle */}
+            <p className="text-xs sm:text-sm text-gray-500 font-medium leading-relaxed max-w-xs mx-auto mb-5">
+              You can select one or more Seller Classifications that match your business.
+            </p>
+
+            {/* Dynamic Calculation Box */}
+            <div className="bg-[#EDF7EE] border border-[#D3E8D6] rounded-2xl p-4 sm:p-5 mb-6 text-center">
+              <div className="text-sm sm:text-base font-extrabold text-gray-900">
+                ₹365 per role / month
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 font-medium mt-1">
+                {selectedSellerTypes.length} {selectedSellerTypes.length === 1 ? "role" : "roles"} selected • Total: ₹{(selectedSellerTypes.length * 365).toLocaleString("en-IN")} / month
+              </div>
+            </div>
+
+            {/* Got it, Continue Button */}
+            <button
+              type="button"
+              onClick={() => setShowMultiRoleModal(false)}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#174B35] hover:bg-[#113B29] text-white font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all cursor-pointer"
+            >
+              Got it, Continue
+            </button>
           </div>
         </div>
       )}

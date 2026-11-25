@@ -3,6 +3,7 @@
 import React from "react";
 import { UploadCloud } from "lucide-react";
 import { CATEGORIES_LIST } from "@/data/sellerPortalData";
+import SellerSelect from "../ui/SellerSelect";
 
 export default function SellerProfileForm({
   profile,
@@ -11,12 +12,20 @@ export default function SellerProfileForm({
   onSave,
   saveNotice,
 }) {
+  const sellerTypeOptions = [
+    "Farmer",
+    "Farmer Producer Organisation (FPO)",
+    "Organic Producer",
+    "Raw Material Supplier",
+    "Manufacturer / Processor",
+  ];
+
   return (
     <form
       onSubmit={onSave}
-      className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-5"
+      className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-5 min-w-0"
     >
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">Seller profile</h2>
         <span className="text-xs text-[#526458] font-medium">
           Captured at onboarding
@@ -25,7 +34,7 @@ export default function SellerProfileForm({
 
       {/* Business Name & Type */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold text-[#38453D] mb-1">
             Seller / business name
           </label>
@@ -34,29 +43,20 @@ export default function SellerProfileForm({
             value={profile.businessName}
             onChange={(e) => onFieldChange("businessName", e.target.value)}
             placeholder="Name of your farm, business or organisation"
-            className="w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+            className="w-full min-w-0 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold text-[#38453D] mb-1">
             Seller type
           </label>
-          <select
+          <SellerSelect
             value={profile.sellerType}
-            onChange={(e) => onFieldChange("sellerType", e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B] cursor-pointer"
-          >
-            <option value="Farmer">Farmer</option>
-            <option value="Farmer Producer Organisation (FPO)">
-              Farmer Producer Organisation (FPO)
-            </option>
-            <option value="Organic Producer">Organic Producer</option>
-            <option value="Raw Material Supplier">Raw Material Supplier</option>
-            <option value="Manufacturer / Processor">
-              Manufacturer / Processor
-            </option>
-          </select>
+            onChange={(val) => onFieldChange("sellerType", val)}
+            options={sellerTypeOptions}
+            ariaLabel="Seller type"
+          />
           <p className="text-[10px] text-[#7A877E] mt-1">
             A classification only, not a separate role.
           </p>
@@ -240,16 +240,16 @@ export default function SellerProfileForm({
       )}
 
       {/* Form Actions */}
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-end gap-2.5 sm:gap-3 pt-2">
         <button
           type="button"
-          className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+          className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+          className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer text-center"
         >
           Save profile
         </button>

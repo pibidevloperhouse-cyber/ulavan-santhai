@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Package,
@@ -12,6 +12,7 @@ import {
   Bell,
   User,
   X,
+  LogOut,
 } from "lucide-react";
 
 export default function SellerSidebar({
@@ -22,7 +23,19 @@ export default function SellerSidebar({
   enquiryCount = 0,
   notificationCount = 0,
 }) {
+  const router = useRouter();
   const pathname = usePathname() || "/seller/dashboard";
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.clear();
+      localStorage.removeItem("ulavan_auth_token");
+      localStorage.removeItem("ulavan_registered_user");
+      localStorage.removeItem("token");
+    }
+    if (onClose) onClose();
+    router.push("/login");
+  };
 
   const navItems = [
     {
@@ -135,13 +148,26 @@ export default function SellerSidebar({
         })}
       </nav>
 
-      {/* Sidebar Footer with Seller Details */}
-      <div className="p-4 border-t border-[#1D4430] bg-[#0F261A] shrink-0">
-        <div className="text-sm font-medium text-white truncate">
-          {sellerName}
-        </div>
-        <div className="text-xs text-[#7E9E81] mt-0.5">
-          Seller type: {sellerType}
+      {/* Sidebar Footer with Seller Details and Clean Minimal Logout Icon */}
+      <div className="p-3.5 border-t border-[#1D4430] bg-[#0F261A] shrink-0">
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-white truncate">
+              {sellerName}
+            </div>
+            <div className="text-xs text-[#7E9E81] truncate">
+              Seller type: {sellerType}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out"
+            aria-label="Log out"
+            className="p-2 rounded-lg text-[#8EA990] hover:text-white hover:bg-[#1B3F2C] border border-[#1D4430] transition-colors cursor-pointer shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
