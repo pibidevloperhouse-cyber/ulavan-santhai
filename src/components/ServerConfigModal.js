@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -15,6 +15,13 @@ export default function ServerConfigModal({ visible, onClose, onSaved }) {
   const [apiUrl, setApiUrl] = useState(getBaseUrl());
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null); // { success: boolean, message: string }
+
+  useEffect(() => {
+    if (visible) {
+      setApiUrl(getBaseUrl());
+      setTestResult(null);
+    }
+  }, [visible]);
 
   const handleTestConnection = async () => {
     const target = apiUrl.trim().replace(/\/+$/, '');
@@ -100,7 +107,7 @@ export default function ServerConfigModal({ visible, onClose, onSaved }) {
             onChangeText={setApiUrl}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="http://192.168.1.56:5000"
+            placeholder="http://192.168.1.39:5000"
             placeholderTextColor={Colors.textPlaceholder}
           />
 

@@ -1,11 +1,12 @@
-﻿import { buyerClassifications, sellerClassifications } from './classificationFields';
+import { buyerClassifications, sellerClassifications } from './classificationFields';
 import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { getDocumentAsync } from 'expo-document-picker';
 import { BrandLogo } from '../components/landing/LandingNavbar';
 import BuyerCheckout from '../components/BuyerCheckout';
+import DocumentUploader from '../components/DocumentUploader';
 import { getBaseUrl } from '../config/api';
-import { sellerForms, sellerPlan, uploadSellerProof } from '../services/sellerOnboarding';
+import { getSessionCache } from '../services/authService';
+import { sellerForms, sellerPlan } from '../services/sellerOnboarding';
 
 const steps = ['Profile', 'Documents', 'Review', 'Payment'];
 const districts = [
@@ -20,11 +21,11 @@ const districts = [
 ];
 const types = ['Individual', 'Business', 'Manufacturer', 'Reseller', 'Other'];
 const proofs = [
-  ['Identity Proof (Aadhaar Card / Voter ID / PAN)', 'Government identity proof of the account owner or registered business.'],
+  ['Identity Proof (Aadhaar Card / Voter ID / PAN)', 'Government identity proof of the account owner or registered business.', 'ID_PROOF'],
 ];
 const individualBuyerProofs = [
-  ['Aadhaar Card', 'Upload your Aadhaar Card (Front & Back) or valid Government ID proof.'],
-  ['PAN Card', 'Upload your PAN Card proof document.'],
+  ['Aadhaar Card', 'Upload your Aadhaar Card (Front & Back) or valid Government ID proof.', 'AADHAAR_CARD'],
+  ['PAN Card', 'Upload your PAN Card proof document.', 'PAN_CARD'],
 ];
 const benefits = [
   '100% Verified Buyer & Procurement Badge',
@@ -83,13 +84,225 @@ function Field({ label, value, onChangeText, placeholder, numeric, required, sel
   );
 }
 
-function Detail({ label, value }) {
+function ReviewIcon({ name }) {
+  if (name === 'building') {
+    return (
+      <View style={ri.building}>
+        <View style={ri.winRow}>
+          <View style={ri.win} />
+          <View style={ri.win} />
+        </View>
+        <View style={ri.winRow}>
+          <View style={ri.win} />
+          <View style={ri.win} />
+        </View>
+        <View style={ri.door} />
+      </View>
+    );
+  }
+  if (name === 'shield') {
+    return (
+      <View style={ri.shield}>
+        <Text style={ri.shieldTick}>✓</Text>
+      </View>
+    );
+  }
+  if (name === 'pin') {
+    return (
+      <View style={ri.pinWrap}>
+        <View style={ri.pinCircle}>
+          <View style={ri.pinDot} />
+        </View>
+        <View style={ri.pinTip} />
+      </View>
+    );
+  }
+  if (name === 'mail') {
+    return (
+      <View style={ri.mailBox}>
+        <View style={ri.mailFlap} />
+      </View>
+    );
+  }
+  if (name === 'phone') {
+    return (
+      <View style={ri.phoneBox}>
+        <View style={ri.phoneBtn} />
+      </View>
+    );
+  }
+  if (name === 'user') {
+    return (
+      <View style={ri.userWrap}>
+        <View style={ri.userHead} />
+        <View style={ri.userBody} />
+      </View>
+    );
+  }
+  if (name === 'home') {
+    return (
+      <View style={ri.homeWrap}>
+        <View style={ri.homeRoof} />
+        <View style={ri.homeBase} />
+      </View>
+    );
+  }
   return (
-    <View style={s.detail}>
-      <Text style={s.muted}>{label}</Text>
-      <Text style={s.label}>{value || '—'}</Text>
+    <View style={ri.docBox}>
+      <View style={ri.docLine} />
+      <View style={[ri.docLine, { width: 7 }]} />
     </View>
   );
+}
+
+function Detail({ label, value, icon }) {
+  return (
+    <View style={s.detail}>
+      {Boolean(icon) && (
+        <View style={s.detailIconBox}>
+          <ReviewIcon name={icon} />
+        </View>
+      )}
+      <View style={s.detailTextCol}>
+        <Text style={s.detailLabel}>{label}</Text>
+        <Text style={s.detailValue}>{value || '—'}</Text>
+      </View>
+    </View>
+  );
+}
+
+function getClassificationReviewRows({ isSeller, profile, fieldValues }) {
+  const locationLabel = isSeller ? 'Farm / Unit Location' : 'Operating District';
+  const locationValue = `${profile.district || 'Tamil Nadu'}, Tamil Nadu`;
+  const addressParts = [profile.address, profile.city, profile.pinCode].filter(Boolean);
+  const rows = [];
+
+  if (!isSeller) {
+    const bt = profile.buyerType;
+    if (bt === 'Individual') {
+      rows.push({ label: 'Account Category', value: 'Individual Direct Consumer', icon: 'user' });
+    } else if (bt === 'Business') {
+      rows.push({ label: 'Enterprise Name', value: fieldValues.businessName || '—', icon: 'building' });
+      rows.push({
+        label: 'GST Status',
+        value:
+          fieldValues.businessIsGst === 'Yes' && fieldValues.businessGstin
+            ? fieldValues.businessGstin
+            : 'Unregistered',
+        icon: 'shield',
+      });
+    } else if (bt === 'Manufacturer') {
+      rows.push({
+        label: 'Company & Sector',
+        value: [fieldValues.mfgCompanyName, fieldValues.mfgCategory].filter(Boolean).join(' • ') || '—',
+        icon: 'building',
+      });
+    } else if (bt === 'Reseller') {
+      rows.push({
+        label: 'Mandi Shop / Stall',
+        value: [fieldValues.resellerShopName, fieldValues.resellerType].filter(Boolean).join(' • ') || '—',
+        icon: 'building',
+      });
+    } else {
+      rows.push({
+        label: 'Organization',
+        value: [fieldValues.otherOrgName, fieldValues.otherCategory].filter(Boolean).join(' • ') || '—',
+        icon: 'building',
+      });
+      rows.push({
+        label: 'Buying Purpose',
+        value: fieldValues.otherPurpose || '—',
+        icon: 'doc',
+      });
+    }
+  } else {
+    const st = profile.sellerType;
+    if (st === 'Farmer') {
+      rows.push({ label: 'Farm Name', value: fieldValues.farmerFarmName || '—', icon: 'home' });
+    } else if (st === 'Agricultural Producer') {
+      rows.push({
+        label: 'FPO / Cooperative',
+        value: fieldValues.fpoName
+          ? fieldValues.fpoStructure
+            ? `${fieldValues.fpoName} (${fieldValues.fpoStructure})`
+            : fieldValues.fpoName
+          : '—',
+        icon: 'building',
+      });
+      rows.push({
+        label: 'Registration Number',
+        value:
+          fieldValues.fpoIsRegistered === 'Yes' && fieldValues.fpoRegNumber
+            ? fieldValues.fpoRegNumber
+            : 'Not Registered',
+        icon: 'shield',
+      });
+    } else if (st === 'Organic Producer') {
+      rows.push({
+        label: 'Organic Farm',
+        value: [fieldValues.organicFarmName, fieldValues.organicCertStatus].filter(Boolean).join(' • ') || '—',
+        icon: 'building',
+      });
+      rows.push({
+        label: 'License / Scope Number',
+        value:
+          fieldValues.organicHasLicense === 'Yes' && fieldValues.organicScopeNumber
+            ? fieldValues.organicScopeNumber
+            : 'No License',
+        icon: 'shield',
+      });
+    } else if (st === 'Raw-Material Provider') {
+      rows.push({
+        label: 'Business / Provider Name',
+        value: fieldValues.rawProviderName || '—',
+        icon: 'building',
+      });
+    } else if (st === 'Ingredient Producer') {
+      rows.push({
+        label: 'Enterprise Name',
+        value: fieldValues.ingProducerName || '—',
+        icon: 'building',
+      });
+      rows.push({
+        label: 'FSSAI License',
+        value:
+          fieldValues.ingHasFssai === 'Yes' && fieldValues.ingFssaiNumber
+            ? fieldValues.ingFssaiNumber
+            : 'No FSSAI License',
+        icon: 'shield',
+      });
+    } else if (st === 'Manufacturer') {
+      rows.push({ label: 'Company Name', value: fieldValues.mfgSellerName || '—', icon: 'building' });
+      rows.push({
+        label: 'FSSAI & GSTIN',
+        value: `${fieldValues.mfgHasFssai === 'Yes' && fieldValues.mfgFssaiNumber ? `FSSAI: ${fieldValues.mfgFssaiNumber}` : 'No FSSAI'} • ${fieldValues.mfgIsGst === 'Yes' && fieldValues.mfgGstin ? `GST: ${fieldValues.mfgGstin}` : 'No GST'}`,
+        icon: 'shield',
+      });
+    } else if (st === 'Value-Added Manufacturer') {
+      rows.push({ label: 'Brand Name', value: fieldValues.vaBrandName || '—', icon: 'building' });
+      rows.push({
+        label: 'FSSAI License',
+        value:
+          fieldValues.vaHasFssai === 'Yes' && fieldValues.vaFssaiNumber
+            ? fieldValues.vaFssaiNumber
+            : 'No FSSAI License',
+        icon: 'shield',
+      });
+    } else {
+      rows.push({ label: 'Enterprise Name', value: fieldValues.otherSellerName || 'N/A', icon: 'building' });
+      rows.push({
+        label: 'GSTIN & Activity',
+        value: `${fieldValues.otherIsGst === 'Yes' && fieldValues.otherGstin ? fieldValues.otherGstin : 'Not GST Registered'}${fieldValues.otherActivity ? ` • ${fieldValues.otherActivity}` : ''}`,
+        icon: 'doc',
+      });
+    }
+  }
+
+  rows.push({ label: locationLabel, value: locationValue, icon: 'pin' });
+  if (addressParts.length > 0) {
+    rows.push({ label: 'Street Address', value: addressParts.join(', '), icon: 'home' });
+  }
+  return rows;
 }
 
 export default function BuyerOnboarding({
@@ -115,6 +328,7 @@ export default function BuyerOnboarding({
   });
   const [answers, setAnswers] = useState({});
   const [files, setFiles] = useState({});
+  const [uploadingDocs, setUploadingDocs] = useState({});
   const [certified, setCertified] = useState(false);
   const [selector, setSelector] = useState(null);
   const [error, setError] = useState('');
@@ -124,6 +338,8 @@ export default function BuyerOnboarding({
   const lock = useRef(false);
   const scroller = useRef(null);
 
+  const activeToken = token || getSessionCache()?.token || null;
+  const isUploadingAny = Object.keys(uploadingDocs).length > 0;
   const sellerForm = sellerForms[profile.sellerType] || sellerForms.Farmer;
   const form = isSeller ? sellerClassifications[profile.sellerType] : buyerClassifications[profile.buyerType];
   const visibleFields = (form?.fields || []).filter(field => !field.when || answers[field.when] === 'Yes');
@@ -133,8 +349,33 @@ export default function BuyerOnboarding({
   const selectedField = visibleFields.find(field => field.key === selector);
   const options = selectedField?.options || (selector === 'district' ? districts : isSeller ? Object.keys(sellerForms) : types);
   const isIndividualBuyer = !isSeller && profile.buyerType === 'Individual';
-  const buyerProofs = isIndividualBuyer ? individualBuyerProofs : proofs;
-  const activeProofs = isSeller ? sellerForm.proofs : buyerProofs;
+  const hasBuyerGst =
+    !isSeller &&
+    (answers.businessIsGst === 'Yes' || answers.mfgIsGst === 'Yes');
+  const buyerProofs = isIndividualBuyer
+    ? individualBuyerProofs
+    : hasBuyerGst
+      ? [
+          ...proofs,
+          [
+            'GST Registration Certificate (Form REG-06)',
+            'Upload valid GST registration certificate for your business.',
+            'GST_CERTIFICATE',
+          ],
+        ]
+      : proofs;
+  const activeProofs = isSeller
+    ? profile.sellerType === 'Ingredient Producer' && answers.ingHasFssai === 'Yes'
+      ? [
+          ...sellerForm.proofs,
+          [
+            'FSSAI Food Safety License Certificate',
+            'Mandatory state or central FSSAI registration certificate for food products.',
+            'FSSAI_LICENSE',
+          ],
+        ]
+      : sellerForm.proofs
+    : buyerProofs;
   const planName = isSeller ? sellerPlan.name : titles[3];
   const classification = isSeller ? 'Seller Classification' : 'Buyer Classification';
   const heading = isSeller ? ['Seller profile', 'Required Verification Documents', titles[2], planName] : titles;
@@ -183,7 +424,7 @@ export default function BuyerOnboarding({
     const response = await fetch(getBaseUrl() + '/api/v1/' + path, {
       method: 'POST',
       headers: {
-        Authorization: token ? 'Bearer ' + token : '',
+        Authorization: activeToken ? 'Bearer ' + activeToken : '',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
@@ -227,38 +468,15 @@ export default function BuyerOnboarding({
     go(1);
   }
 
-  function pick(label) {
-    run(async () => {
-      const choice = await getDocumentAsync({
-        type: ['application/pdf', 'image/jpeg', 'image/png'],
-        multiple: false,
-        base64: false,
-      });
-      if (choice.canceled) return;
-      const file = choice.assets[0];
-      if (!/\.(pdf|jpe?g|png)$/i.test(file.name) || file.size == null || file.size > 5 * 1024 * 1024) {
-        throw new Error('Choose a PDF, JPG or PNG file no larger than 5 MB.');
-      }
-      setFiles(previous => ({ ...previous, [label]: file }));
-      setCertified(false);
-    });
-  }
-
   function continueDocuments() {
+    if (Object.keys(uploadingDocs).length > 0) {
+      return setError('Please wait for your document upload to finish.');
+    }
     if (isSeller) {
-      const missing = activeProofs.find(([name]) => !files[name]?.documentId && !files[name]?.name);
+      const missing = activeProofs.find(([name]) => !files[name]?.documentId);
       if (missing) return setError('Please upload your ' + missing[0] + ' to continue.');
     }
     go(2);
-  }
-
-  function upload(name, code) {
-    const file = files[name];
-    run(async () => {
-      const documentId = await uploadSellerProof(file, code, token);
-      setFiles(previous => ({ ...previous, [name]: { ...file, documentId } }));
-      setCertified(false);
-    });
   }
 
   function proceed() {
@@ -281,7 +499,12 @@ export default function BuyerOnboarding({
           });
         } else {
           const { sellerType, ...buyerProfile } = profile;
-          await post('onboarding/buyer', { ...buyerProfile, ...fieldValues, userName: user?.name || profile.name });
+          await post('onboarding/buyer', {
+            ...buyerProfile,
+            ...fieldValues,
+            userName: user?.name || profile.name,
+            documents: Object.values(files).map(file => file.documentId).filter(Boolean),
+          });
         }
         const created = await post('payments/create-order', { planId: isSeller ? 'SELLER_ANNUAL' : 'BUYER_ANNUAL' });
         if (!created.orderId || !created.keyId || Number(created.amount) !== 36500 || created.currency !== 'INR') {
@@ -290,7 +513,7 @@ export default function BuyerOnboarding({
         setOrder(created);
       } catch (e) {
         // Fallback for offline / demo environments: open simulated checkout so user sees complete workflow
-        if (!token || e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed')) {
+        if (!activeToken || e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed')) {
           setOrder({
             orderId: 'order_demo_' + Date.now(),
             keyId: 'rzp_test_demo',
@@ -309,7 +532,7 @@ export default function BuyerOnboarding({
     setReceipt(proof);
     run(async () => {
       try {
-        if (token) {
+        if (activeToken) {
           await post('payments/verify', proof);
         }
       } catch (err) {
@@ -359,7 +582,22 @@ export default function BuyerOnboarding({
           {/* 4 Step Navigation Tabs (clickable) */}
           <View style={s.tabs}>
             {steps.map((name, i) => (
-              <Pressable key={name} style={s.tab} onPress={() => go(i)}>
+              <Pressable
+                key={name}
+                style={s.tab}
+                onPress={() => {
+                  if (busy || receipt || i === step) return;
+                  if (i < step) {
+                    go(i);
+                  } else if (step === 0) {
+                    continueProfile();
+                  } else if (step === 1) {
+                    continueDocuments();
+                  } else if (step === 2) {
+                    proceed();
+                  }
+                }}
+              >
                 <View style={[s.track, i <= step && { backgroundColor: green }]} />
                 <Text style={[s.tabText, i === step && s.selected]}>{name}</Text>
               </Pressable>
@@ -493,41 +731,40 @@ export default function BuyerOnboarding({
           {/* ==================================================== */}
           {step === 1 && (
             activeProofs.map(([name, description, code]) => (
-              <View key={name} style={s.card}>
-                <View style={isSeller || isIndividualBuyer ? s.inline : s.buyerProofHeading}>
-                  <Text style={s.cardTitle}>{name}</Text>
-                  {isSeller ? (
-                    <Text style={{ color: '#dc2838', fontWeight: 'bold' }}>* Required</Text>
-                  ) : (
-                    <Text style={s.optional}>Optional</Text>
-                  )}
-                </View>
-                <Text style={s.subtitle}>{description}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busy}
-                  onPress={() => pick(name)}
-                  style={s.drop}
-                >
-                  <Text style={s.uploadIcon}>⇧</Text>
-                  <Text style={s.label}>
-                    {files[name]?.name || 'Click to select document'}
-                  </Text>
-                  <Text style={s.center}>
-                    {files[name]
-                      ? (files[name].documentId ? 'Uploaded · Tap to replace' : 'Selected on device · Tap to replace')
-                      : 'Allowed: PDF, JPG, JPEG, PNG (Max 5 MB)'}
-                  </Text>
-                </Pressable>
-                {isSeller && files[name] && !files[name].documentId && (
-                  <View style={s.uploadConfirm}>
-                    <Text style={s.muted}>File selected. Tap below to upload to cloud:</Text>
-                    <Action disabled={busy} onPress={() => upload(name, code)}>
-                      {busy ? 'Uploading…' : 'Upload selected document'}
-                    </Action>
-                  </View>
-                )}
-              </View>
+              <DocumentUploader
+                key={`${isSeller ? 'seller' : 'buyer'}_${code || name}`}
+                documentType={code || name}
+                title={name}
+                description={description}
+                required={isSeller}
+                uploadedDoc={files[name] || null}
+                token={activeToken}
+                disabled={busy}
+                onUploadStart={(docType) => {
+                  setError('');
+                  setUploadingDocs(prev => ({ ...prev, [docType]: true }));
+                }}
+                onUploadEnd={(docType) => {
+                  setUploadingDocs(prev => {
+                    const next = { ...prev };
+                    delete next[docType];
+                    return next;
+                  });
+                }}
+                onUploadSuccess={(doc) => {
+                  setFiles(prev => ({ ...prev, [name]: doc }));
+                  setCertified(false);
+                  setError('');
+                }}
+                onRemove={() => {
+                  setFiles(prev => {
+                    const next = { ...prev };
+                    delete next[name];
+                    return next;
+                  });
+                  setCertified(false);
+                }}
+              />
             ))
           )}
 
@@ -550,29 +787,25 @@ export default function BuyerOnboarding({
                     <Text style={s.muted}>Full Name / Username</Text>
                   </View>
                 </View>
-                <Detail label="Email Address" value={effectiveEmail} />
-                <Detail label="Mobile Number" value={effectiveMobile} />
+                <Detail label="Email Address" value={effectiveEmail} icon="mail" />
+                <Detail label="Mobile Number" value={`+91 ${effectiveMobile}`} icon="phone" />
               </View>
 
               <View style={s.card}>
-                <Text style={s.cardTitle}>{heading[0]}</Text>
-                <Detail
-                  label="Account Category"
-                  value={isSeller ? profile.sellerType : profile.buyerType === 'Individual' ? 'Individual Direct Consumer' : profile.buyerType}
-                />
-                {visibleFields.filter(field => fieldValues[field.key]).map(field => (
-                  <Detail key={field.key} label={field.label} value={fieldValues[field.key]} />
+                <View style={s.classificationHeader}>
+                  <Text style={s.classificationTitle}>
+                    {isSeller ? 'Seller classification' : 'Buyer classification'}
+                  </Text>
+                  <View style={s.classificationPill}>
+                    <Text style={s.classificationPillText}>
+                      {isSeller ? profile.sellerType : profile.buyerType}
+                    </Text>
+                  </View>
+                </View>
+
+                {getClassificationReviewRows({ isSeller, profile, fieldValues }).map((row) => (
+                  <Detail key={row.label} label={row.label} value={row.value} icon={row.icon} />
                 ))}
-                <Detail
-                  label={isSeller ? 'Farm / Unit Location' : 'Operating District'}
-                  value={(profile.district || 'Tamil Nadu') + ', Tamil Nadu'}
-                />
-                {!!(profile.address || profile.city || profile.pinCode) && (
-                  <Detail
-                    label="Address"
-                    value={[profile.address, profile.city, profile.pinCode].filter(Boolean).join(', ')}
-                  />
-                )}
               </View>
 
               <View style={s.card}>
@@ -581,7 +814,12 @@ export default function BuyerOnboarding({
                 </Text>
                 {Object.keys(files).length ? (
                   Object.entries(files).map(([key, file]) => (
-                    <Detail key={key} label={key} value={file.name} />
+                    <Detail
+                      key={key}
+                      label={key}
+                      value={`${file.fileName || file.name}${file.documentId ? ` (ID: ${file.documentId})` : ''}`}
+                      icon="doc"
+                    />
                   ))
                 ) : (
                   <Text style={s.subtitle}>No verification documents attached</Text>
@@ -631,7 +869,7 @@ export default function BuyerOnboarding({
               <>
                 <View style={s.card}>
                   <View style={s.row}>
-                    <Text style={s.pill}>{isSeller ? sellerPlan.badge : 'Buyer Membership'}</Text>
+                    <Text style={s.pill}>{isSeller ? sellerPlan.badge : 'Buyer Verified Plan'}</Text>
                     <Text style={s.price}>₹365</Text>
                   </View>
                   <Text style={[s.muted, { textAlign: 'right' }]}>/ Year (₹1.00/day)</Text>
@@ -681,10 +919,12 @@ export default function BuyerOnboarding({
             <View style={s.footer}>
               {step < 3 && (
                 <Action
-                  disabled={busy}
+                  disabled={busy || isUploadingAny}
                   onPress={[continueProfile, continueDocuments, proceed][step]}
                 >
-                  {['Continue to documents', 'Continue to review', 'Proceed to Payment'][step]}  →
+                  {isUploadingAny
+                    ? 'Uploading document…'
+                    : ['Continue to documents', 'Continue to review', 'Proceed to Payment'][step] + '  →'}
                 </Action>
               )}
               <Action secondary disabled={busy} onPress={back}>
@@ -993,12 +1233,38 @@ const s = StyleSheet.create({
     color: '#546176',
   },
   detail: {
-    gap: 3,
-    padding: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 13,
     borderWidth: 1,
-    borderColor: '#e6e9ed',
-    borderRadius: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     marginTop: 10,
+  },
+  detailIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  detailLabel: {
+    fontSize: 12.5,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
   },
   seller: {
     alignSelf: 'flex-end',
@@ -1070,5 +1336,203 @@ const s = StyleSheet.create({
     paddingVertical: 13,
     borderBottomWidth: 1,
     borderColor: '#e7ebe5',
+  },
+  classificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 8,
+  },
+  classificationTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+    flexShrink: 1,
+  },
+  classificationPill: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  classificationPillText: {
+    color: '#065F46',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
+
+const ri = StyleSheet.create({
+  building: {
+    width: 15,
+    height: 17,
+    borderWidth: 1.6,
+    borderColor: green,
+    borderRadius: 2,
+    paddingTop: 2.5,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  winRow: {
+    flexDirection: 'row',
+    gap: 2.5,
+  },
+  win: {
+    width: 2.5,
+    height: 2.5,
+    backgroundColor: green,
+    borderRadius: 0.5,
+  },
+  door: {
+    width: 4,
+    height: 4,
+    borderTopWidth: 1.4,
+    borderLeftWidth: 1.4,
+    borderRightWidth: 1.4,
+    borderColor: green,
+  },
+  shield: {
+    width: 15,
+    height: 17,
+    borderWidth: 1.7,
+    borderColor: green,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldTick: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: green,
+    lineHeight: 11,
+  },
+  pinWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinCircle: {
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    borderWidth: 1.7,
+    borderColor: green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    borderWidth: 1.4,
+    borderColor: green,
+  },
+  pinTip: {
+    width: 4,
+    height: 4,
+    borderRightWidth: 1.7,
+    borderBottomWidth: 1.7,
+    borderColor: green,
+    transform: [{ rotate: '45deg' }],
+    marginTop: -2,
+  },
+  mailBox: {
+    width: 17,
+    height: 12,
+    borderWidth: 1.7,
+    borderColor: green,
+    borderRadius: 2.5,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  mailFlap: {
+    width: 11,
+    height: 11,
+    borderRightWidth: 1.6,
+    borderBottomWidth: 1.6,
+    borderColor: green,
+    transform: [{ rotate: '45deg' }],
+    marginTop: -6,
+  },
+  phoneBox: {
+    width: 12,
+    height: 17,
+    borderWidth: 1.7,
+    borderColor: green,
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 2,
+  },
+  phoneBtn: {
+    width: 3,
+    height: 2,
+    backgroundColor: green,
+    borderRadius: 1,
+  },
+  userWrap: {
+    alignItems: 'center',
+    gap: 1.5,
+  },
+  userHead: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 1.6,
+    borderColor: green,
+  },
+  userBody: {
+    width: 13,
+    height: 6,
+    borderTopWidth: 1.6,
+    borderLeftWidth: 1.6,
+    borderRightWidth: 1.6,
+    borderColor: green,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
+  homeWrap: {
+    alignItems: 'center',
+  },
+  homeRoof: {
+    width: 11,
+    height: 11,
+    borderTopWidth: 1.7,
+    borderLeftWidth: 1.7,
+    borderColor: green,
+    transform: [{ rotate: '45deg' }],
+    marginBottom: -5,
+  },
+  homeBase: {
+    width: 13,
+    height: 9,
+    borderLeftWidth: 1.7,
+    borderRightWidth: 1.7,
+    borderBottomWidth: 1.7,
+    borderColor: green,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  docBox: {
+    width: 14,
+    height: 17,
+    borderWidth: 1.6,
+    borderColor: green,
+    borderRadius: 2.5,
+    justifyContent: 'center',
+    paddingHorizontal: 2.5,
+    gap: 2.5,
+  },
+  docLine: {
+    width: 8,
+    height: 1.6,
+    backgroundColor: green,
+    borderRadius: 1,
   },
 });

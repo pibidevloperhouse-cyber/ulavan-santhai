@@ -54,10 +54,11 @@ const requestWithTimeout = async (url, options = {}, timeoutMs = 12000) => {
  * @param {string} params.password
  */
 export const loginUser = async ({ identifier, password }) => {
-  const cleanId = String(identifier || '').trim().toLowerCase();
+  const rawId = String(identifier || '').trim();
+  const cleanId = rawId.toLowerCase();
   const rawPassword = String(password || '');
 
-  if (!cleanId || !rawPassword) {
+  if (!rawId || !rawPassword) {
     return {
       success: false,
       message: 'Please provide both your email/phone and password.',
@@ -72,9 +73,9 @@ export const loginUser = async ({ identifier, password }) => {
     const response = await requestWithTimeout(endpoint, {
       method: 'POST',
       body: JSON.stringify({
-        identifier: cleanId,
+        identifier: isEmail ? cleanId : rawId,
         email: isEmail ? cleanId : undefined,
-        mobile: !isEmail ? cleanId.replace(/\D/g, '') : undefined,
+        mobile: !isEmail ? rawId.replace(/\D/g, '') : undefined,
         password: rawPassword,
       }),
     });
@@ -104,7 +105,7 @@ export const loginUser = async ({ identifier, password }) => {
   } catch (err) {
     return {
       success: false,
-      message: err.message || 'Unable to connect to the backend server. Please verify backend IP & Wi-Fi connection.',
+      message: `${err.message || 'Unable to connect to the backend server. Please verify backend IP & Wi-Fi connection.'}\n(${endpoint})`,
     };
   }
 };
