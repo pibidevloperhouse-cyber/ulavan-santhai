@@ -3,10 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Bell, Mail, ChevronRight } from "lucide-react";
-import {
-  INITIAL_ENQUIRIES,
-  INITIAL_NOTIFICATIONS,
-} from "@/data/sellerPortalData";
+
+const EMPTY_LIST = [];
 
 /**
  * Clean top-bar notification & enquiry popovers.
@@ -16,10 +14,10 @@ export default function HeaderAlertsPopover({ compact = false }) {
   const [openMenu, setOpenMenu] = useState(null); // "enquiries" | "notifications" | null
   const containerRef = useRef(null);
 
-  const unreadNotifications = INITIAL_NOTIFICATIONS.filter(
+  const unreadNotifications = EMPTY_LIST.filter(
     (n) => n.unread
   ).length;
-  const newEnquiries = INITIAL_ENQUIRIES.filter(
+  const newEnquiries = EMPTY_LIST.filter(
     (e) => e.status === "New"
   ).length;
 
@@ -65,11 +63,10 @@ export default function HeaderAlertsPopover({ compact = false }) {
         aria-label="Buyer enquiries"
         aria-expanded={openMenu === "enquiries"}
         title="Buyer enquiries"
-        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
-          openMenu === "enquiries"
-            ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
-            : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
-        }`}
+        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "enquiries"
+          ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
+          : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
+          }`}
       >
         <Mail className="w-4 h-4" />
         {newEnquiries > 0 && (
@@ -86,11 +83,10 @@ export default function HeaderAlertsPopover({ compact = false }) {
         aria-label="Notifications"
         aria-expanded={openMenu === "notifications"}
         title="Notifications"
-        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
-          openMenu === "notifications"
-            ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
-            : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
-        }`}
+        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "notifications"
+          ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
+          : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
+          }`}
       >
         <Bell className="w-4 h-4" />
         {unreadNotifications > 0 && (
@@ -117,7 +113,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
           </div>
 
           <div className="max-h-64 overflow-y-auto divide-y divide-[#F4F1EA]">
-            {INITIAL_ENQUIRIES.length === 0 ? (
+            {EMPTY_LIST.length === 0 ? (
               <div className="px-4 py-5 text-center space-y-1">
                 <p className="text-xs font-semibold text-[#374151]">
                   No buyer enquiries yet
@@ -127,7 +123,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
                 </p>
               </div>
             ) : (
-              INITIAL_ENQUIRIES.slice(0, 4).map((enq) => (
+              EMPTY_LIST.slice(0, 4).map((enq) => (
                 <Link
                   key={enq.id}
                   href="/seller/enquiries"
@@ -178,7 +174,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
           </div>
 
           <div className="max-h-64 overflow-y-auto divide-y divide-[#F4F1EA]">
-            {INITIAL_NOTIFICATIONS.length === 0 ? (
+            {EMPTY_LIST.length === 0 ? (
               <div className="px-4 py-5 text-center space-y-1">
                 <p className="text-xs font-semibold text-[#374151]">
                   No unread notifications
@@ -188,7 +184,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
                 </p>
               </div>
             ) : (
-              INITIAL_NOTIFICATIONS.slice(0, 4).map((notif) => (
+              EMPTY_LIST.slice(0, 4).map((notif) => (
                 <Link
                   key={notif.id}
                   href="/seller/notifications"

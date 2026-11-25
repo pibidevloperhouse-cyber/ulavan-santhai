@@ -2,7 +2,7 @@
 
 import React from "react";
 import { UploadCloud } from "lucide-react";
-import { CATEGORIES_LIST } from "@/data/sellerPortalData";
+import { getSellerCategories } from "@/services/categoryStorage";
 import SellerSelect from "../ui/SellerSelect";
 
 export default function SellerProfileForm({
@@ -12,13 +12,10 @@ export default function SellerProfileForm({
   onSave,
   saveNotice,
 }) {
-  const sellerTypeOptions = [
-    "Farmer",
-    "Farmer Producer Organisation (FPO)",
-    "Organic Producer",
-    "Raw Material Supplier",
-    "Manufacturer / Processor",
-  ];
+  const activeSellerClassifications = getSellerCategories()
+    .filter((c) => c.status === "Active")
+    .map((c) => c.code || c.name);
+  const sellerTypeOptions = activeSellerClassifications;
 
   return (
     <form
@@ -165,7 +162,7 @@ export default function SellerProfileForm({
           Products offered (categories)
         </label>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
-          {CATEGORIES_LIST.map((cat) => {
+          {activeSellerClassifications.map((cat) => {
             const checked = profile.categories.includes(cat);
             return (
               <label

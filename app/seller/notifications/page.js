@@ -3,10 +3,9 @@
 import React, { useState, useMemo } from "react";
 import NotificationList from "@/components/seller/notifications/NotificationList";
 import EventsCoveredCard from "@/components/seller/notifications/EventsCoveredCard";
-import { INITIAL_NOTIFICATIONS } from "@/data/sellerPortalData";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState("All");
 
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -70,11 +69,10 @@ export default function NotificationsPage() {
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              activeTab === tab.key
-                ? "bg-[#24583B] text-white shadow-2xs"
-                : "bg-[#EFECE3] text-[#4F5D53] hover:text-[#1F2922] hover:bg-[#E5E1D6]"
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === tab.key
+              ? "bg-[#24583B] text-white shadow-2xs"
+              : "bg-[#EFECE3] text-[#4F5D53] hover:text-[#1F2922] hover:bg-[#E5E1D6]"
+              }`}
           >
             {tab.label}
           </button>

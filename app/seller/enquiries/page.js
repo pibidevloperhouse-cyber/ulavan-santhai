@@ -4,10 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import EnquiryList from "@/components/seller/enquiries/EnquiryList";
 import EnquiryDetail from "@/components/seller/enquiries/EnquiryDetail";
-import { INITIAL_ENQUIRIES } from "@/data/sellerPortalData";
 
 export default function BuyerEnquiriesPage() {
-  const [enquiries, setEnquiries] = useState(INITIAL_ENQUIRIES);
+  const [enquiries, setEnquiries] = useState([]);
   const [selectedId, setSelectedId] = useState("enq-1");
   const [filterTab, setFilterTab] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,33 +73,30 @@ export default function BuyerEnquiriesPage() {
           <button
             type="button"
             onClick={() => setFilterTab("ALL")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              filterTab === "ALL"
-                ? "bg-[#24583B] text-white shadow-xs"
-                : "text-[#4B5A50] hover:text-[#1F2922]"
-            }`}
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "ALL"
+              ? "bg-[#24583B] text-white shadow-xs"
+              : "text-[#4B5A50] hover:text-[#1F2922]"
+              }`}
           >
             All ({enquiries.length})
           </button>
           <button
             type="button"
             onClick={() => setFilterTab("NEW")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              filterTab === "NEW"
-                ? "bg-[#24583B] text-white shadow-xs"
-                : "text-[#4B5A50] hover:text-[#1F2922]"
-            }`}
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "NEW"
+              ? "bg-[#24583B] text-white shadow-xs"
+              : "text-[#4B5A50] hover:text-[#1F2922]"
+              }`}
           >
             New ({newCount})
           </button>
           <button
             type="button"
             onClick={() => setFilterTab("REPLIED")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              filterTab === "REPLIED"
-                ? "bg-[#24583B] text-white shadow-xs"
-                : "text-[#4B5A50] hover:text-[#1F2922]"
-            }`}
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "REPLIED"
+              ? "bg-[#24583B] text-white shadow-xs"
+              : "text-[#4B5A50] hover:text-[#1F2922]"
+              }`}
           >
             Replied ({repliedCount})
           </button>

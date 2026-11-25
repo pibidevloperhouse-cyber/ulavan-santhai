@@ -15,6 +15,10 @@ import { useSessionUser } from "@/services/sessionAuth";
 import PaymentView from "@/components/onboarding/PaymentView";
 import BrandLogo from "@/components/ui/BrandLogo";
 import { getSellerCategories, getBuyerCategories } from "@/services/categoryStorage";
+import {
+  getSellerUnlockedCategories,
+  updateSellerProfile,
+} from "@/services/sellerApi";
 
 export const BUYER_TYPES = [
   "Individual",
@@ -252,17 +256,36 @@ export const getSanitizedSellerProfile = (sellerType, sellerData) => {
   }
 };
 
-function OnboardingContent({ initialRole }) {
+const createPaymentIdentifiers = (role, razorpayPaymentId) => ({
+  now: new Date(),
+  txId: `TXN_US_${Date.now().toString().slice(-8)}`,
+  gwRef: razorpayPaymentId || `pay_rzp_${Math.random().toString(36).substring(2, 10)}`,
+  invNumber: `INV-US-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+  applicationId: `US_${role.toUpperCase()}_${Date.now().toString().slice(-6)}`,
+});
+
+function OnboardingContent({ initialRole, initialMode = "", initialUnlockCategory = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Active role from query: "buyer" or "seller"
+  // Active role & optional additional-classification unlock mode from query
   const roleParam = (searchParams.get("role") || initialRole || "buyer").toLowerCase();
+  const modeParam = (searchParams.get("mode") || initialMode || "").toLowerCase();
+  const unlockCategoryParam = searchParams.get("category") || initialUnlockCategory || "";
   const [role, setRole] = useState(roleParam === "seller" ? "seller" : "buyer");
+  const isUnlockMode = role === "seller" && modeParam === "unlock" && Boolean(unlockCategoryParam);
 
-  // Stepper: 1. Profile Details -> 2. Document Upload -> 3. Review & Submit -> 4. Payment
-  const stepParam = parseInt(searchParams.get("step") || "1", 10);
-  const [currentStep, setCurrentStep] = useState(stepParam >= 1 && stepParam <= 4 ? stepParam : 1);
+  // Stepper: normal onboarding uses 1 -> 2 -> 3 -> 4; unlock mode uses only 2 (Documents) -> 4 (Payment)
+  const stepParam = parseInt(searchParams.get("step") || "", 10);
+  const [currentStep, setCurrentStep] = useState(
+    isUnlockMode
+      ? stepParam === 4
+        ? 4
+        : 2
+      : stepParam >= 1 && stepParam <= 4
+        ? stepParam
+        : 1
+  );
   const [reviewSubStep, setReviewSubStep] = useState(1);
 
   // Authenticated user from session (hydration-safe)
@@ -280,8 +303,10 @@ function OnboardingContent({ initialRole }) {
 
   // Selected sub-type
   const [buyerType, setBuyerType] = useState("Individual");
-  const [sellerType, setSellerType] = useState("");
-  const [selectedSellerTypes, setSelectedSellerTypes] = useState([]);
+  const [sellerType, setSellerType] = useState(() => (isUnlockMode ? unlockCategoryParam : ""));
+  const [selectedSellerTypes, setSelectedSellerTypes] = useState(() =>
+    isUnlockMode ? [unlockCategoryParam] : []
+  );
   const [showMultiRoleModal, setShowMultiRoleModal] = useState(false);
 
   const hasSellerRole = (type) => selectedSellerTypes.includes(type);
@@ -316,6 +341,11 @@ function OnboardingContent({ initialRole }) {
     .map((c) => c.code || c.name);
   const finalSellerTypes = Array.from(new Set([...displayedSellerTypes, ...SELLER_TYPES]));
 
+  // Already purchased classifications when adding another classification from Seller Portal
+  const existingPurchasedRoles = isUnlockMode
+    ? getSellerUnlockedCategories(userAuth, dynamicSellerCats)
+    : [];
+
   const selectedSellerCategoryObj = dynamicSellerCats.find(
     (c) => (c.code || c.name) === activeCustomSellerType || c.name === activeCustomSellerType
   );
@@ -328,6 +358,30 @@ function OnboardingContent({ initialRole }) {
 
   // Dynamic Seller Form State - initialized clean
   const [sellerData, setSellerData] = useState(createInitialSellerData);
+  const [sellerLocationEdits, setSellerLocationEdits] = useState({});
+
+  const getSellerLocationField = (field) => {
+    if (Object.prototype.hasOwnProperty.call(sellerLocationEdits, field)) {
+      return sellerLocationEdits[field];
+    }
+    if (isUnlockMode && userAuth?.sellerData?.[field]) {
+      return userAuth.sellerData[field];
+    }
+    return sellerData[field] || "";
+  };
+
+  const resolvedSellerData = {
+    ...sellerData,
+    district: getSellerLocationField("district"),
+    village: getSellerLocationField("village"),
+    pinCode: getSellerLocationField("pinCode"),
+    farmAddress: getSellerLocationField("farmAddress"),
+  };
+
+  const handleSellerLocationChange = (field, value) => {
+    setSellerLocationEdits((prev) => ({ ...prev, [field]: value }));
+    setSellerData((p) => ({ ...p, [field]: value }));
+  };
 
   // Uploaded Documents
   const [uploadedDocs, setUploadedDocs] = useState({});
@@ -364,6 +418,10 @@ function OnboardingContent({ initialRole }) {
   };
 
   const handleSellerTypeToggle = (type) => {
+    if (isUnlockMode && existingPurchasedRoles.includes(type)) {
+      setFormError(`"${type}" is already active on your account. Select a new classification to unlock.`);
+      return;
+    }
     const isAlreadySelected = selectedSellerTypes.includes(type);
     const nextSelected = isAlreadySelected
       ? selectedSellerTypes.filter((t) => t !== type)
@@ -439,6 +497,21 @@ function OnboardingContent({ initialRole }) {
     },
   ];
 
+  const activeSteps = isUnlockMode
+    ? [
+        {
+          id: 2,
+          title: "Document Upload",
+          subtitle: "Identity & Verification",
+        },
+        {
+          id: 4,
+          title: "Payment",
+          subtitle: `₹${(Math.max(1, selectedSellerTypes.length) * 365).toLocaleString("en-IN")} Fee`,
+        },
+      ]
+    : steps;
+
   // Step 1 Validation
   const handleNextFromStep1 = () => {
     setFormError("");
@@ -472,7 +545,7 @@ function OnboardingContent({ initialRole }) {
         setFormError("Please select at least one Seller Classification.");
         return;
       }
-      if (!sellerData.district) {
+      if (!resolvedSellerData.district) {
         setFormError("Please select your farm/operating district.");
         return;
       }
@@ -584,6 +657,12 @@ function OnboardingContent({ initialRole }) {
       return;
     }
 
+    if (isUnlockMode) {
+      setCurrentStep(4);
+      scrollToTop();
+      return;
+    }
+
     setCurrentStep(3);
     setReviewSubStep(1);
     scrollToTop();
@@ -677,7 +756,7 @@ function OnboardingContent({ initialRole }) {
     const totalAmount = baseAmount + addonAmount;
     const buyerViewLimit = role === "buyer" ? 10 + addonBlocks * 10 : null;
 
-    const now = new Date();
+    const { now, txId, gwRef, invNumber, applicationId } = createPaymentIdentifiers(role, razorpayPaymentId);
     const startDate = now.toISOString();
     const endDate = new Date(now);
     if (role === "seller") {
@@ -687,23 +766,21 @@ function OnboardingContent({ initialRole }) {
     }
     const renewalDueDate = endDate.toISOString();
 
-    const txId = `TXN_US_${Date.now().toString().slice(-8)}`;
-    const gwRef = razorpayPaymentId || `pay_rzp_${Math.random().toString(36).substring(2, 10)}`;
-    const invNumber = `INV-US-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const applicationId = `US_${role.toUpperCase()}_${Date.now().toString().slice(-6)}`;
-
     const resolvedSellerTypes = selectedSellerTypes.length > 0 ? selectedSellerTypes : [sellerType || "Farmer"];
+    const mergedSellerTypes = isUnlockMode
+      ? Array.from(new Set([...existingPurchasedRoles, ...resolvedSellerTypes]))
+      : resolvedSellerTypes;
     const sellerTypesLabel = resolvedSellerTypes.join(", ");
+    const mergedSellerTypesLabel = mergedSellerTypes.join(", ");
 
     // 1. Submit Application Data
     const fullPayload = {
       applicationId,
       role: role.toUpperCase(),
+      subType: role === "buyer" ? buyerType : mergedSellerTypesLabel,
       account: userAuth,
-      subType: role === "buyer" ? buyerType : sellerTypesLabel,
       selectedSellerTypes: role === "seller" ? resolvedSellerTypes : [sellerType],
-      profile: role === "buyer" ? buyerData : sellerData,
+      profile: role === "buyer" ? buyerData : resolvedSellerData,
       documents: uploadedDocs,
       status: "active",
       submittedAt: startDate,
@@ -724,13 +801,17 @@ function OnboardingContent({ initialRole }) {
         planId:
           role === "buyer"
             ? "plan_buyer_base"
-            : resolvedSellerTypes.length > 1
-              ? `plan_seller_multi_${resolvedSellerTypes.length}`
-              : "plan_seller_monthly",
+            : isUnlockMode
+              ? `plan_seller_unlock_${resolvedSellerTypes.length}`
+              : resolvedSellerTypes.length > 1
+                ? `plan_seller_multi_${resolvedSellerTypes.length}`
+                : "plan_seller_monthly",
         planName:
           role === "buyer"
             ? `Buyer Access Plan (${buyerViewLimit} Sellers)`
-            : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""} - ₹${resolvedSellerTypes.length * 365})`,
+            : isUnlockMode
+              ? `Additional Classification Unlock (${sellerTypesLabel} - ₹${resolvedSellerTypes.length * 365})`
+              : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""} - ₹${resolvedSellerTypes.length * 365})`,
         baseAmount,
         taxAmount: 0,
         totalAmount,
@@ -745,6 +826,7 @@ function OnboardingContent({ initialRole }) {
       await submitRolePayment(checkoutData);
 
       // 3. Update session user state with role-specific independent completion flags
+      let nextSellerProfileData = null;
       if (typeof window !== "undefined") {
         const stored =
           sessionStorage.getItem("ulavan_user") ||
@@ -768,11 +850,42 @@ function OnboardingContent({ initialRole }) {
           buyerRemaining: buyerViewLimit,
         };
 
+        if (!isBuyer) {
+          const existingSellerData = existing.sellerData || {};
+          const rawUnlockFields = resolvedSellerTypes.reduce(
+            (acc, cat) => ({ ...acc, ...getSanitizedSellerProfile(cat, resolvedSellerData) }),
+            {}
+          );
+          const nonEmptyUnlockFields = Object.fromEntries(
+            Object.entries(rawUnlockFields).filter(
+              ([, value]) => value !== "" && value !== undefined && value !== null
+            )
+          );
+          nextSellerProfileData = isUnlockMode
+            ? {
+                ...existingSellerData,
+                ...nonEmptyUnlockFields,
+                district: resolvedSellerData.district || existingSellerData.district || "",
+                village: resolvedSellerData.village || existingSellerData.village || "",
+                pinCode: resolvedSellerData.pinCode || existingSellerData.pinCode || "",
+                farmAddress: resolvedSellerData.farmAddress || existingSellerData.farmAddress || "",
+                sellerType: existingPurchasedRoles[0] || mergedSellerTypes[0],
+                sellerTypes: mergedSellerTypes,
+                unlockedCategories: mergedSellerTypes,
+              }
+            : {
+                ...resolvedSellerData,
+                sellerType: mergedSellerTypes[0],
+                sellerTypes: mergedSellerTypes,
+                unlockedCategories: mergedSellerTypes,
+              };
+        }
+
         const updatedUser = {
           ...existing,
           role: role.charAt(0).toUpperCase() + role.slice(1),
           activeRole: role,
-          subType: isBuyer ? buyerType : sellerTypesLabel,
+          subType: isBuyer ? buyerType : mergedSellerTypesLabel,
           status: "active",
           isPaid: true,
           // Role-specific completion flags
@@ -783,7 +896,7 @@ function OnboardingContent({ initialRole }) {
 
           sellerPaid: !isBuyer ? true : Boolean(existing.sellerPaid),
           sellerOnboarded: !isBuyer ? true : Boolean(existing.sellerOnboarded),
-          sellerData: !isBuyer ? { ...sellerData, sellerType: resolvedSellerTypes[0], sellerTypes: resolvedSellerTypes } : existing.sellerData,
+          sellerData: !isBuyer ? nextSellerProfileData : existing.sellerData,
           sellerPayment: !isBuyer ? paymentRecord : existing.sellerPayment,
 
           payment: paymentRecord,
@@ -794,6 +907,10 @@ function OnboardingContent({ initialRole }) {
         localStorage.setItem("ulavan_registered_user", JSON.stringify(updatedUser));
         sessionStorage.setItem("ulavan_latest_app_id", applicationId);
         sessionStorage.setItem("ulavan_latest_payment_id", invNumber);
+      }
+
+      if (role === "seller" && isUnlockMode && nextSellerProfileData) {
+        await updateSellerProfile(nextSellerProfileData).catch(() => {});
       }
 
       // 4. Update local state to show Payment Receipt confirmation
@@ -807,7 +924,12 @@ function OnboardingContent({ initialRole }) {
         planEndDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         renewalDueDate: endDate.toLocaleDateString("en-IN", { dateStyle: "medium" }),
         role: role === "buyer" ? `Buyer (${buyerType})` : `Seller (${sellerTypesLabel})`,
-        planName: role === "buyer" ? "Buyer Access Plan (10 Verified Sellers)" : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""})`,
+        planName:
+          role === "buyer"
+            ? "Buyer Access Plan (10 Verified Sellers)"
+            : isUnlockMode
+              ? `Additional Classification (${sellerTypesLabel})`
+              : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""})`,
         baseAmount,
         addonAmount,
         totalAmount,
@@ -849,7 +971,10 @@ function OnboardingContent({ initialRole }) {
         role={role}
         selectedRoles={selectedSellerTypes}
         payableAmount={role === "seller" ? Math.max(1, selectedSellerTypes.length) * 365 : 365}
+        isUnlockMode={isUnlockMode}
+        existingRoles={existingPurchasedRoles}
         onRoleChange={(nextRole) => {
+          if (isUnlockMode) return;
           setRole(nextRole);
           setCurrentStep(1);
           setUploadedDocs({});
@@ -864,12 +989,12 @@ function OnboardingContent({ initialRole }) {
         }}
         userAuth={userAuth}
         onBack={() => {
-          setCurrentStep(3);
+          setCurrentStep(isUnlockMode ? 2 : 3);
           scrollToTop();
         }}
         onStepClick={(s) => {
-          setCurrentStep(s);
-          if (s === 3) setReviewSubStep(1);
+          setCurrentStep(isUnlockMode ? (s === 4 ? 4 : 2) : s);
+          if (!isUnlockMode && s === 3) setReviewSubStep(1);
           scrollToTop();
         }}
         onFinalizePayment={handleFinalizePayment}
@@ -914,6 +1039,15 @@ function OnboardingContent({ initialRole }) {
   };
 
   const handleStepClick = (s) => {
+    if (isUnlockMode) {
+      if (s === 4) {
+        handleNextFromStep2();
+        return;
+      }
+      setCurrentStep(2);
+      scrollToTop();
+      return;
+    }
     setCurrentStep(s);
     if (s === 3) setReviewSubStep(1);
     scrollToTop();
@@ -923,7 +1057,12 @@ function OnboardingContent({ initialRole }) {
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#174B35] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
-      <MobileRegistrationHeader currentStep={currentStep} onStepClick={handleStepClick} onLogout={handleLogout} />
+      <MobileRegistrationHeader
+        currentStep={currentStep}
+        isUnlockMode={isUnlockMode}
+        onStepClick={handleStepClick}
+        onLogout={handleLogout}
+      />
       {/* Panoramic landscape footer strip in sequence without any clipping */}
       <div
         className="hidden lg:block fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
@@ -942,10 +1081,12 @@ function OnboardingContent({ initialRole }) {
         <div>
           <BrandLogo width={160} priority />
           <h1 className="text-2xl sm:text-3xl font-black text-[#174B35] tracking-tight mt-6 sm:mt-8 leading-tight">
-            Create your account!
+            {isUnlockMode ? "Add Classification" : "Create your account!"}
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1.5">
-            Manage crops, soil, and yields in one place
+            {isUnlockMode
+              ? "Upload verification documents & pay ₹365 to unlock this category"
+              : "Manage crops, soil, and yields in one place"}
           </p>
         </div>
 
@@ -954,10 +1095,10 @@ function OnboardingContent({ initialRole }) {
           {/* Vertical Stepper with single line titles only */}
           <div className="shrink-0 z-20 pr-2">
             <Stepper
-              currentStep={currentStep}
-              steps={steps}
+              currentStep={isUnlockMode ? (currentStep === 4 ? 2 : 1) : currentStep}
+              steps={activeSteps}
               orientation="vertical"
-              onStepClick={handleStepClick}
+              onStepClick={(s) => handleStepClick(isUnlockMode ? (s === 1 ? 2 : 4) : s)}
             />
           </div>
 
@@ -987,6 +1128,17 @@ function OnboardingContent({ initialRole }) {
       <div ref={rightPanelRef} className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-5 lg:pt-8 pb-10 lg:pb-36 px-4 sm:px-10 xl:px-16 flex flex-col lg:justify-between relative bg-transparent scroll-smooth">
         {/* Top Floating Actions: Home, Logout & User Avatar */}
         <div className="hidden lg:flex items-center justify-end gap-2.5 pb-6">
+          {isUnlockMode && (
+            <Link
+              href="/seller/products/add"
+              className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
+            >
+              <svg className="w-3.5 h-3.5 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="m10 5-7 7 7 7M3 12h18" />
+              </svg>
+              <span>Back to Add Product</span>
+            </Link>
+          )}
           <Link
             href="/"
             className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-2xs backdrop-blur-xs"
@@ -1011,6 +1163,32 @@ function OnboardingContent({ initialRole }) {
 
         {/* Form fits directly onto the natural cream background with leaf and tractor elements */}
         <main className="w-full max-w-2xl mx-auto space-y-6 lg:my-auto [&_label]:text-gray-800 [&_label]:font-bold [&_.text-red-500]:text-red-600">
+          {isUnlockMode && (
+            <div className="p-4 rounded-2xl bg-emerald-50/90 border border-emerald-300/90 flex items-start gap-3 shadow-2xs animate-in fade-in">
+              <div className="w-8 h-8 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-extrabold">
+                ₹
+              </div>
+              <div className="space-y-1 min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-[#174B35]">
+                  {existingPurchasedRoles.length > 0
+                    ? `You have already purchased: ${existingPurchasedRoles.join(", ")}.`
+                    : "You already have an active seller classification plan."}
+                </p>
+                <p className="text-xs sm:text-[13px] text-gray-700 leading-relaxed">
+                  You are adding{" "}
+                  <strong className="text-[#174B35] font-bold">
+                    {selectedSellerTypes.length > 0 ? selectedSellerTypes.join(", ") : unlockCategoryParam}
+                  </strong>{" "}
+                  to list products under another classification. Upload its required documents below and complete the{" "}
+                  <strong className="text-[#174B35] font-bold">
+                    ₹{(Math.max(1, selectedSellerTypes.length) * 365).toLocaleString("en-IN")}
+                  </strong>{" "}
+                  classification fee in the Payment step.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error notification */}
           {formError && (
             <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 animate-in fade-in">
@@ -1035,10 +1213,16 @@ function OnboardingContent({ initialRole }) {
                 </div>
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                    {role === "buyer" ? "Buyer profile" : "Seller profile"}
+                    {role === "buyer"
+                      ? "Buyer profile"
+                      : isUnlockMode
+                        ? "Add seller classification"
+                        : "Seller profile"}
                   </h2>
                   <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
-                    Choose your type, then enter your details.
+                    {isUnlockMode
+                      ? "Confirm your new classification details before uploading its verification documents."
+                      : "Choose your type, then enter your details."}
                   </p>
                 </div>
               </div>
@@ -1436,18 +1620,29 @@ function OnboardingContent({ initialRole }) {
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                       {finalSellerTypes.map((type) => {
+                        const isAlreadyPurchased = isUnlockMode && existingPurchasedRoles.includes(type);
                         const isSelected = selectedSellerTypes.includes(type);
                         return (
                           <button
                             key={type}
                             type="button"
                             onClick={() => handleSellerTypeToggle(type)}
-                            className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center min-h-[50px] ${isSelected
-                                ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02]"
-                                : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs"
-                              }`}
+                            disabled={isAlreadyPurchased}
+                            title={isAlreadyPurchased ? "Already active on your account" : undefined}
+                            className={`p-3 rounded-2xl border text-center text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center gap-1 min-h-[50px] ${
+                              isAlreadyPurchased
+                                ? "bg-emerald-50/90 text-[#174B35] border-emerald-300 cursor-default opacity-90"
+                                : isSelected
+                                  ? "bg-[#174B35] text-white border-[#174B35] shadow-sm shadow-emerald-900/20 scale-[1.02] cursor-pointer"
+                                  : "bg-white hover:bg-emerald-50/50 text-gray-700 hover:text-[#174B35] border-gray-200/90 hover:border-[#174B35]/40 shadow-2xs cursor-pointer"
+                            }`}
                           >
                             <span className="leading-tight">{type}</span>
+                            {isAlreadyPurchased && (
+                              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[#174B35]/10 text-[#174B35]">
+                                Active
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -2030,29 +2225,29 @@ function OnboardingContent({ initialRole }) {
                     <FormInput
                       label="Street Address"
                       placeholder="e.g. Survey No. 42/B, Thottam Road, Post Box 12"
-                      value={sellerData.farmAddress}
-                      onChange={(e) => setSellerData((p) => ({ ...p, farmAddress: e.target.value }))}
+                      value={resolvedSellerData.farmAddress}
+                      onChange={(e) => handleSellerLocationChange("farmAddress", e.target.value)}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormSelect
                         label="District"
                         required
-                        value={sellerData.district}
-                        onChange={(e) => setSellerData((p) => ({ ...p, district: e.target.value }))}
+                        value={resolvedSellerData.district}
+                        onChange={(e) => handleSellerLocationChange("district", e.target.value)}
                         options={TAMIL_NADU_DISTRICTS}
                       />
                       <FormInput
                         label="Village / Taluk"
                         placeholder="e.g. Anaimalai"
-                        value={sellerData.village}
-                        onChange={(e) => setSellerData((p) => ({ ...p, village: e.target.value }))}
+                        value={resolvedSellerData.village}
+                        onChange={(e) => handleSellerLocationChange("village", e.target.value)}
                       />
                       <FormInput
                         label="PIN Code"
                         placeholder="e.g. 642001"
                         maxLength={6}
-                        value={sellerData.pinCode}
-                        onChange={(e) => setSellerData((p) => ({ ...p, pinCode: e.target.value }))}
+                        value={resolvedSellerData.pinCode}
+                        onChange={(e) => handleSellerLocationChange("pinCode", e.target.value)}
                       />
                     </div>
                   </div>
@@ -2073,13 +2268,13 @@ function OnboardingContent({ initialRole }) {
                   </svg>
                 </button>
                 <Link
-                  href="/get-started"
+                  href={isUnlockMode ? "/seller/products/add" : "/get-started"}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
                 >
                   <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
                   </svg>
-                  Change Role
+                  {isUnlockMode ? "Back to Add Product" : "Change Role"}
                 </Link>
               </div>
             </div>
@@ -2295,23 +2490,35 @@ function OnboardingContent({ initialRole }) {
                   onClick={handleNextFromStep2}
                   className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#174B35] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#103A29] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#174B35] sm:w-auto sm:px-6"
                 >
-                  <span className="sm:hidden">Continue to review</span>
-                  <span className="hidden sm:inline">Continue to Review &amp; Submit</span>
+                  <span className="sm:hidden">{isUnlockMode ? "Continue to payment" : "Continue to review"}</span>
+                  <span className="hidden sm:inline">{isUnlockMode ? "Continue to Payment" : "Continue to Review & Submit"}</span>
                   <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleStepClick(1)}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
-                >
-                  <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
-                  </svg>
-                  <span className="sm:hidden">Back to profile</span>
-                  <span className="hidden sm:inline">Back to Profile Details</span>
-                </button>
+                {isUnlockMode ? (
+                  <Link
+                    href="/seller/products/add"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                  >
+                    <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                    </svg>
+                    <span>Back to Add Product</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleStepClick(1)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
+                  >
+                    <svg aria-hidden="true" className="size-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m10 5-7 7 7 7M3 12h18" />
+                    </svg>
+                    <span className="sm:hidden">Back to profile</span>
+                    <span className="hidden sm:inline">Back to Profile Details</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -2790,7 +2997,7 @@ function OnboardingContent({ initialRole }) {
                         <div className="min-w-0 flex-1">
                           <span className="text-xs text-gray-400 block font-normal">Farm / Unit Location</span>
                           <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate block">
-                            {sellerData.village}, {sellerData.district}, Tamil Nadu
+                            {resolvedSellerData.village}, {resolvedSellerData.district}, Tamil Nadu
                           </span>
                         </div>
                       </div>
@@ -3050,8 +3257,17 @@ function OnboardingContent({ initialRole }) {
 function OnboardingContentWrapper() {
   const searchParams = useSearchParams();
   const roleParam = (searchParams.get("role") || "buyer").toLowerCase();
+  const modeParam = (searchParams.get("mode") || "").toLowerCase();
+  const categoryParam = searchParams.get("category") || "";
 
-  return <OnboardingContent key={roleParam} initialRole={roleParam} />;
+  return (
+    <OnboardingContent
+      key={`${roleParam}-${modeParam}-${categoryParam}`}
+      initialRole={roleParam}
+      initialMode={modeParam}
+      initialUnlockCategory={categoryParam}
+    />
+  );
 }
 
 export default function OnboardingPage() {

@@ -7,7 +7,7 @@ import SellerProfileForm from "@/components/seller/profile/SellerProfileForm";
 import AccountSecurityCard from "@/components/seller/profile/AccountSecurityCard";
 import BuyerRoleAndChannelsCard from "@/components/seller/profile/BuyerRoleAndChannelsCard";
 import { useSessionUser } from "@/services/sessionAuth";
-import { getDynamicSellerProfile } from "@/data/sellerPortalData";
+import { getDynamicSellerProfile } from "@/services/sellerApi";
 
 export default function ProfileAndSettingsPage() {
   const router = useRouter();

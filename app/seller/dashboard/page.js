@@ -9,10 +9,18 @@ import RecentEnquiriesCard from "@/components/seller/dashboard/RecentEnquiriesCa
 import RecentNotificationsCard from "@/components/seller/dashboard/RecentNotificationsCard";
 import { useSessionUser } from "@/services/sessionAuth";
 import { getSellerProducts } from "@/services/productApi";
-import {
-  getDynamicSellerProfile,
-  DASHBOARD_METRICS,
-} from "@/data/sellerPortalData";
+import { getDynamicSellerProfile } from "@/services/sellerApi";
+
+const PRODUCT_STATUS_KEYS = [
+  { label: "Draft", statusKey: "Draft" },
+  { label: "Submitted", statusKey: "Submitted" },
+  { label: "Under Review", statusKey: "Under Review" },
+  { label: "Approved", statusKey: "Approved" },
+  { label: "Published", statusKey: "Published" },
+  { label: "Rejected", statusKey: "Rejected" },
+  { label: "Inactive", statusKey: "Inactive" },
+  { label: "Expired / Unavailable", statusKey: "Expired" },
+];
 
 export default function SellerDashboardPage({ onMenuToggle }) {
   const sessionUser = useSessionUser();
@@ -53,7 +61,6 @@ export default function SellerDashboardPage({ onMenuToggle }) {
     const publishedCount = countsByStatus.get("Published") || 0;
 
     return {
-      ...DASHBOARD_METRICS,
       accountStatus: {
         status: profile.accountStatus || "Active",
         subtext: "Verified seller account",
@@ -66,7 +73,13 @@ export default function SellerDashboardPage({ onMenuToggle }) {
         count: products.length,
         subtext: `${publishedCount} published live`,
       },
-      statusBreakdown: DASHBOARD_METRICS.statusBreakdown.map((item) => ({
+      buyerEnquiries: {
+        count: 0,
+        subtext: "0 awaiting response",
+      },
+      recentEnquiries: [],
+      recentNotifications: [],
+      statusBreakdown: PRODUCT_STATUS_KEYS.map((item) => ({
         ...item,
         count: countsByStatus.get(item.label) || 0,
       })),

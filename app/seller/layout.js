@@ -7,7 +7,7 @@ import SellerSidebar from "@/components/seller/layout/SellerSidebar";
 import HeaderAlertsPopover from "@/components/seller/layout/HeaderAlertsPopover";
 import { SellerProvider, useSeller } from "@/components/seller/layout/SellerContext";
 import { useSessionUser } from "@/services/sessionAuth";
-import { getDynamicSellerProfile } from "@/data/sellerPortalData";
+import { getDynamicSellerProfile } from "@/services/sellerApi";
 
 function SellerLayoutShell({ children }) {
   const { isMobileMenuOpen, closeMobileMenu, openMobileMenu } = useSeller();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BasicInfoSection from "@/components/seller/products/add/BasicInfoSection";
@@ -15,19 +15,31 @@ import {
   createSellerProduct,
   updateSellerProduct,
   getSellerProductById,
-  getProductCategories,
 } from "@/services/productApi";
+import { useSessionUser } from "@/services/sessionAuth";
+import {
+  getSellerProfile,
+  getSellerUnlockedCategories,
+} from "@/services/sellerApi";
+import { fetchCurrentUserProfile } from "@/services/paymentApi";
+import { getSellerCategories } from "@/services/categoryStorage";
 
 function AddProductFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
+  const unlockedParam = searchParams.get("unlocked") || "";
   const isEditing = Boolean(editId);
+  const sessionUser = useSessionUser();
 
   // Basic Information State
   const [productName, setProductName] = useState("");
   const [productCategory, setProductCategory] = useState("");
+  const [hasClearedCategory, setHasClearedCategory] = useState(false);
   const [productSubcategory, setProductSubcategory] = useState("");
+  const [sellerCategories, setSellerCategories] = useState(getSellerCategories);
+  const [liveProfileUser, setLiveProfileUser] = useState(null);
+  const [pendingUnlockCategory, setPendingUnlockCategory] = useState(null);
   const [productType, setProductType] = useState("");
   const [variety, setVariety] = useState("");
   const [qualityGrade, setQualityGrade] = useState("Select grade");
@@ -78,6 +90,94 @@ function AddProductFormContent() {
 
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync seller categories from Admin Portal / backend DB & keep live profile updated
+  useEffect(() => {
+    const syncCategories = () => {
+      setSellerCategories(getSellerCategories());
+    };
+    window.addEventListener("ulavan_categories_updated", syncCategories);
+    window.addEventListener("storage", syncCategories);
+
+    let isMounted = true;
+    Promise.all([
+      getSellerProfile().catch(() => null),
+      fetchCurrentUserProfile().catch(() => null),
+    ]).then(([sellerRes, userRes]) => {
+      if (!isMounted) return;
+      const sellerObj =
+        sellerRes?.success && sellerRes.data
+          ? sellerRes.data.seller || sellerRes.data.profile || sellerRes.data.user || sellerRes.data
+          : null;
+      const userObj = userRes?.success && userRes.user ? userRes.user : null;
+
+      if (sellerObj || userObj) {
+        setLiveProfileUser({
+          ...(userObj || {}),
+          ...(sellerObj || {}),
+          sellerData: {
+            ...(userObj?.sellerData || {}),
+            ...(sellerObj?.sellerData || {}),
+          },
+        });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("ulavan_categories_updated", syncCategories);
+      window.removeEventListener("storage", syncCategories);
+    };
+  }, []);
+
+  const unlockedCategories = useMemo(() => {
+    const mergedUser = liveProfileUser
+      ? {
+          ...liveProfileUser,
+          ...sessionUser,
+          subType: sessionUser?.subType || liveProfileUser.subType || "",
+          sellerType: sessionUser?.sellerType || liveProfileUser.sellerType || "",
+          sellerTypes:
+            sessionUser?.sellerTypes?.length > 0
+              ? sessionUser.sellerTypes
+              : liveProfileUser.sellerTypes || null,
+          unlockedCategories: Array.from(
+            new Set([
+              ...(sessionUser?.unlockedCategories || []),
+              ...(liveProfileUser.unlockedCategories || []),
+            ])
+          ),
+          sellerData: {
+            ...(liveProfileUser.sellerData || {}),
+            ...(sessionUser?.sellerData || {}),
+          },
+        }
+      : sessionUser;
+    const resolved = getSellerUnlockedCategories(mergedUser, sellerCategories);
+    return resolved;
+  }, [sessionUser, liveProfileUser, sellerCategories]);
+
+  const effectiveProductCategory =
+    productCategory ||
+    (!isEditing && !hasClearedCategory
+      ? unlockedParam && unlockedCategories.includes(unlockedParam)
+        ? unlockedParam
+        : unlockedCategories.length === 1
+        ? unlockedCategories[0]
+        : ""
+      : "");
+
+  const handleProductCategoryChange = (val) => {
+    setProductCategory(val);
+    setHasClearedCategory(!val);
+  };
+
+  const handleProceedToUnlockOnboarding = () => {
+    if (!pendingUnlockCategory) return;
+    const target = encodeURIComponent(pendingUnlockCategory);
+    setPendingUnlockCategory(null);
+    router.push(`/onboarding?role=seller&mode=unlock&category=${target}&step=2`);
+  };
 
   // Load existing product if editing
   useEffect(() => {
@@ -225,8 +325,15 @@ function AddProductFormContent() {
       setStatusMessage("Error: Product name is mandatory.");
       return;
     }
-    if (!productCategory || productCategory === "Select a category") {
+    if (!effectiveProductCategory || effectiveProductCategory === "Select a category") {
       setStatusMessage("Error: Please select a product category.");
+      return;
+    }
+    if (!unlockedCategories.includes(effectiveProductCategory)) {
+      setPendingUnlockCategory(effectiveProductCategory);
+      setStatusMessage(
+        `Error: Please pay ₹365 to unlock "${effectiveProductCategory}" before submitting.`
+      );
       return;
     }
 
@@ -242,7 +349,7 @@ function AddProductFormContent() {
     try {
       const formData = {
         productName,
-        productCategory,
+        productCategory: effectiveProductCategory,
         productSubcategory,
         productType,
         variety,
@@ -355,10 +462,15 @@ function AddProductFormContent() {
           <BasicInfoSection
             productName={productName}
             onProductNameChange={setProductName}
-            productCategory={productCategory}
-            onProductCategoryChange={setProductCategory}
+            productCategory={effectiveProductCategory}
+            onProductCategoryChange={handleProductCategoryChange}
             productSubcategory={productSubcategory}
             onProductSubcategoryChange={setProductSubcategory}
+            sellerCategories={sellerCategories}
+            unlockedCategories={unlockedCategories}
+            onLockedCategoryClick={(categoryName) => {
+              setPendingUnlockCategory(categoryName);
+            }}
             productType={productType}
             onProductTypeChange={setProductType}
             variety={variety}
@@ -464,6 +576,79 @@ function AddProductFormContent() {
           <ListingStatusSidebar />
         </div>
       </div>
+
+      {/* Unlock Additional Category / Classification Redirect Modal */}
+      {pendingUnlockCategory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setPendingUnlockCategory(null)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ₹ Rupee Icon Circle */}
+            <div className="w-14 h-14 rounded-full bg-[#EAF5EC] flex items-center justify-center mx-auto mb-4 text-[#174B35]">
+              <span className="text-2xl font-black leading-none">₹</span>
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mb-2">
+              Add Another Classification
+            </h3>
+
+            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed max-w-sm mx-auto mb-4">
+              {unlockedCategories.length > 0 ? (
+                <>
+                  You have already purchased{" "}
+                  <strong className="text-[#174B35]">
+                    {unlockedCategories.join(", ")}
+                  </strong>
+                  . To add products under{" "}
+                  <strong className="text-gray-900">{pendingUnlockCategory}</strong>,
+                  upload the required documents and pay ₹365.
+                </>
+              ) : (
+                <>
+                  Complete verification and pay ₹365 to add products under{" "}
+                  <strong className="text-gray-900">{pendingUnlockCategory}</strong>.
+                </>
+              )}
+            </p>
+
+            {/* Summary Card matching Onboarding UI */}
+            <div className="bg-[#EDF7EE] border border-[#D3E8D6] rounded-2xl p-4 sm:p-5 mb-5 text-center space-y-1.5">
+              {unlockedCategories.length > 0 && (
+                <div className="text-[11px] font-semibold text-[#174B35]">
+                  Already Active: {unlockedCategories.join(", ")}
+                </div>
+              )}
+              <div className="text-sm sm:text-base font-extrabold text-gray-900">
+                {pendingUnlockCategory} • ₹365
+              </div>
+              <div className="text-[11px] text-gray-600 font-medium">
+                Document Upload &rarr; Payment (₹365)
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={handleProceedToUnlockOnboarding}
+                className="w-full py-3.5 px-6 rounded-xl bg-[#174B35] hover:bg-[#113B29] text-white font-bold text-sm sm:text-base shadow-md transition-all cursor-pointer"
+              >
+                Continue to Upload Docs &amp; Pay ₹365 &rarr;
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingUnlockCategory(null)}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

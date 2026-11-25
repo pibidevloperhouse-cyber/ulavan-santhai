@@ -7,10 +7,7 @@ import PaymentFlowSteps from "@/components/seller/subscription/PaymentFlowSteps"
 import PaymentResultCards from "@/components/seller/subscription/PaymentResultCards";
 import PaymentHistoryTable from "@/components/seller/subscription/PaymentHistoryTable";
 import { useSessionUser } from "@/services/sessionAuth";
-import {
-  getDynamicSellerProfile,
-  PAYMENT_HISTORY,
-} from "@/data/sellerPortalData";
+import { getDynamicSellerProfile } from "@/services/sellerApi";
 
 export default function SellerSubscriptionPage() {
   const sessionUser = useSessionUser();
@@ -20,7 +17,7 @@ export default function SellerSubscriptionPage() {
   );
 
   const paymentHistory = useMemo(() => {
-    if (typeof window === "undefined") return PAYMENT_HISTORY;
+    if (typeof window === "undefined") return [];
     const paymentId = sessionStorage.getItem("ulavan_latest_payment_id");
     if (paymentId || sessionUser?.isPaid || sessionUser?.sellerPaid) {
       return [
@@ -36,7 +33,7 @@ export default function SellerSubscriptionPage() {
         },
       ];
     }
-    return PAYMENT_HISTORY;
+    return [];
   }, [sessionUser]);
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);

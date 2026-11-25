@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { DEFAULT_SELLER_PROFILE } from "@/data/sellerPortalData";
+import { useSessionUser } from "@/services/sessionAuth";
+import { getDynamicSellerProfile } from "@/services/sellerApi";
 
 export default function OriginLocationSection({
   placeOfOrigin,
@@ -13,6 +14,18 @@ export default function OriginLocationSection({
   manufacturingLocation,
   onManufacturingLocationChange,
 }) {
+  const sessionUser = useSessionUser();
+  const profile = getDynamicSellerProfile(sessionUser);
+  const locationParts = [
+    profile.address,
+    profile.city,
+    profile.state,
+    profile.pinCode,
+  ].filter(Boolean);
+  const locationText =
+    locationParts.length > 0
+      ? locationParts.join(", ")
+      : "Location captured from your Seller onboarding profile";
   return (
     <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
@@ -99,9 +112,7 @@ export default function OriginLocationSection({
           Seller / business location
         </label>
         <div className="w-full px-3 py-2 bg-[#F6F4EC] border border-[#E3DDCF] rounded-lg text-xs text-[#6B7870] break-words">
-          {DEFAULT_SELLER_PROFILE.address}, {DEFAULT_SELLER_PROFILE.city},{" "}
-          {DEFAULT_SELLER_PROFILE.state} — {DEFAULT_SELLER_PROFILE.pinCode}{" "}
-          (Taken from your Seller profile)
+          {locationText}
         </div>
       </div>
     </div>

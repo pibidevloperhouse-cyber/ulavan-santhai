@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Lock } from "lucide-react";
 
 /**
  * Custom viewport-constrained select dropdown for the Seller Portal.
@@ -11,6 +11,7 @@ import { ChevronDown, Check } from "lucide-react";
 export default function SellerSelect({
   value = "",
   onChange,
+  onLockedClick,
   options = [],
   placeholder = "Select an option",
   disabled = false,
@@ -54,11 +55,17 @@ export default function SellerSelect({
     };
   }, [isOpen]);
 
-  const handleSelect = (nextValue) => {
+  const handleSelect = (opt) => {
     if (disabled) return;
     setIsOpen(false);
+    if (opt.locked) {
+      if (onLockedClick) {
+        onLockedClick(opt);
+      }
+      return;
+    }
     if (onChange) {
-      onChange(nextValue);
+      onChange(opt.value);
     }
   };
 
@@ -104,22 +111,30 @@ export default function SellerSelect({
             </li>
           ) : (
             normalizedOptions.map((opt) => {
-              const isSelected = opt.value === value;
+              const isLocked = Boolean(opt.locked);
+              const isSelected = !isLocked && opt.value === value;
               return (
                 <li key={opt.value} role="option" aria-selected={isSelected}>
                   <button
                     type="button"
-                    onClick={() => handleSelect(opt.value)}
+                    onClick={() => handleSelect(opt)}
                     className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer whitespace-normal break-words ${
-                      isSelected
+                      isLocked
+                        ? "text-[#7A877E] hover:bg-[#FAF8F5]"
+                        : isSelected
                         ? "bg-[#E8F0E3] text-[#174B35] font-semibold"
                         : "text-[#1F2922] hover:bg-[#FAF8F5]"
                     }`}
                   >
                     <span className="flex-1 min-w-0">{opt.label}</span>
-                    {isSelected && (
+                    {isLocked ? (
+                      <Lock
+                        className="w-3.5 h-3.5 text-[#8A948D] shrink-0"
+                        aria-hidden="true"
+                      />
+                    ) : isSelected ? (
                       <Check className="w-3.5 h-3.5 text-[#174B35] shrink-0" />
-                    )}
+                    ) : null}
                   </button>
                 </li>
               );

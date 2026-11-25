@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Search } from "lucide-react";
-import { CATEGORIES_LIST } from "@/data/sellerPortalData";
+import { getSellerCategories } from "@/services/categoryStorage";
 import SellerSelect from "../ui/SellerSelect";
 
 export default function ProductFilters({
@@ -15,7 +15,10 @@ export default function ProductFilters({
   availabilityFilter,
   onAvailabilityChange,
 }) {
-  const categoryOptions = ["All categories", ...CATEGORIES_LIST];
+  const dynamicCategories = getSellerCategories()
+    .filter((c) => c.status === "Active")
+    .map((c) => c.code || c.name);
+  const categoryOptions = ["All categories", ...dynamicCategories];
   const statusOptions = [
     "All statuses",
     "Published",

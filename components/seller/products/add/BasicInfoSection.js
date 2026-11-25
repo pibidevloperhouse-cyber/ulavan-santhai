@@ -1,12 +1,15 @@
 "use client";
 
 import React from "react";
-import {
-  CATEGORIES_LIST,
-  CATEGORY_SUBCATEGORIES_MAP,
-  QUALITY_GRADES,
-} from "@/data/sellerPortalData";
+import { getSellerCategories } from "@/services/categoryStorage";
 import SellerSelect from "../../ui/SellerSelect";
+
+const QUALITY_GRADES = [
+  "Select grade",
+  "Grade A (Export / Premium)",
+  "Grade B (Commercial / Standard)",
+  "Grade C (Processing)",
+];
 
 export default function BasicInfoSection({
   productName,
@@ -15,6 +18,9 @@ export default function BasicInfoSection({
   onProductCategoryChange,
   productSubcategory,
   onProductSubcategoryChange,
+  sellerCategories,
+  unlockedCategories = [],
+  onLockedCategoryClick,
   productType,
   onProductTypeChange,
   variety,
@@ -26,23 +32,51 @@ export default function BasicInfoSection({
   productDescription,
   onProductDescriptionChange,
 }) {
-  // Available subcategories based on chosen category
-  const availableSubcategories =
-    (productCategory && CATEGORY_SUBCATEGORIES_MAP[productCategory]) || [];
+  const activeCategoriesList =
+    Array.isArray(sellerCategories) && sellerCategories.length > 0
+      ? sellerCategories.filter((c) => c.status !== "Inactive")
+      : getSellerCategories().filter((c) => c.status !== "Inactive");
+
+  const classificationNames = activeCategoriesList.map((c) => c.code || c.name);
+  const unlockedSet = new Set(unlockedCategories);
+  const combinedCategories = Array.from(
+    new Set([...classificationNames, ...unlockedCategories.filter(Boolean)])
+  );
+
+  const isSelectedCategoryUnlocked = Boolean(
+    productCategory && unlockedSet.has(productCategory)
+  );
+
+  const matchedCatObj = activeCategoriesList.find(
+    (c) => (c.code || c.name) === productCategory || c.name === productCategory
+  );
+
+  // Available subcategories strictly from the chosen active Seller Onboarding classification
+  const availableSubcategories = isSelectedCategoryUnlocked
+    ? matchedCatObj?.subcategories || []
+    : [];
 
   const categoryOptions = [
     { value: "", label: "Select a category" },
-    ...CATEGORIES_LIST.map((cat) => ({ value: cat, label: cat })),
+    ...combinedCategories.map((cat) => ({
+      value: cat,
+      label: cat,
+      locked: !unlockedSet.has(cat),
+    })),
   ];
 
-  const subcategoryOptions = [
-    {
-      value: "",
-      label: productCategory ? "-- Select subcategory --" : "-- Select category first --",
-    },
-    ...availableSubcategories.map((sub) => ({ value: sub, label: sub })),
-    { value: "Other", label: "Other / Custom" },
-  ];
+  const subcategoryOptions = isSelectedCategoryUnlocked
+    ? [
+        { value: "", label: "-- Select subcategory --" },
+        ...availableSubcategories.map((sub) => ({ value: sub, label: sub })),
+        { value: "Other", label: "Other / Custom" },
+      ]
+    : [
+        {
+          value: "",
+          label: "-- Select active category first --",
+        },
+      ];
 
   return (
     <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
@@ -80,20 +114,22 @@ export default function BasicInfoSection({
             </span>
           </label>
           <SellerSelect
-            value={productCategory}
+            value={isSelectedCategoryUnlocked ? productCategory : ""}
             onChange={(val) => {
               onProductCategoryChange(val);
               if (onProductSubcategoryChange) {
                 onProductSubcategoryChange("");
               }
             }}
+            onLockedClick={(opt) => {
+              if (onLockedCategoryClick) {
+                onLockedCategoryClick(opt.value);
+              }
+            }}
             options={categoryOptions}
             placeholder="Select a category"
             ariaLabel="Product category"
           />
-          <p className="text-[10px] text-[#7A877E] mt-1">
-            Loaded from database / admin portal.
-          </p>
         </div>
 
         {/* Product subcategory */}
@@ -105,17 +141,14 @@ export default function BasicInfoSection({
             </span>
           </label>
           <SellerSelect
-            value={productSubcategory || ""}
+            value={isSelectedCategoryUnlocked ? productSubcategory || "" : ""}
             onChange={(val) =>
               onProductSubcategoryChange && onProductSubcategoryChange(val)
             }
             options={subcategoryOptions}
-            disabled={!productCategory}
+            disabled={!isSelectedCategoryUnlocked}
             ariaLabel="Product subcategory"
           />
-          <p className="text-[10px] text-[#7A877E] mt-1">
-            Commodity / crop classification.
-          </p>
         </div>
       </div>
 

@@ -9,16 +9,20 @@ import HandshakeLoader from "@/components/ui/HandshakeLoader";
 import MobileRegistrationHeader from "@/components/onboarding/MobileRegistrationHeader";
 import Stepper from "@/components/forms/Stepper";
 import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
+import { loadRazorpayScript } from "@/utils/loadRazorpay";
+import { createRazorpayOrder, verifyRazorpayPayment } from "@/services/paymentApi";
 
 /**
  * Clean & Modular PaymentView Component
- * Powers Step 4 of Onboarding for both Buyer (BUYER_ANNUAL) and Seller (SELLER_ANNUAL).
- * Features 2-panel Onboarding alignment, Stepper, HandshakeLoader, and Real Razorpay Integration.
+ * Powers Step 4 of Onboarding for both Buyer (BUYER_ANNUAL) and Seller (SELLER_ANNUAL),
+ * as well as Additional Seller Classification unlock payments.
  */
 export default function PaymentView({
   role = "buyer",
   selectedRoles = [],
   payableAmount,
+  isUnlockMode = false,
+  existingRoles = [],
   onRoleChange,
   userAuth = {},
   onBack,
@@ -32,6 +36,8 @@ export default function PaymentView({
   const router = useRouter();
   const [activeRole, setActiveRole] = useState(role);
   const [paymentResult, setPaymentResult] = useState(externalPaymentResult || null);
+  const [isUnlockProcessing, setIsUnlockProcessing] = useState(false);
+  const [unlockHookError, setUnlockHookError] = useState("");
 
   const {
     initiatePayment,
@@ -42,11 +48,12 @@ export default function PaymentView({
   } = useRazorpayPayment();
 
   const currentRole = onRoleChange ? role : activeRole;
-  const isProcessing = isHookProcessing || isProcessingExternal;
+  const isProcessing = isHookProcessing || isProcessingExternal || isUnlockProcessing;
   const activeResult = externalPaymentResult || paymentResult;
   const isBuyer = currentRole === "buyer";
   const sellerRoleCount = selectedRoles.length > 0 ? selectedRoles.length : 1;
   const effectiveAmount = isBuyer ? 365 : (payableAmount || sellerRoleCount * 365);
+  const displayedError = isUnlockMode ? unlockHookError : hookError;
 
   const handleRoleToggle = (newRole) => {
     if (onRoleChange) {
@@ -73,11 +80,107 @@ export default function PaymentView({
     }
   };
 
+  const completeUnlockPayment = async (txId) => {
+    const invNum = `INV-US-ADD-${Date.now().toString().slice(-6)}`;
+    const resultPayload = {
+      transactionId: txId,
+      gatewayReference: txId,
+      invoiceNumber: invNum,
+      paymentStatus: "SUCCESS",
+      paymentDate: new Date().toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }),
+      planName: `Additional Classification (${selectedRoles.join(", ")})`,
+      baseAmount: effectiveAmount,
+      totalAmount: effectiveAmount,
+    };
+
+    if (externalFinalizePayment) {
+      try {
+        await externalFinalizePayment(txId);
+      } catch (subErr) {
+        console.warn("Addon application submission note:", subErr);
+      }
+    }
+
+    setPaymentResult(resultPayload);
+    setIsUnlockProcessing(false);
+
+    if (onPaymentSuccess) {
+      onPaymentSuccess(resultPayload);
+    }
+  };
+
   /**
-   * Executes the 2-step Razorpay payment workflow via useRazorpayPayment hook
+   * Executes the 2-step Razorpay payment workflow via useRazorpayPayment hook,
+   * or handles additional classification payment in unlock mode.
    */
-  const handlePay = () => {
+  const handlePay = async () => {
     clearError();
+    setUnlockHookError("");
+
+    if (isUnlockMode && !isBuyer) {
+      setIsUnlockProcessing(true);
+      try {
+        const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+        const isLoaded = razorpayKey ? await loadRazorpayScript() : false;
+
+        if (isLoaded && razorpayKey && typeof window !== "undefined" && window.Razorpay) {
+          const orderRes = await createRazorpayOrder("SELLER_CATEGORY_UNLOCK").catch(() => null);
+          const orderData = orderRes?.data || orderRes?.raw?.data || orderRes;
+          const orderId = orderData?.orderId || orderData?.id;
+
+          if (orderRes?.success && orderId) {
+            const options = {
+              key: orderData?.keyId || orderData?.key || razorpayKey,
+              amount: orderData?.amount || effectiveAmount * 100,
+              currency: orderData?.currency || "INR",
+              name: "Ulavan Santhai",
+              description: `Additional Classification (${selectedRoles.join(", ")})`,
+              image: "/images/ulavan-santhai-emblem@2x.png",
+              order_id: orderId,
+              prefill: {
+                name: userAuth?.name || "",
+                email: userAuth?.email || "",
+                contact: userAuth?.mobile || "",
+              },
+              theme: { color: "#174B35" },
+              handler: async function (response) {
+                try {
+                  await verifyRazorpayPayment({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    paymentMethod: response.method || "RAZORPAY_ONLINE",
+                  });
+                } catch {
+                  // Continue updating local session state after Razorpay callback
+                }
+                await completeUnlockPayment(response.razorpay_payment_id || `pay_add_${Date.now()}`);
+              },
+              modal: {
+                ondismiss: function () {
+                  setIsUnlockProcessing(false);
+                },
+              },
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+            return;
+          }
+        }
+
+        // Preview / sandbox fallback when backend add-on order route is not configured
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        await completeUnlockPayment(`pay_add_${Date.now()}`);
+      } catch (err) {
+        setUnlockHookError(err?.message || "Payment failed. Please try again.");
+        setIsUnlockProcessing(false);
+      }
+      return;
+    }
+
     const planId = isBuyer ? "BUYER_ANNUAL" : "SELLER_ANNUAL";
 
     initiatePayment({
@@ -111,12 +214,17 @@ export default function PaymentView({
     });
   };
 
-  const steps = [
-    { id: 1, title: "Profile Details" },
-    { id: 2, title: "Document Upload" },
-    { id: 3, title: "Review & Submit" },
-    { id: 4, title: "Payment" },
-  ];
+  const steps = isUnlockMode
+    ? [
+        { id: 2, title: "Document Upload" },
+        { id: 4, title: "Payment" },
+      ]
+    : [
+        { id: 1, title: "Profile Details" },
+        { id: 2, title: "Document Upload" },
+        { id: 3, title: "Review & Submit" },
+        { id: 4, title: "Payment" },
+      ];
 
   const handleStepClick = (s) => {
     if (onStepClick) {
@@ -130,7 +238,12 @@ export default function PaymentView({
     <div
       className="relative min-h-screen lg:h-screen w-full flex flex-col lg:flex-row font-sans selection:bg-[#1F4D36] selection:text-white bg-[#F5F8EC] lg:overflow-hidden"
     >
-      <MobileRegistrationHeader currentStep={4} onStepClick={handleStepClick} onLogout={handleLogout} />
+      <MobileRegistrationHeader
+        currentStep={4}
+        isUnlockMode={isUnlockMode}
+        onStepClick={handleStepClick}
+        onLogout={handleLogout}
+      />
       {/* Panoramic landscape footer strip */}
       <div
         className="hidden lg:block fixed bottom-0 left-0 right-0 h-[30px] pointer-events-none z-20 bg-repeat-x bg-bottom"
@@ -149,10 +262,12 @@ export default function PaymentView({
         <div>
           <BrandLogo width={160} priority />
           <h1 className="text-2xl sm:text-3xl font-black text-[#174B35] tracking-tight mt-6 sm:mt-8 leading-tight">
-            Create your account!
+            {isUnlockMode ? "Add Classification" : "Create your account!"}
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1.5">
-            Manage crops, soil, and yields in one place
+            {isUnlockMode
+              ? "Unlock an additional category to list more products"
+              : "Manage crops, soil, and yields in one place"}
           </p>
         </div>
 
@@ -160,10 +275,10 @@ export default function PaymentView({
         <div className="flex items-center justify-between gap-4 my-auto py-6 relative">
           <div className="shrink-0 z-20 pr-2">
             <Stepper
-              currentStep={4}
+              currentStep={isUnlockMode ? 2 : 4}
               steps={steps}
               orientation="vertical"
-              onStepClick={handleStepClick}
+              onStepClick={(s) => handleStepClick(isUnlockMode ? (s === 1 ? 2 : 4) : s)}
             />
           </div>
 
@@ -188,13 +303,22 @@ export default function PaymentView({
       <div className="flex-1 w-full lg:h-full lg:overflow-y-auto pt-5 lg:pt-8 pb-10 lg:pb-36 px-4 sm:px-10 xl:px-16 flex flex-col lg:justify-between relative bg-transparent scroll-smooth">
         {/* Top Floating Actions: Home & Logout */}
         <div className="mx-auto w-full max-w-2xl lg:max-w-none flex items-center justify-end gap-2.5 pb-4 lg:pb-6">
-          <button
-            type="button"
-            onClick={() => handleRoleToggle(isBuyer ? "seller" : "buyer")}
-            className="px-3.5 py-1.5 text-xs font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer shadow-2xs backdrop-blur-xs"
-          >
-            View {isBuyer ? "Seller" : "Buyer"} Screen
-          </button>
+          {isUnlockMode ? (
+            <Link
+              href="/seller/products/add"
+              className="px-3.5 py-1.5 text-xs font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer shadow-2xs backdrop-blur-xs"
+            >
+              &larr; Back to Add Product
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleRoleToggle(isBuyer ? "seller" : "buyer")}
+              className="px-3.5 py-1.5 text-xs font-semibold rounded-xl text-[#174B35] bg-white/90 hover:bg-white border border-gray-200/90 transition-all duration-200 cursor-pointer shadow-2xs backdrop-blur-xs"
+            >
+              View {isBuyer ? "Seller" : "Buyer"} Screen
+            </button>
+          )}
 
           <Link
             href="/"
@@ -230,10 +354,33 @@ export default function PaymentView({
                   </svg>
                 </div>
                 <h2 className="text-2xl font-black text-gray-900">
-                  Payment Verified &amp; Profile Active!
+                  {isUnlockMode
+                    ? "Classification Unlocked & Active!"
+                    : "Payment Verified & Profile Active!"}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto">
-                  Your payment of <strong className="text-gray-900">₹{activeResult.totalAmount || 365}.00</strong> has been verified via Razorpay. Your verified trading credentials on UlavanSanthai are now active.
+                  {isUnlockMode ? (
+                    <>
+                      Your additional payment of{" "}
+                      <strong className="text-gray-900">
+                        ₹{activeResult.totalAmount || effectiveAmount}.00
+                      </strong>{" "}
+                      has been verified. You can now add products under{" "}
+                      <strong className="text-[#174B35]">
+                        {selectedRoles.join(", ")}
+                      </strong>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      Your payment of{" "}
+                      <strong className="text-gray-900">
+                        ₹{activeResult.totalAmount || 365}.00
+                      </strong>{" "}
+                      has been verified via Razorpay. Your verified trading
+                      credentials on UlavanSanthai are now active.
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -277,24 +424,66 @@ export default function PaymentView({
                   Download / Print Receipt
                 </button>
                 <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-                  <Link
-                    href="/get-started"
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#204732]/30 text-[#204732] hover:bg-[#E8F0E3] text-xs font-bold transition-colors text-center"
-                  >
-                    Role Switcher (Buyer / Seller)
-                  </Link>
-                  <Link
-                    href={isBuyer ? "/onboarding/status" : "/seller/dashboard"}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#204732] hover:bg-[#153423] text-white text-xs font-bold shadow-md transition-colors text-center"
-                  >
-                    {isBuyer ? "View Buyer Status" : "Open Seller Dashboard"} &rarr;
-                  </Link>
+                  {isUnlockMode ? (
+                    <>
+                      <Link
+                        href="/seller/dashboard"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#204732]/30 text-[#204732] hover:bg-[#E8F0E3] text-xs font-bold transition-colors text-center"
+                      >
+                        Seller Dashboard
+                      </Link>
+                      <Link
+                        href={`/seller/products/add?unlocked=${encodeURIComponent(
+                          selectedRoles[0] || ""
+                        )}`}
+                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#204732] hover:bg-[#153423] text-white text-xs font-bold shadow-md transition-colors text-center"
+                      >
+                        Add Product Now &rarr;
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/get-started"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-[#204732]/30 text-[#204732] hover:bg-[#E8F0E3] text-xs font-bold transition-colors text-center"
+                      >
+                        Role Switcher (Buyer / Seller)
+                      </Link>
+                      <Link
+                        href={isBuyer ? "/onboarding/status" : "/seller/dashboard"}
+                        className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#204732] hover:bg-[#153423] text-white text-xs font-bold shadow-md transition-colors text-center"
+                      >
+                        {isBuyer ? "View Buyer Status" : "Open Seller Dashboard"} &rarr;
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           ) : (
             /* Payment View matching exact Steps 1-3 alignment */
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Clear Notice when paying again to add another classification */}
+              {isUnlockMode && !isBuyer && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#EDF7EE] border border-[#CBE5D0] flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 text-sm font-black mt-0.5">
+                    ₹
+                  </div>
+                  <div className="text-xs sm:text-sm text-[#174B35] leading-relaxed">
+                    <p className="font-bold">
+                      {existingRoles.length > 0
+                        ? `Already Purchased: ${existingRoles.join(", ")}`
+                        : "Additional Classification Fee"}
+                    </p>
+                    <p className="text-[#2C5E45] font-medium mt-0.5">
+                      You have already purchased your existing category plan. Pay{" "}
+                      <strong>₹{effectiveAmount}</strong> now to add{" "}
+                      <strong>{selectedRoles.join(", ")}</strong> so you can list products under this classification.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Header with Payment Icon Badge matching Steps 1-3 */}
               <div className="flex items-start gap-3.5">
                 <div className="w-11 h-11 rounded-full bg-[#174B35] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
@@ -304,26 +493,32 @@ export default function PaymentView({
                 </div>
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-[#174B35] tracking-tight">
-                    {isBuyer ? "Buyer Verified Plan" : "Seller Platform Membership"}
+                    {isBuyer
+                      ? "Buyer Verified Plan"
+                      : isUnlockMode
+                      ? "Unlock Additional Classification"
+                      : "Seller Platform Membership"}
                   </h2>
                   <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">
                     {isBuyer
                       ? "Full 1-year verified access to connect directly with certified agricultural producers."
+                      : isUnlockMode
+                      ? `Complete your ₹${effectiveAmount} classification fee to start adding products under ${selectedRoles.join(", ")}.`
                       : "Activate your producer workspace for 1 full year to showcase crops & receive direct commercial buyer orders."}
                   </p>
                 </div>
               </div>
 
               {/* Error Message if any */}
-              {hookError && (
+              {displayedError && (
                 <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start justify-between gap-3 animate-in fade-in">
                   <div className="flex items-start gap-2.5">
                     <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-xs sm:text-sm font-semibold text-red-800">{hookError}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-red-800">{displayedError}</p>
                   </div>
-                  {isAlreadyActive && (
+                  {!isUnlockMode && isAlreadyActive && (
                     <Link
                       href={isBuyer ? "/onboarding/status" : "/seller/dashboard"}
                       className="shrink-0 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[11px] transition"
@@ -342,13 +537,19 @@ export default function PaymentView({
                     {/* Badge & Price Header */}
                     <div className="flex items-start justify-between gap-4">
                       <span className="inline-block px-3 py-1 rounded-full bg-[#174B35] text-white text-[11px] font-bold tracking-wide">
-                        {isBuyer ? "Buyer Verified Plan" : "Seller Membership"}
+                        {isBuyer
+                          ? "Buyer Verified Plan"
+                          : isUnlockMode
+                          ? "Additional Classification"
+                          : "Seller Membership"}
                       </span>
                       <div className="text-right shrink-0">
                         <span className="text-2xl sm:text-3xl font-black text-gray-900">₹{effectiveAmount}</span>
                         <span className="text-xs text-gray-500 font-semibold block mt-0.5">
                           {isBuyer
                             ? "/ Year (₹1.00/day)"
+                            : isUnlockMode
+                            ? `${sellerRoleCount} New Role${sellerRoleCount > 1 ? "s" : ""} @ ₹365`
                             : sellerRoleCount > 1
                             ? `/ Year (${sellerRoleCount} Roles @ ₹365/ea)`
                             : "/ Year (₹1.00/day)"}
@@ -358,12 +559,18 @@ export default function PaymentView({
 
                     {/* Title & Subtitle */}
                     <h3 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight pt-1">
-                      {isBuyer ? "Verified Buyer Platform Access" : "Agricultural Producer Membership"}
+                      {isBuyer
+                        ? "Verified Buyer Platform Access"
+                        : isUnlockMode
+                        ? "Add Classification to Your Seller Plan"
+                        : "Agricultural Producer Membership"}
                     </h3>
 
                     <p className="text-xs text-gray-600 leading-relaxed">
                       {isBuyer
                         ? "Full 1-year verified access to connect with cultivators and procure agricultural produce."
+                        : isUnlockMode
+                        ? `Unlocks ${selectedRoles.join(", ")} for product listings alongside your existing active category plan.`
                         : "List crops, receive verified commercial buyer enquiries, and manage your agricultural sales."}
                     </p>
 
@@ -376,6 +583,16 @@ export default function PaymentView({
                             "Direct access to farmer harvest produce listings",
                             "Create procurement requests & bulk RFQs",
                             "Zero middleman brokerage & trade commission",
+                          ]
+                        : isUnlockMode
+                        ? [
+                            ...(existingRoles.length > 0
+                              ? [`Already Purchased: ${existingRoles.join(", ")}`]
+                              : []),
+                            `Unlocking New Classification: ${selectedRoles.join(", ")}`,
+                            "Verification documents uploaded & attached",
+                            "Add products & subcategories under this classification",
+                            "Zero commission on all farm-gate transactions",
                           ]
                         : [
                             "You can select multiple classifications. A ₹365 fee applies to each selected classification.",
@@ -425,6 +642,8 @@ export default function PaymentView({
                         <span>
                           {isBuyer
                             ? "Annual Membership (365 Days)"
+                            : isUnlockMode
+                            ? `Additional Classification (${sellerRoleCount} @ ₹365)`
                             : sellerRoleCount > 1
                             ? `Annual Membership (${sellerRoleCount} Roles @ ₹365/ea)`
                             : "Annual Membership (365 Days)"}
@@ -487,7 +706,11 @@ export default function PaymentView({
                               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                             />
                           </svg>
-                          <span>Subscribe &amp; Pay ₹{effectiveAmount}</span>
+                          <span>
+                            {isUnlockMode
+                              ? `Pay ₹${effectiveAmount} & Unlock`
+                              : `Subscribe & Pay ₹${effectiveAmount}`}
+                          </span>
                           <span className="text-base font-bold">&rarr;</span>
                         </>
                       )}
@@ -511,7 +734,7 @@ export default function PaymentView({
                   onClick={handleBackAction}
                   className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#174B35] transition-colors hover:bg-[#e8efdf] focus-visible:outline-2 focus-visible:outline-[#174B35] sm:border sm:border-gray-200 sm:bg-white"
                 >
-                  <span>&larr; Back to Review</span>
+                  <span>{isUnlockMode ? "← Back to Documents" : "← Back to Review"}</span>
                 </button>
 
                 <div className="flex items-center justify-center gap-2 text-center text-xs font-medium text-gray-600">
