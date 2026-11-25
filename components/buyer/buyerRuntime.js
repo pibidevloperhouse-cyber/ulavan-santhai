@@ -1,4 +1,5 @@
 import { buyerScripts } from "@/data/buyerScripts";
+import { enhanceBuyerModal, enhanceBuyerView } from "@/components/buyer/buyerMobileEnhancements";
 
 export function initBuyerRuntime(initialPage = "home", initialProductId = null) {
   if (typeof window === "undefined") return;
@@ -14,6 +15,39 @@ export function initBuyerRuntime(initialPage = "home", initialProductId = null) 
       document.head.appendChild(script);
       script.remove();
     }
+
+    if (typeof window.render === "function") {
+      const prevRender = window.render;
+      window.render = function (...args) {
+        const res = prevRender.apply(this, args);
+        enhanceBuyerView();
+        return res;
+      };
+    }
+
+    if (typeof window.open_ === "function") {
+      const prevOpen = window.open_;
+      window.open_ = function (...args) {
+        const res = prevOpen.apply(this, args);
+        enhanceBuyerModal();
+        return res;
+      };
+    }
+
+    if (!window.__BUYER_MEDIA_BOUND__) {
+      window.__BUYER_MEDIA_BOUND__ = true;
+      const mq = window.matchMedia("(max-width: 900px)");
+      const onViewportCross = () => {
+        if (typeof window.render === "function") {
+          window.render();
+        }
+      };
+      if (typeof mq.addEventListener === "function") {
+        mq.addEventListener("change", onViewportCross);
+      }
+    }
+
+    enhanceBuyerView();
   } else {
     // Re-render header and main view in case DOM was remounted by React
     if (typeof window.buildHeader === "function") {
