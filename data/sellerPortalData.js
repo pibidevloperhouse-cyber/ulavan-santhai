@@ -141,6 +141,50 @@ export const CATEGORIES_LIST = [
   "Value-Added Products",
 ];
 
+export const CATEGORY_SUBCATEGORIES_MAP = {
+  "Agricultural Products": [
+    "Paddy & Rice",
+    "Millets & Cereals",
+    "Fresh Vegetables",
+    "Tropical Fruits",
+    "Pulses & Legumes",
+    "Spices & Condiments",
+    "Coconut & Oilseeds",
+    "Sugarcane",
+    "Flowers & Foliage",
+  ],
+  "Organic Products": [
+    "Certified Organic Vegetables",
+    "NPOP Native Spices",
+    "Traditional Rice (Karuppu Kavuni, Mappillai Samba)",
+    "Country Cane Jaggery & Palm Sugar",
+    "Natural Farming Produce",
+    "Native Herbal Mixes",
+  ],
+  "Agricultural Raw Materials": [
+    "Oilseeds & Copra",
+    "Raw Spices & Pepper",
+    "Dry Guntur/Sannam Chillies",
+    "Raw Cotton & Agro Fibres",
+    "Sugarcane Stalks",
+    "Tapioca Tubers",
+  ],
+  "Agriculture-Derived Ingredients": [
+    "Cold / Wood Pressed Oils (Marachekku)",
+    "Flours & Idli Mixes",
+    "Stone-ground Spice Powders",
+    "Natural Tapioca Starch",
+    "Herbal & Botanical Extracts",
+  ],
+  "Value-Added Products": [
+    "Millet Pasta & Noodles",
+    "Traditional Spicy Pickles",
+    "Nendran Banana & Tapioca Chips",
+    "Herbal Teas & Infusions",
+    "Fruit Jams & Concentrates",
+  ],
+};
+
 export const QUALITY_GRADES = [
   "Select grade",
   "Grade A (Export / Premium)",

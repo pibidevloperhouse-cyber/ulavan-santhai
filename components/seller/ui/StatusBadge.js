@@ -72,9 +72,10 @@ export default function StatusBadge({ status, className = "" }) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles} ${className}`}
+      title={status}
+      className={`inline-flex items-center justify-center max-w-full px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border truncate ${styles} ${className}`}
     >
-      {status}
+      <span className="truncate">{status}</span>
     </span>
   );
 }

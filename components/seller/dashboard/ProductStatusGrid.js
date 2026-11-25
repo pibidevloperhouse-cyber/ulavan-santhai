@@ -2,57 +2,88 @@
 
 import React from "react";
 import Link from "next/link";
-import StatusBadge from "../ui/StatusBadge";
+import { ChevronRight } from "lucide-react";
+
+const STATUS_DOT = {
+  Draft: "bg-[#6B7280]",
+  Submitted: "bg-[#D97706]",
+  "Under Review": "bg-[#D97706]",
+  Approved: "bg-[#1D7446]",
+  Published: "bg-[#174B35]",
+  Inactive: "bg-[#6B7280]",
+  Rejected: "bg-[#DC2626]",
+  "Expired / Unavailable": "bg-[#DC2626]",
+};
 
 export default function ProductStatusGrid({ statusBreakdown = [] }) {
+  const orderedLabels = [
+    "Draft",
+    "Submitted",
+    "Under Review",
+    "Approved",
+    "Published",
+    "Inactive",
+    "Rejected",
+    "Expired / Unavailable",
+  ];
+
+  const byLabel = new Map(statusBreakdown.map((item) => [item.label, item]));
+  const items = orderedLabels.map(
+    (label) => byLabel.get(label) || { label, count: 0, statusKey: label }
+  );
+
+  const totalCount = items.reduce(
+    (sum, item) => sum + (Number(item.count) || 0),
+    0
+  );
+
   return (
-    <div className="bg-white border border-[#E5E0D5] rounded-xl p-5 shadow-xs space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-[#1F2937]">
-          Product listings by status
-        </h2>
+    <div className="bg-white border border-[#E5E0D5] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-sm font-bold text-[#111827]">
+            Product listings by status
+          </h2>
+          <span className="font-space text-[11px] font-semibold text-[#5B6860] bg-[#F5F4F0] px-2 py-0.5 rounded-md">
+            {totalCount}
+          </span>
+        </div>
+
         <Link
           href="/seller/products"
-          className="text-xs text-[#1B4D36] font-semibold hover:underline"
+          className="inline-flex items-center gap-0.5 text-xs text-[#174B35] font-semibold hover:underline"
         >
-          Manage products
+          <span>Manage products</span>
+          <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {/* Row 1 (Top 6 statuses) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {statusBreakdown.slice(0, 6).map((item) => (
-          <Link
-            key={item.label}
-            href={`/seller/products?status=${encodeURIComponent(item.label)}`}
-            className="bg-[#FCFBF9] border border-[#E5E0D5] rounded-lg p-3 flex flex-col justify-between hover:border-[#1B4D36] hover:bg-[#F9FAF8] hover:shadow-xs active:scale-98 transition-all cursor-pointer group"
-          >
-            <div>
-              <StatusBadge status={item.label} />
-            </div>
-            <div className="mt-2.5 text-2xl font-bold text-[#111827] group-hover:text-[#1B4D36] transition-colors">
-              {item.count}
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* Balanced Status Matrix: 2-col mobile, 4-col tablet, 2-col inside 1024px split, 4-col on xl desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3">
+        {items.map((item) => {
+          const dotColor = STATUS_DOT[item.label] || "bg-[#6B7280]";
+          return (
+            <Link
+              key={item.label}
+              href={`/seller/products?status=${encodeURIComponent(item.label)}`}
+              className="min-w-0 bg-[#FAF9F6] hover:bg-[#F3F5F0] border border-[#EAE6DD] hover:border-[#9EB5A0] rounded-lg p-3 flex flex-col justify-between transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                <span
+                  title={item.label}
+                  className="text-xs font-medium text-[#374151] group-hover:text-[#111827] truncate"
+                >
+                  {item.label}
+                </span>
+              </div>
 
-      {/* Row 2 (Remaining statuses) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-        {statusBreakdown.slice(6).map((item) => (
-          <Link
-            key={item.label}
-            href={`/seller/products?status=${encodeURIComponent(item.label)}`}
-            className="bg-[#FCFBF9] border border-[#E5E0D5] rounded-lg p-3 flex flex-col justify-between hover:border-[#1B4D36] hover:bg-[#F9FAF8] hover:shadow-xs active:scale-98 transition-all cursor-pointer group"
-          >
-            <div>
-              <StatusBadge status={item.label} />
-            </div>
-            <div className="mt-2 text-xl font-bold text-[#111827] group-hover:text-[#1B4D36] transition-colors">
-              {item.count}
-            </div>
-          </Link>
-        ))}
+              <div className="mt-2.5 font-space text-xl sm:text-2xl font-bold text-[#111827] group-hover:text-[#174B35] transition-colors leading-none">
+                {item.count}
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

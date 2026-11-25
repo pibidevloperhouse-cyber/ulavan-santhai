@@ -9,7 +9,7 @@ export default function RenewPlanCard({
   paymentNotice = "",
 }) {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-5">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-5 min-w-0">
       <div className="pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">Renew or buy plan</h2>
       </div>

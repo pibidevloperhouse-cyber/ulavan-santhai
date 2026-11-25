@@ -306,6 +306,7 @@ export async function createSellerProduct(formData, isDraft = false) {
       sellerId: formData.sellerId || activeSellerId || undefined,
       name: formData.productName?.trim() || formData.name?.trim() || "",
       category: formData.productCategory || formData.category || "",
+      subcategory: formData.productSubcategory || formData.subcategory || null,
       productType: formData.productType?.trim() || null,
       variety: formData.variety?.trim() || null,
       qualityGrade: formData.qualityGrade !== "Select grade" ? formData.qualityGrade : null,
@@ -396,4 +397,4 @@ export function getLocalStoredProducts() {
   return [];
 }
 
-export function persistLocalProducts() {}
+export function persistLocalProducts() { }

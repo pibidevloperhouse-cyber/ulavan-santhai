@@ -10,8 +10,8 @@ export default function CurrentSubscriptionCard({
   if (!subscription) return null;
 
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-5">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">
           Current subscription
         </h2>
@@ -66,17 +66,17 @@ export default function CurrentSubscriptionCard({
         Admin and read from configuration.
       </div>
 
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-1">
         <button
           type="button"
           onClick={onRenew}
-          className="px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs"
+          className="px-4 py-2.5 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
         >
           Renew subscription
         </button>
         <a
           href="#payment-history"
-          className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors"
+          className="px-4 py-2.5 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors text-center cursor-pointer"
         >
           View payment history
         </a>

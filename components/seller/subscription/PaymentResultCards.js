@@ -5,8 +5,8 @@ import StatusBadge from "../ui/StatusBadge";
 
 export default function PaymentResultCards({ onRetry }) {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 shadow-2xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">
           Payment result screens
         </h2>

@@ -111,10 +111,10 @@ export default function MyProductsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6 min-w-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
             My products
           </h1>
@@ -125,7 +125,7 @@ export default function MyProductsPage() {
 
         <Link
           href="/seller/products/add"
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1B4D36] hover:bg-[#133A28] text-white text-xs font-semibold rounded-lg transition-colors shadow-xs self-start sm:self-auto cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1B4D36] hover:bg-[#133A28] text-white text-xs font-semibold rounded-lg transition-colors shadow-xs w-full sm:w-auto text-center cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           Add product

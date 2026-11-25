@@ -8,14 +8,14 @@ export default function AccountStatusCard({
   approvedDate = "15 Oct 2026",
 }) {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-5 sm:p-6 shadow-2xs space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
         <h2 className="text-sm font-bold text-[#1F2922]">Account status</h2>
         <span className="text-xs text-[#526458] font-medium">Verification</span>
       </div>
 
       {/* Current Status Pill */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <StatusBadge status={accountStatus} />
         <span className="text-xs text-[#5C6A61]">
           Approved by the Admin on {approvedDate}

@@ -26,21 +26,21 @@ export default function EnquiryList({
   }
 
   return (
-    <div className="bg-white border border-[#E5E0D5] rounded-xl overflow-hidden shadow-xs divide-y divide-[#F0EDE6]">
+    <div className="bg-white border border-[#E5E0D5] rounded-xl overflow-hidden shadow-xs divide-y divide-[#F0EDE6] min-w-0">
       {enquiries.map((item) => {
         const isSelected = item.id === selectedId;
         return (
           <div
             key={item.id}
             onClick={() => onSelectEnquiry(item.id)}
-            className={`p-4 cursor-pointer transition-colors ${
+            className={`p-3.5 sm:p-4 cursor-pointer transition-colors ${
               isSelected
                 ? "bg-[#FAF7F0] border-l-4 border-l-[#1B4D36]"
                 : "hover:bg-[#FAF9F6]"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="font-bold text-xs text-[#111827]">
+              <div className="font-bold text-xs text-[#111827] truncate">
                 {item.buyerName}
               </div>
               <span className="text-xs text-[#9CA3AF] shrink-0 font-medium">
@@ -48,7 +48,7 @@ export default function EnquiryList({
               </span>
             </div>
 
-            <div className="text-xs text-[#1B4D36] font-semibold mt-0.5">
+            <div className="text-xs text-[#1B4D36] font-semibold mt-0.5 truncate">
               {item.productName}
             </div>
 
@@ -56,7 +56,7 @@ export default function EnquiryList({
               {item.message}
             </p>
 
-            <div className="flex items-center gap-1.5 mt-2.5">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
               <StatusBadge status={item.status} />
               <StatusBadge status={item.enquiryType} />
             </div>

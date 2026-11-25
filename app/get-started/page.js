@@ -172,18 +172,20 @@ export default function GetStartedPage() {
   return (
     <div className="min-h-screen bg-[#F5F5EB] flex flex-col font-sans selection:bg-[#174B35] selection:text-white">
       {/* Top Brand Bar */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header className="bg-white/95 backdrop-blur-md border-b border-gray-200/90 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Animated Brand Logo */}
-          <BrandLogo width={165} priority />
+          <div className="shrink min-w-0 pr-1">
+            <BrandLogo width={160} className="w-[110px] sm:w-[160px]" priority />
+          </div>
 
-          {/* Quick Links, Home & Logout */}
-          <div className="flex items-center gap-3">
+          {/* Quick Links: Home & Logout */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <Link
               href="/"
-              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-2 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-1.5 shadow-2xs shrink-0 whitespace-nowrap active:scale-95"
             >
-              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#174B35] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span>Home</span>
@@ -192,9 +194,9 @@ export default function GetStartedPage() {
             <button
               type="button"
               onClick={handleLogout}
-              className="px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold rounded-xl text-[#174B35] bg-[#E8F0E3] hover:bg-[#d9e8d1] border border-[#729B59]/40 hover:border-[#729B59]/70 transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-1.5 shadow-2xs shrink-0 whitespace-nowrap active:scale-95"
             >
-              <svg className="w-4 h-4 text-[#174B35]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#174B35] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               <span>Logout</span>
@@ -204,42 +206,42 @@ export default function GetStartedPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col justify-center">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16 flex flex-col justify-center">
         {/* Page Title & Subtitle */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+        <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-12">
           <h1
             suppressHydrationWarning
-            className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#174B35] tracking-tight leading-tight"
+            className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#174B35] tracking-tight leading-tight px-1"
           >
             {userName ? `Welcome back, ${userName}!` : "Welcome to Ulavan Santhai!"}
           </h1>
-          <p className="mt-3 text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-2 sm:mt-3 text-xs sm:text-base lg:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto px-2">
             Switch between your Buyer and Seller workspaces anytime, or complete your tailored profile to start trading with zero middleman margin.
           </p>
-          <div className="mt-5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E8F0E3] text-[#174B35] text-xs font-bold tracking-wide uppercase border border-[#729B59]/30">
-            <span className="w-2 h-2 rounded-full bg-[#729B59]" />
+          <div className="mt-3.5 sm:mt-5 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-[#E8F0E3] text-[#174B35] text-[10px] sm:text-xs font-bold tracking-wide uppercase border border-[#729B59]/30">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#729B59]" />
             <span>Choose Your Marketplace Role</span>
           </div>
         </div>
 
         {/* 2 Large Image Cards Grid: Buyer and Seller */}
-        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto w-full gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto w-full gap-5 sm:gap-8 items-stretch pb-10 sm:pb-4">
           {cards.map((card) => (
             <div
               key={card.role}
               onClick={() => handleSelectRole(card.role)}
-              className={`group bg-white rounded-3xl overflow-hidden border-2 border-gray-200/90 shadow-sm hover:shadow-2xl ${card.borderAccent} transition-all duration-300 flex flex-col cursor-pointer hover:-translate-y-1.5 relative`}
+              className={`group bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/90 sm:border-2 shadow-xs sm:shadow-sm hover:shadow-xl ${card.borderAccent} transition-all duration-300 flex flex-col cursor-pointer hover:-translate-y-1 relative`}
             >
-              {/* Active Plan / Popular Badge */}
+              {/* Active Plan / Popular Badge (Desktop only on image; moved below photo on mobile so face is never covered) */}
               {card.isOnboarded ? (
-                <div className="absolute top-4 right-4 z-20">
+                <div className="hidden sm:block absolute sm:top-4 sm:right-4 z-20">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold shadow-md tracking-wide">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                     Verified Plan Active
                   </span>
                 </div>
               ) : card.popularBadge ? (
-                <div className="absolute top-4 right-4 z-20">
+                <div className="hidden sm:block absolute sm:top-4 sm:right-4 z-20">
                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#174B35] text-white text-[11px] font-bold shadow-md tracking-wide">
                     {card.popularBadge}
                   </span>
@@ -247,7 +249,7 @@ export default function GetStartedPage() {
               ) : null}
 
               {/* Large Image Header */}
-              <div className="relative aspect-[16/11] w-full overflow-hidden bg-gray-100">
+              <div className="relative aspect-[16/10] sm:aspect-[16/11] w-full overflow-hidden bg-gray-100">
                 <Image
                   src={card.image}
                   alt={card.alt}
@@ -256,13 +258,13 @@ export default function GetStartedPage() {
                   className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-3.5 left-4 right-4 text-white">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-200">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute bottom-3 left-3.5 right-3.5 sm:bottom-3.5 sm:left-4 sm:right-4 text-white">
+                  <span className="hidden sm:block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-200">
                     {card.badge}
                   </span>
                   <div className="flex items-baseline justify-between mt-0.5">
-                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+                    <h3 className="text-2xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight">
                       {card.title}
                     </h3>
                   </div>
@@ -270,18 +272,35 @@ export default function GetStartedPage() {
               </div>
 
               {/* Content Body */}
-              <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+              <div className="p-4 sm:p-6 lg:p-7 flex-1 flex flex-col justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600 mb-5 leading-relaxed min-h-[38px]">
+                  {/* Mobile-Only Status & Role Badge Bar (Neatly placed below photo so image is never obstructed) */}
+                  <div className="sm:hidden flex items-center justify-between gap-2 mb-3">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#174B35] bg-[#E8F0E3] px-2.5 py-1 rounded-lg border border-[#729B59]/30">
+                      {card.badge}
+                    </span>
+                    {card.isOnboarded ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold shadow-2xs tracking-wide shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        Verified Plan Active
+                      </span>
+                    ) : card.popularBadge ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#174B35] text-white text-[10px] font-bold shadow-2xs tracking-wide shrink-0">
+                        {card.popularBadge}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-gray-600 mb-3.5 sm:mb-5 leading-relaxed min-h-0 sm:min-h-[38px]">
                     {card.tagline}
                   </p>
 
-                  <div className="space-y-3 mb-6 pt-4 border-t border-gray-100">
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 pt-3 sm:pt-4 border-t border-gray-100">
                     {card.benefits.map((benefit, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5">
-                        <div className="w-5 h-5 rounded-full bg-[#E8F0E3] text-[#174B35] flex items-center justify-center shrink-0 mt-0.5">
+                      <div key={idx} className="flex items-start gap-2 sm:gap-2.5">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#E8F0E3] text-[#174B35] flex items-center justify-center shrink-0 mt-0.5">
                           <svg
-                            className="w-3.5 h-3.5"
+                            className="w-3 h-3 sm:w-3.5 sm:h-3.5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -302,19 +321,19 @@ export default function GetStartedPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="pt-2 space-y-2">
+                {/* Action Button */}
+                <div className="pt-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelectRole(card.role);
                     }}
-                    className={`w-full py-3.5 px-5 rounded-2xl font-bold text-sm transition-all duration-200 shadow-sm group-hover:shadow-md flex items-center justify-center gap-2 cursor-pointer ${card.buttonBg}`}
+                    className={`w-full py-3 sm:py-3.5 px-4 sm:px-5 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm transition-all duration-200 shadow-xs group-hover:shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] ${card.buttonBg}`}
                   >
                     <span>{card.buttonText}</span>
                     <svg
-                      className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
