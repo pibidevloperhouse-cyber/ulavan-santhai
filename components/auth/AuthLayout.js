@@ -27,13 +27,22 @@ function Leaves() {
   );
 }
 
-export default function AuthLayout({ titleId, children, overlay }) {
+export default function AuthLayout({
+  titleId,
+  children,
+  overlay,
+  backdrop = null,
+  pageClassName = "",
+  panelClassName = "",
+  backHref = "/",
+}) {
   return (
-    <div className="login-page">
+    <div className={`login-page ${pageClassName}`.trim()}>
+      {backdrop}
       {/* Top Floating Back Link */}
       <div className="login-navigation">
         <Link
-          href="/"
+          href={backHref}
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/95 backdrop-blur-md text-[#174B35] hover:text-[#103A29] text-xs font-bold shadow-xs border border-gray-200 hover:border-[#174B35]/40 transition-all duration-200"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,7 +53,7 @@ export default function AuthLayout({ titleId, children, overlay }) {
       </div>
 
       <main className="login-layout">
-        <section className="login-panel" aria-labelledby={titleId}>
+        <section className={`login-panel ${panelClassName}`.trim()} aria-labelledby={titleId}>
           <Leaves />
           {children}
         </section>

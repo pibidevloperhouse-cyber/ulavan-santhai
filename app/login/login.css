@@ -15,6 +15,174 @@
     url("/images/register-green-fields.webp");
 }
 
+.login-page.admin-login-page {
+  background-color: #0e5a30;
+  background-image:
+    radial-gradient(ellipse at center, rgba(12, 62, 34, 0.04) 42%, rgba(6, 28, 16, 0.34) 100%),
+    url("/images/admin-login-bg-hd.png");
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.admin-icons-rail {
+  position: absolute;
+  top: 42%;
+  right: clamp(1.25rem, 4.5vw, 4.75rem);
+  z-index: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.05rem, 2svh, 1.55rem);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.admin-icons-rail::before {
+  content: "";
+  position: absolute;
+  top: -1.75rem;
+  bottom: -1.75rem;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom,
+      transparent,
+      rgba(220, 238, 193, 0.28) 18%,
+      rgba(220, 238, 193, 0.28) 82%,
+      transparent);
+  z-index: 0;
+}
+
+.admin-bg-icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(3.15rem, 4.3vw, 4.25rem);
+  height: clamp(3.15rem, 4.3vw, 4.25rem);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, rgba(18, 102, 50, 0.38), rgba(7, 62, 27, 0.56));
+  opacity: 0;
+  transform: scale(0.88);
+  transform-origin: center center;
+  will-change: opacity, transform;
+}
+
+.admin-bg-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.admin-bg-icon-1 {
+  animation: adminIconSeq1 6.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.admin-bg-icon-2 {
+  animation: adminIconSeq2 6.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.admin-bg-icon-3 {
+  animation: adminIconSeq3 6.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@media (min-width: 768px) {
+  .admin-icons-rail {
+    display: flex;
+  }
+}
+
+@keyframes adminIconSeq1 {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  9%,
+  89% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes adminIconSeq2 {
+
+  0%,
+  14% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  23%,
+  89% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes adminIconSeq3 {
+
+  0%,
+  28% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  37%,
+  89% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-bg-icon {
+    animation: none;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.login-panel.admin-login-panel {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(244, 250, 236, 0.82));
+  backdrop-filter: blur(10px) saturate(125%);
+  box-shadow: 0 22px 54px rgba(5, 28, 15, 0.38);
+}
+
+@media (min-width: 768px) {
+  .login-panel.admin-login-panel {
+    width: min(100%, 31.5rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .login-page.admin-login-page .login-layout {
+    align-content: center;
+    padding-bottom: 2.5rem;
+  }
+}
+
 .login-navigation {
   position: absolute;
   z-index: 3;
@@ -63,7 +231,7 @@
   pointer-events: none;
 }
 
-.login-panel > .login-leaves {
+.login-panel>.login-leaves {
   top: -5.7svh;
   width: clamp(5rem, 12vw, 12rem);
 }
@@ -128,7 +296,7 @@
     border-radius: 1.75rem;
   }
 
-  .login-panel > .login-leaves {
+  .login-panel>.login-leaves {
     top: -.8rem;
     right: -.45rem;
     width: clamp(5rem, 8vw, 8rem);
@@ -147,7 +315,7 @@
     margin-top: .75rem;
   }
 
-  :is(.register-form, .login-form) > :not(:last-child) {
+  :is(.register-form, .login-form)> :not(:last-child) {
     margin-block-end: clamp(.35rem, 1.15svh, .65rem);
   }
 
@@ -188,7 +356,7 @@
     overflow: hidden;
   }
 
-  .login-panel > .login-leaves {
+  .login-panel>.login-leaves {
     top: 0;
   }
 
