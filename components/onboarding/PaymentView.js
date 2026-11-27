@@ -127,7 +127,7 @@ export default function PaymentView({
         const isLoaded = razorpayKey ? await loadRazorpayScript() : false;
 
         if (isLoaded && razorpayKey && typeof window !== "undefined" && window.Razorpay) {
-          const orderRes = await createRazorpayOrder("SELLER_CATEGORY_UNLOCK").catch(() => null);
+          const orderRes = await createRazorpayOrder(selectedRoles).catch(() => null);
           const orderData = orderRes?.data || orderRes?.raw?.data || orderRes;
           const orderId = orderData?.orderId || orderData?.id;
 
@@ -188,6 +188,8 @@ export default function PaymentView({
       role: currentRole,
       userAuth,
       amount: effectiveAmount,
+      selectedCategories: isBuyer ? ["Buyer"] : selectedRoles,
+      categories: isBuyer ? ["Buyer"] : selectedRoles,
       onSuccess: async (resultPayload) => {
         setPaymentResult(resultPayload);
 

@@ -10,7 +10,7 @@ import FormInput from "@/components/forms/FormInput";
 import FormSelect from "@/components/forms/FormSelect";
 import DocumentUploader from "@/components/forms/DocumentUploader";
 import { submitApplication } from "@/services/onboardingApi";
-import { submitRolePayment, fetchCurrentUserProfile } from "@/services/paymentApi";
+import { fetchCurrentUserProfile } from "@/services/paymentApi";
 import { useSessionUser } from "@/services/sessionAuth";
 import PaymentView from "@/components/onboarding/PaymentView";
 import BrandLogo from "@/components/ui/BrandLogo";
@@ -789,43 +789,7 @@ function OnboardingContent({ initialRole, initialMode = "", initialUnlockCategor
     try {
       await submitApplication(fullPayload);
 
-      // 2. Submit Payment Record via Payment API
-      const checkoutData = {
-        transactionId: txId,
-        gatewayReference: gwRef,
-        userId: userAuth?.id || "",
-        userName: userAuth?.name || "Registered Member",
-        userEmail: userAuth?.email || "",
-        userMobile: userAuth?.mobile || "",
-        role: role.toUpperCase(),
-        planId:
-          role === "buyer"
-            ? "plan_buyer_base"
-            : isUnlockMode
-              ? `plan_seller_unlock_${resolvedSellerTypes.length}`
-              : resolvedSellerTypes.length > 1
-                ? `plan_seller_multi_${resolvedSellerTypes.length}`
-                : "plan_seller_monthly",
-        planName:
-          role === "buyer"
-            ? `Buyer Access Plan (${buyerViewLimit} Sellers)`
-            : isUnlockMode
-              ? `Additional Classification Unlock (${sellerTypesLabel} - ₹${resolvedSellerTypes.length * 365})`
-              : `Seller Monthly Plan (${resolvedSellerTypes.length} Role${resolvedSellerTypes.length > 1 ? "s" : ""} - ₹${resolvedSellerTypes.length * 365})`,
-        baseAmount,
-        taxAmount: 0,
-        totalAmount,
-        currency: "INR",
-        paymentMethod: "Razorpay (UPI / Cards / Net Banking)",
-        paymentDetails: {
-          gateway: "Razorpay",
-          razorpayPaymentId: gwRef,
-        },
-      };
-
-      await submitRolePayment(checkoutData);
-
-      // 3. Update session user state with role-specific independent completion flags
+      // 2. Update session user state with role-specific independent completion flags
       let nextSellerProfileData = null;
       if (typeof window !== "undefined") {
         const stored =

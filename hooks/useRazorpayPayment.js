@@ -34,6 +34,8 @@ export function useRazorpayPayment() {
       role = "buyer",
       userAuth = {},
       amount: requestedAmount,
+      categories = [],
+      selectedCategories = [],
       onSuccess,
       onFailure,
     }) => {
@@ -54,8 +56,17 @@ export function useRazorpayPayment() {
           );
         }
 
+        const activeCategories =
+          selectedCategories.length > 0
+            ? selectedCategories
+            : categories.length > 0
+            ? categories
+            : isBuyer
+            ? ["Buyer"]
+            : ["Farmer"];
+
         // 2. Step 1: Create Order on Backend (/api/v1/payments/create-order)
-        const orderRes = await createRazorpayOrder(planId);
+        const orderRes = await createRazorpayOrder(activeCategories);
 
         // Handle HTTP 409 Conflict: user already has an active membership for this role
         if (

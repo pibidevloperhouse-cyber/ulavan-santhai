@@ -55,13 +55,19 @@ export const PRICING_PLANS = {
 
 /**
  * Step 1: Create payment order on backend
- * Calls POST /api/v1/payments/create-order with { planId }
+ * Calls POST /api/v1/payments/create-order with { categories: selectedCategories }
  * Backend fetches price from database, creates Razorpay order, returns { orderId, amount, currency, keyId, plan }
  */
-export async function createRazorpayOrder(planId) {
+export async function createRazorpayOrder(selectedCategories = []) {
+  const categoriesList = Array.isArray(selectedCategories)
+    ? selectedCategories
+    : selectedCategories?.categories || (typeof selectedCategories === "string" ? [selectedCategories] : []);
+
   return apiFetch("/api/v1/payments/create-order", {
     method: "POST",
-    body: JSON.stringify({ planId }),
+    body: JSON.stringify({
+      categories: categoriesList,
+    }),
   });
 }
 
@@ -79,11 +85,10 @@ export async function verifyRazorpayPayment(verificationData) {
 
 /**
  * Backward-compatible helper for legacy components
+ * Note: Razorpay order creation and verification are handled during checkout.
  */
-export async function submitRolePayment(checkoutData) {
-  const role = (checkoutData.role || "BUYER").toUpperCase();
-  const plan = PRICING_PLANS[role] || PRICING_PLANS.BUYER;
-  return createRazorpayOrder(plan.id);
+export async function submitRolePayment() {
+  return { success: true };
 }
 
 /**
