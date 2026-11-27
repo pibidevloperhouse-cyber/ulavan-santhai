@@ -11,14 +11,14 @@ export default function EnquiryList({
 }) {
   if (enquiries.length === 0) {
     return (
-      <div className="bg-white border border-[#E5E0D5] rounded-xl p-10 text-center space-y-2 shadow-xs">
-        <div className="w-10 h-10 rounded-full bg-[#F3F4F6] text-[#6B7280] flex items-center justify-center mx-auto">
+      <div className="bg-white border border-[#DDE7CE] rounded-2xl p-10 text-center space-y-2 shadow-xs">
+        <div className="w-10 h-10 rounded-full bg-[#ECF9C4] text-[#0B3C26] flex items-center justify-center mx-auto">
           <Mail className="w-5 h-5" />
         </div>
-        <div className="text-xs font-bold text-[#111827]">
+        <div className="text-xs font-bold text-[#0B3C26]">
           No buyer enquiries
         </div>
-        <p className="text-xs text-[#6B7280] leading-relaxed max-w-xs mx-auto">
+        <p className="text-xs text-[#4E6D45] leading-relaxed max-w-xs mx-auto">
           When buyers send queries about your products, you will see them listed here.
         </p>
       </div>
@@ -26,7 +26,7 @@ export default function EnquiryList({
   }
 
   return (
-    <div className="bg-white border border-[#E5E0D5] rounded-xl overflow-hidden shadow-xs divide-y divide-[#F0EDE6] min-w-0">
+    <div className="bg-white border border-[#DDE7CE] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#EDF3DF] min-w-0">
       {enquiries.map((item) => {
         const isSelected = item.id === selectedId;
         return (
@@ -35,24 +35,24 @@ export default function EnquiryList({
             onClick={() => onSelectEnquiry(item.id)}
             className={`p-3.5 sm:p-4 cursor-pointer transition-colors ${
               isSelected
-                ? "bg-[#FAF7F0] border-l-4 border-l-[#1B4D36]"
-                : "hover:bg-[#FAF9F6]"
+                ? "bg-[#ECF9C4]/55 border-l-4 border-l-[#2D8A3E]"
+                : "hover:bg-[#F5F7EC]"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="font-bold text-xs text-[#111827] truncate">
+              <div className="font-bold text-xs text-[#0B3C26] truncate">
                 {item.buyerName}
               </div>
-              <span className="text-xs text-[#9CA3AF] shrink-0 font-medium">
+              <span className="text-xs text-[#54754B] shrink-0 font-medium">
                 {item.timeAgo}
               </span>
             </div>
 
-            <div className="text-xs text-[#1B4D36] font-semibold mt-0.5 truncate">
+            <div className="text-xs text-[#2D8A3E] font-semibold mt-0.5 truncate">
               {item.productName}
             </div>
 
-            <p className="text-xs text-[#4B5563] mt-1 line-clamp-2 leading-relaxed font-normal">
+            <p className="text-xs text-[#3C5840] mt-1 line-clamp-2 leading-relaxed font-normal">
               {item.message}
             </p>
 

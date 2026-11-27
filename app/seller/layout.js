@@ -17,7 +17,7 @@ function SellerLayoutShell({ children }) {
   return (
     <div className="min-h-screen bg-[#F5F5EB] text-[#0B3C26] pt-14 lg:pt-0 overflow-x-clip">
       {/* Mobile Top Header - fixed at top on mobile/tablet so it never scrolls out of view */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white text-gray-900 px-3 sm:px-4 flex items-center justify-between border-b border-gray-200 shadow-xs">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white text-[#0B3C26] px-3 sm:px-4 flex items-center justify-between border-b border-[#DDE7CE] shadow-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
@@ -49,7 +49,7 @@ function SellerLayoutShell({ children }) {
               priority
               className="w-[96px] xs:w-[108px] sm:w-[125px] max-h-9 h-auto object-contain shrink-0"
             />
-            <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[#174B35] tracking-wider px-1.5 py-0.5 rounded bg-[#E8F0E3] border border-[#729B59]/40 shrink-0">
+            <span className="text-[9px] sm:text-[10px] uppercase font-extrabold text-[#0B3C26] tracking-wider px-1.5 py-0.5 rounded bg-[#C5F340] border border-[#0B3C26]/15 shrink-0">
               SELLER
             </span>
           </Link>
@@ -61,7 +61,7 @@ function SellerLayoutShell({ children }) {
           <Link
             href="/seller/profile"
             title="View profile and settings"
-            className="w-8 h-8 rounded-full bg-[#E8F0E3] text-[#174B35] font-bold text-xs flex items-center justify-center border border-[#729B59]/30 hover:ring-2 hover:ring-[#174B35]/20 transition-all cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-full bg-[#ECF9C4] text-[#0B3C26] font-bold text-xs flex items-center justify-center border border-[#C5E37A] hover:ring-2 hover:ring-[#8DC63F]/40 transition-all cursor-pointer shrink-0"
           >
             {profile.avatarInitials || "S"}
           </Link>

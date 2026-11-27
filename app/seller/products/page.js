@@ -115,17 +115,17 @@ export default function MyProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B3C26]">
             My products
           </h1>
-          <p className="text-xs sm:text-sm text-[#4B5563] mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-[#4E6D45] mt-1 font-medium">
             Create, edit and manage your agricultural product listings
           </p>
         </div>
 
         <Link
           href="/seller/products/add"
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1B4D36] hover:bg-[#133A28] text-white text-xs font-semibold rounded-lg transition-colors shadow-xs w-full sm:w-auto text-center cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#C5F340] hover:bg-[#d3fc59] text-[#0B3C26] text-xs font-extrabold rounded-xl transition-colors shadow-xs w-full sm:w-auto text-center cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           Add product

@@ -172,12 +172,87 @@ function AddProductFormContent() {
     setHasClearedCategory(!val);
   };
 
-  const handleProceedToUnlockOnboarding = () => {
+  const handleProceedToUnlockSubscription = () => {
     if (!pendingUnlockCategory) return;
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          "ulavan_add_product_draft",
+          JSON.stringify({
+            productName,
+            productSubcategory,
+            productType,
+            variety,
+            qualityGrade,
+            size,
+            productDescription,
+            placeOfOrigin,
+            productionLocation,
+            processingLocation,
+            manufacturingLocation,
+            moqQty,
+            moqUnit,
+            moqVariesBy,
+            availability,
+            processingDetails,
+            manufacturingDetails,
+            packagingDetails,
+            specifications,
+            otherAttributes,
+          })
+        );
+      } catch {
+        // ignore storage quota errors
+      }
+    }
     const target = encodeURIComponent(pendingUnlockCategory);
     setPendingUnlockCategory(null);
-    router.push(`/onboarding?role=seller&mode=unlock&category=${target}&step=2`);
+    router.push(`/seller/subscription?unlock=${target}`);
   };
+
+  // Restore draft fields if returning from category unlock on Subscription page
+  useEffect(() => {
+    if (editId || !unlockedParam || typeof window === "undefined") return;
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (!isMounted) return;
+      try {
+        const rawDraft = sessionStorage.getItem("ulavan_add_product_draft");
+        if (!rawDraft) return;
+        const draft = JSON.parse(rawDraft);
+        sessionStorage.removeItem("ulavan_add_product_draft");
+        if (draft.productName) setProductName(draft.productName);
+        if (draft.productSubcategory) setProductSubcategory(draft.productSubcategory);
+        if (draft.productType) setProductType(draft.productType);
+        if (draft.variety) setVariety(draft.variety);
+        if (draft.qualityGrade) setQualityGrade(draft.qualityGrade);
+        if (draft.size) setSize(draft.size);
+        if (draft.productDescription) setProductDescription(draft.productDescription);
+        if (draft.placeOfOrigin) setPlaceOfOrigin(draft.placeOfOrigin);
+        if (draft.productionLocation) setProductionLocation(draft.productionLocation);
+        if (draft.processingLocation) setProcessingLocation(draft.processingLocation);
+        if (draft.manufacturingLocation) setManufacturingLocation(draft.manufacturingLocation);
+        if (draft.moqQty) setMoqQty(draft.moqQty);
+        if (draft.moqUnit) setMoqUnit(draft.moqUnit);
+        if (draft.moqVariesBy) setMoqVariesBy(draft.moqVariesBy);
+        if (draft.availability) setAvailability(draft.availability);
+        if (draft.processingDetails) setProcessingDetails(draft.processingDetails);
+        if (draft.manufacturingDetails) setManufacturingDetails(draft.manufacturingDetails);
+        if (draft.packagingDetails) setPackagingDetails(draft.packagingDetails);
+        if (Array.isArray(draft.specifications) && draft.specifications.length > 0) {
+          setSpecifications(draft.specifications);
+        }
+        if (Array.isArray(draft.otherAttributes) && draft.otherAttributes.length > 0) {
+          setOtherAttributes(draft.otherAttributes);
+        }
+      } catch {
+        // ignore invalid draft JSON
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [editId, unlockedParam]);
 
   // Load existing product if editing
   useEffect(() => {
@@ -404,28 +479,28 @@ function AddProductFormContent() {
     <div className="space-y-6">
       {/* Breadcrumb & Header */}
       <div>
-        <div className="flex items-center gap-1.5 text-xs text-[#7A877E] mb-1">
+        <div className="flex items-center gap-1.5 text-xs text-[#54754B] mb-1">
           <Link
             href="/seller/products"
-            className="text-[#24583B] hover:underline"
+            className="text-[#174B35] font-semibold hover:underline"
           >
             My products
           </Link>
           <span>/</span>
-          <span className="text-[#1F2922] font-medium">
+          <span className="text-[#0B3C26] font-semibold">
             {isEditing ? "Edit product" : "Add product"}
           </span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1F2922]">
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B3C26]">
               {isEditing ? "Edit product" : "Add product"}
             </h1>
-            <p className="text-xs text-[#526458] mt-0.5">
+            <p className="text-xs text-[#4E6D45] mt-0.5">
               <span className="text-[#C53030] font-semibold">Mandatory</span>{" "}
-              <span className="text-[#7A877E] font-medium">Applicable</span>{" "}
-              <span className="text-[#24583B] font-semibold">Configurable</span> —
+              <span className="text-[#54754B] font-medium">Applicable</span>{" "}
+              <span className="text-[#174B35] font-semibold">Configurable</span> —
               &ldquo;Applicable&rdquo; fields show or hide by category.
             </p>
           </div>
@@ -434,14 +509,14 @@ function AddProductFormContent() {
             <button
               type="button"
               onClick={() => handleSubmit("draft")}
-              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-white hover:bg-[#F5F7EC] text-[#0B3C26] border border-[#DDE7CE] text-xs font-semibold rounded-xl transition-colors shadow-2xs text-center cursor-pointer"
             >
               Save as draft
             </button>
             <button
               type="button"
               onClick={() => handleSubmit("review")}
-              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center cursor-pointer"
+              className="flex-1 sm:flex-initial px-4 py-2 bg-[#C5F340] hover:bg-[#d3fc59] text-[#0B3C26] text-xs font-extrabold rounded-xl transition-colors shadow-2xs text-center cursor-pointer"
             >
               {isEditing ? "Save & submit changes" : "Submit for review"}
             </button>
@@ -450,7 +525,7 @@ function AddProductFormContent() {
       </div>
 
       {statusMessage && (
-        <div className="p-3 bg-[#EAF5EC] border border-[#BEE3C8] text-[#1D7446] text-xs font-medium rounded-lg">
+        <div className="p-3 bg-[#ECF9C4] border border-[#C5E37A] text-[#0B3C26] text-xs font-semibold rounded-xl">
           {statusMessage}
         </div>
       )}
@@ -550,21 +625,21 @@ function AddProductFormContent() {
           <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3 pt-3">
             <Link
               href="/seller/products"
-              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors"
+              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#F5F7EC] text-[#0B3C26] border border-[#DDE7CE] text-xs font-bold rounded-xl transition-colors"
             >
               Cancel
             </Link>
             <button
               type="button"
               onClick={() => handleSubmit("draft")}
-              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex-1 sm:flex-initial text-center px-4 py-2 bg-white hover:bg-[#F5F7EC] text-[#0B3C26] border border-[#DDE7CE] text-xs font-bold rounded-xl transition-colors cursor-pointer"
             >
               Save as draft
             </button>
             <button
               type="button"
               onClick={() => handleSubmit("review")}
-              className="w-full sm:w-auto text-center px-4 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+              className="w-full sm:w-auto text-center px-4 py-2 bg-[#C5F340] hover:bg-[#d3fc59] text-[#0B3C26] text-xs font-extrabold rounded-xl transition-colors shadow-2xs cursor-pointer"
             >
               {isEditing ? "Save & submit changes" : "Submit for review"}
             </button>
@@ -584,64 +659,65 @@ function AddProductFormContent() {
           onClick={() => setPendingUnlockCategory(null)}
         >
           <div
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center animate-in zoom-in-95 duration-200"
+            className="bg-white border border-[#DDE7CE] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* ₹ Rupee Icon Circle */}
-            <div className="w-14 h-14 rounded-full bg-[#EAF5EC] flex items-center justify-center mx-auto mb-4 text-[#174B35]">
+            <div className="w-14 h-14 rounded-full bg-[#ECF9C4] border border-[#C5E37A] flex items-center justify-center mx-auto mb-4 text-[#0B3C26]">
               <span className="text-2xl font-black leading-none">₹</span>
             </div>
 
-            <h3 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mb-2">
-              Add Another Classification
+            <h3 className="text-xl sm:text-2xl font-extrabold text-[#0B3C26] tracking-tight mb-2">
+              Unlock Classification
             </h3>
 
-            <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed max-w-sm mx-auto mb-4">
+            <p className="text-xs sm:text-sm text-[#4E6D45] font-medium leading-relaxed max-w-sm mx-auto mb-4">
               {unlockedCategories.length > 0 ? (
                 <>
-                  You have already purchased{" "}
-                  <strong className="text-[#174B35]">
+                  You have already unlocked{" "}
+                  <strong className="text-[#0B3C26]">
                     {unlockedCategories.join(", ")}
                   </strong>
                   . To add products under{" "}
-                  <strong className="text-gray-900">{pendingUnlockCategory}</strong>,
-                  upload the required documents and pay ₹365.
+                  <strong className="text-[#0B3C26]">{pendingUnlockCategory}</strong>,
+                  continue to Subscription &amp; Payments to upload the required documents before paying ₹365.
                 </>
               ) : (
                 <>
-                  Complete verification and pay ₹365 to add products under{" "}
-                  <strong className="text-gray-900">{pendingUnlockCategory}</strong>.
+                  To add products under{" "}
+                  <strong className="text-[#0B3C26]">{pendingUnlockCategory}</strong>,
+                  continue to Subscription &amp; Payments to upload verification documents and pay ₹365.
                 </>
               )}
             </p>
 
-            {/* Summary Card matching Onboarding UI */}
-            <div className="bg-[#EDF7EE] border border-[#D3E8D6] rounded-2xl p-4 sm:p-5 mb-5 text-center space-y-1.5">
+            {/* Summary Card matching Subscription Flow */}
+            <div className="bg-[#F2FAE0] border border-[#C5E37A] rounded-2xl p-4 sm:p-5 mb-5 text-center space-y-1.5">
               {unlockedCategories.length > 0 && (
-                <div className="text-[11px] font-semibold text-[#174B35]">
+                <div className="text-[11px] font-semibold text-[#2D8A3E]">
                   Already Active: {unlockedCategories.join(", ")}
                 </div>
               )}
-              <div className="text-sm sm:text-base font-extrabold text-gray-900">
+              <div className="text-sm sm:text-base font-extrabold text-[#0B3C26]">
                 {pendingUnlockCategory} • ₹365
               </div>
-              <div className="text-[11px] text-gray-600 font-medium">
-                Document Upload &rarr; Payment (₹365)
+              <div className="text-[11px] text-[#4E6D45] font-medium">
+                Subscription &amp; Payments &rarr; Upload Docs &rarr; Pay ₹365
               </div>
             </div>
 
             <div className="space-y-2.5">
               <button
                 type="button"
-                onClick={handleProceedToUnlockOnboarding}
-                className="w-full py-3.5 px-6 rounded-xl bg-[#174B35] hover:bg-[#113B29] text-white font-bold text-sm sm:text-base shadow-md transition-all cursor-pointer"
+                onClick={handleProceedToUnlockSubscription}
+                className="w-full py-3.5 px-6 rounded-xl bg-[#C5F340] hover:bg-[#d3fc59] text-[#0B3C26] font-extrabold text-sm sm:text-base shadow-sm transition-all cursor-pointer"
               >
-                Continue to Upload Docs &amp; Pay ₹365 &rarr;
+                Go to Subscription &amp; Upload Docs &rarr;
               </button>
               <button
                 type="button"
                 onClick={() => setPendingUnlockCategory(null)}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-[#4E6D45] hover:bg-[#F5F7EC] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -657,7 +733,7 @@ export default function AddProductPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-xs text-[#7A877E]">
+        <div className="p-8 text-center text-xs text-[#54754B]">
           Loading product editor...
         </div>
       }

@@ -58,10 +58,10 @@ export default function BuyerEnquiriesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#1F2922]">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B3C26]">
           Buyer enquiries
         </h1>
-        <p className="text-xs sm:text-sm text-[#4B5563] mt-1 font-medium">
+        <p className="text-xs sm:text-sm text-[#4E6D45] mt-1 font-medium">
           Enquiries and interest from buyers on your products
         </p>
       </div>
@@ -69,13 +69,13 @@ export default function BuyerEnquiriesPage() {
       {/* Tabs & Search Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Filter Pills */}
-        <div className="flex flex-wrap p-1 bg-[#EBE7DD] rounded-lg gap-1 w-full sm:w-auto">
+        <div className="flex flex-wrap p-1 bg-[#EDF3DF] border border-[#DDE7CE] rounded-xl gap-1 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setFilterTab("ALL")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "ALL"
-              ? "bg-[#24583B] text-white shadow-xs"
-              : "text-[#4B5A50] hover:text-[#1F2922]"
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${filterTab === "ALL"
+              ? "bg-[#C5F340] text-[#0B3C26] shadow-2xs"
+              : "text-[#4E6D45] hover:text-[#0B3C26]"
               }`}
           >
             All ({enquiries.length})
@@ -83,9 +83,9 @@ export default function BuyerEnquiriesPage() {
           <button
             type="button"
             onClick={() => setFilterTab("NEW")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "NEW"
-              ? "bg-[#24583B] text-white shadow-xs"
-              : "text-[#4B5A50] hover:text-[#1F2922]"
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${filterTab === "NEW"
+              ? "bg-[#C5F340] text-[#0B3C26] shadow-2xs"
+              : "text-[#4E6D45] hover:text-[#0B3C26]"
               }`}
           >
             New ({newCount})
@@ -93,9 +93,9 @@ export default function BuyerEnquiriesPage() {
           <button
             type="button"
             onClick={() => setFilterTab("REPLIED")}
-            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${filterTab === "REPLIED"
-              ? "bg-[#24583B] text-white shadow-xs"
-              : "text-[#4B5A50] hover:text-[#1F2922]"
+            className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer ${filterTab === "REPLIED"
+              ? "bg-[#C5F340] text-[#0B3C26] shadow-2xs"
+              : "text-[#4E6D45] hover:text-[#0B3C26]"
               }`}
           >
             Replied ({repliedCount})
@@ -109,9 +109,9 @@ export default function BuyerEnquiriesPage() {
             placeholder="Search by Buyer or product"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-3 pr-8 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] placeholder:text-[#9BA59E] focus:outline-none focus:border-[#24583B] shadow-2xs"
+            className="w-full pl-3 pr-8 py-2 bg-white border border-[#DDE7CE] rounded-xl text-xs text-[#0B3C26] placeholder:text-[#7A877E] focus:outline-none focus:border-[#2D8A3E] shadow-2xs"
           />
-          <Search className="w-4 h-4 text-[#8E9B92] absolute right-2.5 top-2.5 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#54754B] absolute right-2.5 top-2.5 pointer-events-none" />
         </div>
       </div>
 

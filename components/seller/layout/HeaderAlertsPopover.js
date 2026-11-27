@@ -63,14 +63,14 @@ export default function HeaderAlertsPopover({ compact = false }) {
         aria-label="Buyer enquiries"
         aria-expanded={openMenu === "enquiries"}
         title="Buyer enquiries"
-        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "enquiries"
-          ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
-          : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
+        className={`relative ${buttonSize} rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "enquiries"
+          ? "bg-[#ECF9C4] border-[#8DC63F] text-[#0B3C26]"
+          : "bg-white border-[#DDE7CE] text-[#3C5840] hover:bg-[#F5F7EC] hover:text-[#0B3C26]"
           }`}
       >
         <Mail className="w-4 h-4" />
         {newEnquiries > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#E6A93B] text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#C5F340] text-[#0B3C26] text-[10px] font-bold flex items-center justify-center leading-none">
             {newEnquiries}
           </span>
         )}
@@ -83,14 +83,14 @@ export default function HeaderAlertsPopover({ compact = false }) {
         aria-label="Notifications"
         aria-expanded={openMenu === "notifications"}
         title="Notifications"
-        className={`relative ${buttonSize} rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "notifications"
-          ? "bg-[#E8F0E3] border-[#729B59] text-[#174B35]"
-          : "bg-white border-[#D5DCD4] text-[#374151] hover:bg-[#FAF9F5] hover:text-[#174B35]"
+        className={`relative ${buttonSize} rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${openMenu === "notifications"
+          ? "bg-[#ECF9C4] border-[#8DC63F] text-[#0B3C26]"
+          : "bg-white border-[#DDE7CE] text-[#3C5840] hover:bg-[#F5F7EC] hover:text-[#0B3C26]"
           }`}
       >
         <Bell className="w-4 h-4" />
         {unreadNotifications > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#174B35] text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#0B3C26] text-[#C5F340] text-[10px] font-bold flex items-center justify-center leading-none">
             {unreadNotifications}
           </span>
         )}
@@ -98,9 +98,9 @@ export default function HeaderAlertsPopover({ compact = false }) {
 
       {/* Enquiries Popover Panel */}
       {openMenu === "enquiries" && (
-        <div className="fixed inset-x-3 top-[60px] max-w-sm ml-auto lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-80 bg-white border border-[#E5E0D5] rounded-xl shadow-lg z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#F0ECE4] flex items-center justify-between bg-[#FAF9F6]">
-            <span className="text-xs font-bold text-[#111827]">
+        <div className="fixed inset-x-3 top-[60px] max-w-sm ml-auto lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-80 bg-white border border-[#DDE7CE] rounded-2xl shadow-lg z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#E7EEDB] flex items-center justify-between bg-[#F2F7E6]">
+            <span className="text-xs font-bold text-[#0B3C26]">
               Buyer enquiries
             </span>
             <Link
@@ -112,13 +112,13 @@ export default function HeaderAlertsPopover({ compact = false }) {
             </Link>
           </div>
 
-          <div className="max-h-64 overflow-y-auto divide-y divide-[#F4F1EA]">
+          <div className="max-h-64 overflow-y-auto divide-y divide-[#EDF3DF]">
             {EMPTY_LIST.length === 0 ? (
               <div className="px-4 py-5 text-center space-y-1">
-                <p className="text-xs font-semibold text-[#374151]">
+                <p className="text-xs font-semibold text-[#0B3C26]">
                   No buyer enquiries yet
                 </p>
-                <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                <p className="text-[11px] text-[#54754B] leading-relaxed">
                   Buyer enquiries and bulk quote requests appear here.
                 </p>
               </div>
@@ -128,17 +128,17 @@ export default function HeaderAlertsPopover({ compact = false }) {
                   key={enq.id}
                   href="/seller/enquiries"
                   onClick={() => setOpenMenu(null)}
-                  className="block px-4 py-3 hover:bg-[#FAF9F6] transition-colors"
+                  className="block px-4 py-3 hover:bg-[#F5F7EC] transition-colors"
                 >
                   <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-semibold text-[#111827] truncate">
+                    <span className="font-semibold text-[#0B3C26] truncate">
                       {enq.buyerName}
                     </span>
-                    <span className="text-[10px] text-[#9CA3AF] shrink-0">
+                    <span className="text-[10px] text-[#54754B] shrink-0">
                       {enq.timeAgo}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#4B5563] mt-0.5 line-clamp-1">
+                  <p className="text-[11px] text-[#4E6D45] mt-0.5 line-clamp-1">
                     {enq.productName} · {enq.message}
                   </p>
                 </Link>
@@ -149,7 +149,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
           <Link
             href="/seller/enquiries"
             onClick={() => setOpenMenu(null)}
-            className="px-4 py-2.5 border-t border-[#F0ECE4] bg-[#FAF9F6] flex items-center justify-between text-xs font-semibold text-[#174B35] hover:bg-[#F1F5F0] transition-colors"
+            className="px-4 py-2.5 border-t border-[#E7EEDB] bg-[#F5F7EC] flex items-center justify-between text-xs font-semibold text-[#0B3C26] hover:bg-[#ECF6D2] transition-colors"
           >
             <span>Open enquiry inbox</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -159,9 +159,9 @@ export default function HeaderAlertsPopover({ compact = false }) {
 
       {/* Notifications Popover Panel */}
       {openMenu === "notifications" && (
-        <div className="fixed inset-x-3 top-[60px] max-w-sm ml-auto lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-80 bg-white border border-[#E5E0D5] rounded-xl shadow-lg z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#F0ECE4] flex items-center justify-between bg-[#FAF9F6]">
-            <span className="text-xs font-bold text-[#111827]">
+        <div className="fixed inset-x-3 top-[60px] max-w-sm ml-auto lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-2 lg:w-80 bg-white border border-[#DDE7CE] rounded-2xl shadow-lg z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#E7EEDB] flex items-center justify-between bg-[#F2F7E6]">
+            <span className="text-xs font-bold text-[#0B3C26]">
               Notifications
             </span>
             <Link
@@ -173,13 +173,13 @@ export default function HeaderAlertsPopover({ compact = false }) {
             </Link>
           </div>
 
-          <div className="max-h-64 overflow-y-auto divide-y divide-[#F4F1EA]">
+          <div className="max-h-64 overflow-y-auto divide-y divide-[#EDF3DF]">
             {EMPTY_LIST.length === 0 ? (
               <div className="px-4 py-5 text-center space-y-1">
-                <p className="text-xs font-semibold text-[#374151]">
+                <p className="text-xs font-semibold text-[#0B3C26]">
                   No unread notifications
                 </p>
-                <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                <p className="text-[11px] text-[#54754B] leading-relaxed">
                   Listing reviews, payments, and account alerts appear here.
                 </p>
               </div>
@@ -189,17 +189,17 @@ export default function HeaderAlertsPopover({ compact = false }) {
                   key={notif.id}
                   href="/seller/notifications"
                   onClick={() => setOpenMenu(null)}
-                  className="block px-4 py-3 hover:bg-[#FAF9F6] transition-colors"
+                  className="block px-4 py-3 hover:bg-[#F5F7EC] transition-colors"
                 >
                   <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-semibold text-[#111827] truncate">
+                    <span className="font-semibold text-[#0B3C26] truncate">
                       {notif.title}
                     </span>
-                    <span className="text-[10px] text-[#9CA3AF] shrink-0">
+                    <span className="text-[10px] text-[#54754B] shrink-0">
                       {notif.time}
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#4B5563] mt-0.5 line-clamp-1">
+                  <p className="text-[11px] text-[#4E6D45] mt-0.5 line-clamp-1">
                     {notif.message}
                   </p>
                 </Link>
@@ -210,7 +210,7 @@ export default function HeaderAlertsPopover({ compact = false }) {
           <Link
             href="/seller/notifications"
             onClick={() => setOpenMenu(null)}
-            className="px-4 py-2.5 border-t border-[#F0ECE4] bg-[#FAF9F6] flex items-center justify-between text-xs font-semibold text-[#174B35] hover:bg-[#F1F5F0] transition-colors"
+            className="px-4 py-2.5 border-t border-[#E7EEDB] bg-[#F5F7EC] flex items-center justify-between text-xs font-semibold text-[#0B3C26] hover:bg-[#ECF6D2] transition-colors"
           >
             <span>View all notifications</span>
             <ChevronRight className="w-3.5 h-3.5" />
