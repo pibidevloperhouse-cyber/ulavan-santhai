@@ -38,10 +38,10 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B3C26]">
             Notifications
           </h1>
-          <p className="text-xs sm:text-sm text-[#4B5563] mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-[#4E6D45] mt-1 font-medium">
             In-app notifications about your account, listings, enquiries and payments
           </p>
         </div>
@@ -49,7 +49,7 @@ export default function NotificationsPage() {
         <button
           type="button"
           onClick={handleMarkAllRead}
-          className="inline-flex items-center justify-center px-3.5 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors shadow-2xs w-full sm:w-auto text-center cursor-pointer"
+          className="inline-flex items-center justify-center px-3.5 py-2 bg-white hover:bg-[#F5F7EC] text-[#0B3C26] border border-[#DDE7CE] text-xs font-semibold rounded-xl transition-colors shadow-2xs w-full sm:w-auto text-center cursor-pointer"
         >
           Mark all as read
         </button>
@@ -69,9 +69,9 @@ export default function NotificationsPage() {
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === tab.key
-              ? "bg-[#24583B] text-white shadow-2xs"
-              : "bg-[#EFECE3] text-[#4F5D53] hover:text-[#1F2922] hover:bg-[#E5E1D6]"
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${activeTab === tab.key
+              ? "bg-[#C5F340] text-[#0B3C26] shadow-2xs"
+              : "bg-[#EDF3DF] text-[#4E6D45] hover:text-[#0B3C26] hover:bg-[#E2ECCB]"
               }`}
           >
             {tab.label}

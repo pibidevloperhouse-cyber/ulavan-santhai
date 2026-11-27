@@ -25,14 +25,14 @@ export default function ProductViewModal({ product, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-[#EAE6DD] relative space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-[#DDE7CE] relative space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-1.5 rounded-lg text-[#7A877E] hover:text-[#1F2922] hover:bg-[#F3EFE6] transition-colors cursor-pointer"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-1.5 rounded-lg text-[#54754B] hover:text-[#0B3C26] hover:bg-[#F5F7EC] transition-colors cursor-pointer"
           aria-label="Close dialog"
         >
           <X className="w-5 h-5 pointer-events-none" />
@@ -40,14 +40,14 @@ export default function ProductViewModal({ product, onClose }) {
 
         {/* Modal Header */}
         <div className="flex items-start gap-3 sm:gap-3.5 pr-8">
-          <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-xl bg-[#EAF2EC] text-[#24583B] flex items-center justify-center shrink-0 border border-[#D1E0D3]">
+          <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-xl bg-[#ECF9C4] text-[#0B3C26] flex items-center justify-center shrink-0 border border-[#C5E37A]">
             <ImageIcon className="w-6 sm:w-7 h-6 sm:h-7" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-bold text-[#1F2922] truncate">
+            <h3 className="text-sm sm:text-base font-bold text-[#0B3C26] truncate">
               {product.name}
             </h3>
-            <p className="text-xs text-[#6B7870] mt-0.5 truncate">{product.type}</p>
+            <p className="text-xs text-[#4E6D45] mt-0.5 truncate">{product.type}</p>
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
               <StatusBadge status={product.listingStatus} />
               <StatusBadge status={product.availability} />
@@ -56,45 +56,45 @@ export default function ProductViewModal({ product, onClose }) {
         </div>
 
         {/* Product Details Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 p-3.5 sm:p-4 bg-[#FAF8F5] rounded-xl border border-[#ECE6D8] text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 p-3.5 sm:p-4 bg-[#F5F7EC] rounded-xl border border-[#DDE7CE] text-xs">
           <div>
-            <span className="text-[11px] text-[#7A877E] block">Category</span>
-            <span className="font-semibold text-[#1F2922] mt-0.5 block">
+            <span className="text-[11px] text-[#54754B] block">Category</span>
+            <span className="font-semibold text-[#0B3C26] mt-0.5 block">
               {product.category}
             </span>
           </div>
 
           <div>
-            <span className="text-[11px] text-[#7A877E] block">
+            <span className="text-[11px] text-[#54754B] block">
               Place of Origin
             </span>
-            <span className="font-semibold text-[#1F2922] mt-0.5 block">
+            <span className="font-semibold text-[#0B3C26] mt-0.5 block">
               {product.origin}
             </span>
           </div>
 
           <div>
-            <span className="text-[11px] text-[#7A877E] block">
+            <span className="text-[11px] text-[#54754B] block">
               Minimum Order Quantity (MOQ)
             </span>
-            <span className="font-semibold text-[#1F2922] mt-0.5 block">
+            <span className="font-semibold text-[#0B3C26] mt-0.5 block">
               {product.moq}
             </span>
           </div>
 
           <div>
-            <span className="text-[11px] text-[#7A877E] block">
+            <span className="text-[11px] text-[#54754B] block">
               Listing Status
             </span>
-            <span className="font-semibold text-[#1F2922] mt-0.5 block">
+            <span className="font-semibold text-[#0B3C26] mt-0.5 block">
               {product.listingStatus}
             </span>
           </div>
         </div>
 
         {/* Description & Transparency note */}
-        <div className="text-xs text-[#526056] bg-[#F7FAF8] p-3 rounded-lg border border-[#D8E6DB] leading-relaxed">
-          <span className="font-semibold text-[#1F2922] block mb-0.5">
+        <div className="text-xs text-[#3C5840] bg-[#F2F7E6] p-3 rounded-xl border border-[#DCE8C6] leading-relaxed">
+          <span className="font-semibold text-[#0B3C26] block mb-0.5">
             Producer Listing Details:
           </span>
           Verified agricultural listing showcased on Ulavan Santhai. Subject to
@@ -102,11 +102,11 @@ export default function ProductViewModal({ product, onClose }) {
         </div>
 
         {/* Modal Actions */}
-        <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-between gap-2.5 pt-2 border-t border-[#F0ECE4]">
+        <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-between gap-2.5 pt-2 border-t border-[#E7EEDB]">
           <Link
             href={`/seller/products/add?edit=${product.id}`}
             onClick={onClose}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#24583B] hover:bg-[#1A432C] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs text-center"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#C5F340] hover:bg-[#d3fc59] text-[#0B3C26] text-xs font-extrabold rounded-xl transition-colors shadow-2xs text-center"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit this product
@@ -115,7 +115,7 @@ export default function ProductViewModal({ product, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white hover:bg-[#FAF8F3] text-[#38463D] border border-[#D5CEC0] text-xs font-semibold rounded-lg transition-colors cursor-pointer text-center"
+            className="px-4 py-2 bg-white hover:bg-[#F5F7EC] text-[#3C5840] border border-[#DDE7CE] text-xs font-semibold rounded-xl transition-colors cursor-pointer text-center"
           >
             Close
           </button>

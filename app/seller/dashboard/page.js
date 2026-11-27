@@ -9,6 +9,7 @@ import ProductStatusGrid from "@/components/seller/dashboard/ProductStatusGrid";
 import ActivityAndReadinessPanel from "@/components/seller/dashboard/ActivityAndReadinessPanel";
 import { useSessionUser } from "@/services/sessionAuth";
 import { getSellerProducts } from "@/services/productApi";
+import { getSellerEnquiries } from "@/services/enquiryApi";
 import { getDynamicSellerProfile } from "@/services/sellerApi";
 
 const PRODUCT_STATUS_KEYS = [
@@ -29,24 +30,44 @@ export default function SellerDashboardPage({ onMenuToggle }) {
     [sessionUser]
   );
   const [products, setProducts] = useState([]);
+  const [enquiries, setEnquiries] = useState([]);
+  const [loadedAt, setLoadedAt] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
-    async function loadStats() {
-      try {
-        const res = await getSellerProducts();
-        if (isMounted && res?.success && Array.isArray(res.data)) {
-          setProducts(res.data);
-        }
-      } catch {
-        // Fallback smoothly to empty metrics when offline/unauthenticated
+    async function loadDashboardData() {
+      const sellerId = sessionUser?.id || sessionUser?.userId || profile?.id;
+      const [productsResult, enquiriesResult] = await Promise.allSettled([
+        getSellerProducts(),
+        getSellerEnquiries(sellerId),
+      ]);
+
+      if (!isMounted) return;
+
+      setLoadedAt(Date.now());
+
+      if (
+        productsResult.status === "fulfilled" &&
+        productsResult.value?.success &&
+        Array.isArray(productsResult.value.data)
+      ) {
+        setProducts(productsResult.value.data);
+      }
+
+      if (
+        enquiriesResult.status === "fulfilled" &&
+        enquiriesResult.value?.success &&
+        Array.isArray(enquiriesResult.value.data)
+      ) {
+        setEnquiries(enquiriesResult.value.data);
       }
     }
-    loadStats();
+
+    loadDashboardData();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionUser, profile?.id]);
 
   const liveMetrics = useMemo(() => {
     const countsByStatus = new Map();
@@ -59,6 +80,20 @@ export default function SellerDashboardPage({ onMenuToggle }) {
     }
 
     const publishedCount = countsByStatus.get("Published") || 0;
+    const awaitingCount = enquiries.filter(
+      (e) => !e.responseMessage && String(e.status || "").toLowerCase() !== "replied"
+    ).length;
+
+    const normalizedEnquiries = enquiries.slice(0, 5).map((e, idx) => ({
+      id: e.id || `enq-${idx}`,
+      buyerName: e.buyerName || "Verified Buyer",
+      productName: e.productTitle || e.productName || "Produce Enquiry",
+      message: e.message || "",
+      status: e.status || "New",
+      timeAgo: e.createdAt
+        ? new Date(e.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+        : "",
+    }));
 
     return {
       accountStatus: {
@@ -74,29 +109,26 @@ export default function SellerDashboardPage({ onMenuToggle }) {
         subtext: `${publishedCount} published live`,
       },
       buyerEnquiries: {
-        count: 0,
-        subtext: "0 awaiting response",
+        count: enquiries.length,
+        subtext: `${awaitingCount} awaiting response`,
       },
-      recentEnquiries: [],
+      recentEnquiries: normalizedEnquiries,
       recentNotifications: [],
       statusBreakdown: PRODUCT_STATUS_KEYS.map((item) => ({
         ...item,
         count: countsByStatus.get(item.label) || 0,
       })),
     };
-  }, [products, profile]);
+  }, [products, enquiries, profile]);
 
   return (
     <div className="space-y-5 sm:space-y-6 min-w-0">
-      {/* Clean Top Bar */}
+      {/* Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B3C26]">
             Dashboard
           </h1>
-          <p className="text-xs sm:text-sm text-[#54754B] mt-0.5 font-medium truncate">
-            Storefront overview &amp; performance
-          </p>
         </div>
 
         <SellerHeader
@@ -106,23 +138,23 @@ export default function SellerDashboardPage({ onMenuToggle }) {
         />
       </div>
 
-      {/* Storefront Hero Banner with Circular Plan Ring */}
+      {/* Storefront Summary Banner */}
       <SubscriptionBanner
         daysRemaining={profile.subscription?.daysRemaining || 365}
         sellerName={profile.businessName || "Seller"}
-        sellerType={profile.sellerType || "Farmer"}
         totalProducts={products.length}
       />
 
-      {/* 4 Clean Bento KPI Cards */}
+      {/* 4 KPI Metric Cards with Real Icons */}
       <DashboardMetricCards metrics={liveMetrics} />
 
-      {/* 12-Col Bento Analytics & Activity Workspace */}
+      {/* 12-Col Analytics & Activity Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <div className="lg:col-span-8 space-y-5 min-w-0">
           <PerformanceChartCard
-            totalProducts={products.length}
-            totalEnquiries={liveMetrics.buyerEnquiries.count}
+            products={products}
+            enquiries={enquiries}
+            anchorTimeMs={loadedAt}
           />
           <ProductStatusGrid statusBreakdown={liveMetrics.statusBreakdown} />
         </div>

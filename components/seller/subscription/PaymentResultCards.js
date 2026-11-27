@@ -5,30 +5,30 @@ import StatusBadge from "../ui/StatusBadge";
 
 export default function PaymentResultCards({ onRetry }) {
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
-        <h2 className="text-sm font-bold text-[#1F2922]">
+    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
+        <h2 className="text-sm font-extrabold text-[#0B3C26]">
           Payment result screens
         </h2>
-        <span className="text-xs text-[#526458] font-medium">
+        <span className="text-xs text-[#4E6D45] font-medium">
           Gateway Outcomes
         </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Success */}
-        <div className="border border-[#BEE3C8] bg-[#F5FAF6] rounded-xl p-4 flex flex-col justify-between space-y-3">
+        <div className="border border-[#C5E37A] bg-[#F2FAE0] rounded-xl p-4 flex flex-col justify-between space-y-3">
           <div className="space-y-1.5">
             <StatusBadge status="Success" />
-            <div className="font-bold text-xs text-[#1F2922]">
+            <div className="font-bold text-xs text-[#0B3C26]">
               Payment successful
             </div>
-            <p className="text-[11px] text-[#4A594E] leading-relaxed">
+            <p className="text-[11px] text-[#3C5840] leading-relaxed">
               Shows the transaction reference and confirms your subscription is
               active. A notification is sent.
             </p>
           </div>
-          <div className="text-[11px] text-[#6E7D72] font-mono">
+          <div className="text-[11px] text-[#54754B] font-mono">
             Status: Confirmed & Active
           </div>
         </div>
@@ -37,7 +37,7 @@ export default function PaymentResultCards({ onRetry }) {
         <div className="border border-[#FAC7C7] bg-[#FCF6F6] rounded-xl p-4 flex flex-col justify-between space-y-3">
           <div className="space-y-1.5">
             <StatusBadge status="Failed" />
-            <div className="font-bold text-xs text-[#1F2922]">
+            <div className="font-bold text-xs text-[#0B3C26]">
               Payment failed
             </div>
             <p className="text-[11px] text-[#594A4A] leading-relaxed">
@@ -49,7 +49,7 @@ export default function PaymentResultCards({ onRetry }) {
             <button
               type="button"
               onClick={onRetry}
-              className="px-3 py-1.5 bg-[#24583B] hover:bg-[#1A432C] text-white text-[11px] font-semibold rounded-md transition-colors"
+              className="px-3 py-1.5 bg-[#0B3C26] hover:bg-[#174B35] text-white text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Retry payment
             </button>
@@ -60,7 +60,7 @@ export default function PaymentResultCards({ onRetry }) {
         <div className="border border-[#FDE0B4] bg-[#FCF9F3] rounded-xl p-4 flex flex-col justify-between space-y-3">
           <div className="space-y-1.5">
             <StatusBadge status="Pending" />
-            <div className="font-bold text-xs text-[#1F2922]">
+            <div className="font-bold text-xs text-[#0B3C26]">
               Payment pending
             </div>
             <p className="text-[11px] text-[#59524A] leading-relaxed">
@@ -71,13 +71,13 @@ export default function PaymentResultCards({ onRetry }) {
         </div>
 
         {/* Cancelled */}
-        <div className="border border-[#DFE3E6] bg-[#FAFBFB] rounded-xl p-4 flex flex-col justify-between space-y-3">
+        <div className="border border-[#DDE7CE] bg-[#F5F7EC] rounded-xl p-4 flex flex-col justify-between space-y-3">
           <div className="space-y-1.5">
             <StatusBadge status="Cancelled" />
-            <div className="font-bold text-xs text-[#1F2922]">
+            <div className="font-bold text-xs text-[#0B3C26]">
               Payment cancelled
             </div>
-            <p className="text-[11px] text-[#50575D] leading-relaxed">
+            <p className="text-[11px] text-[#4E6D45] leading-relaxed">
               You left the gateway before paying. Nothing was charged and you
               can start again.
             </p>

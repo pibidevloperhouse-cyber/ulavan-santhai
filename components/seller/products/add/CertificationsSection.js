@@ -79,15 +79,15 @@ export default function CertificationsSection({
   ];
 
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-[#1F2922]">
+          <h2 className="text-sm font-extrabold text-[#0B3C26]">
             7. Certifications
           </h2>
-          <span className="text-[#7A877E] text-[10px]">Applicable</span>
+          <span className="text-[#54754B] text-[10px]">Applicable</span>
         </div>
-        <span className="text-xs text-[#526458] font-medium">
+        <span className="text-xs text-[#4E6D45] font-medium">
           Compliance &amp; Documents
         </span>
       </div>
@@ -95,11 +95,11 @@ export default function CertificationsSection({
       {certifications.map((cert) => (
         <div
           key={cert.id}
-          className="border border-[#E7E2D7] rounded-xl p-3.5 sm:p-4 bg-[#FCFBF8] space-y-3.5 min-w-0"
+          className="border border-[#DDE7CE] rounded-2xl p-3.5 sm:p-4 bg-[#F5F7EC] space-y-3.5 min-w-0"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="min-w-0">
-              <label className="block text-xs font-semibold text-[#38453D] mb-1">
+              <label className="block text-xs font-semibold text-[#3C5840] mb-1">
                 Certification name
               </label>
               <SellerSelect
@@ -112,7 +112,7 @@ export default function CertificationsSection({
             </div>
 
             <div className="min-w-0">
-              <label className="block text-xs font-semibold text-[#38453D] mb-1">
+              <label className="block text-xs font-semibold text-[#3C5840] mb-1">
                 Certification number
               </label>
               <input
@@ -122,14 +122,14 @@ export default function CertificationsSection({
                 onChange={(e) =>
                   onUpdateCertification(cert.id, "number", e.target.value)
                 }
-                className="w-full min-w-0 px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+                className="w-full min-w-0 px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#38453D] mb-1">
+              <label className="block text-xs font-semibold text-[#3C5840] mb-1">
                 Issuing authority
               </label>
               <input
@@ -139,12 +139,12 @@ export default function CertificationsSection({
                 onChange={(e) =>
                   onUpdateCertification(cert.id, "authority", e.target.value)
                 }
-                className="w-full px-3 py-2 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+                className="w-full px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#38453D] mb-1">
+              <label className="block text-xs font-semibold text-[#3C5840] mb-1">
                 Validity (From · Until)
               </label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -155,9 +155,9 @@ export default function CertificationsSection({
                   onChange={(e) =>
                     onUpdateCertification(cert.id, "validFrom", e.target.value)
                   }
-                  className="w-full px-2.5 py-1.5 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+                  className="w-full px-2.5 py-1.5 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
                 />
-                <span className="hidden sm:inline text-[#8A958E] text-xs">·</span>
+                <span className="hidden sm:inline text-[#54754B] text-xs">·</span>
                 <input
                   type="date"
                   aria-label="Valid until"
@@ -165,7 +165,7 @@ export default function CertificationsSection({
                   onChange={(e) =>
                     onUpdateCertification(cert.id, "validUntil", e.target.value)
                   }
-                  className="w-full px-2.5 py-1.5 bg-white border border-[#D8D2C4] rounded-lg text-xs text-[#1F2922] focus:outline-none focus:border-[#24583B]"
+                  className="w-full px-2.5 py-1.5 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
                 />
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function CertificationsSection({
 
           {/* Certificate Document Upload Zone */}
           <div>
-            <label className="block text-xs font-semibold text-[#38453D] mb-1.5">
+            <label className="block text-xs font-semibold text-[#3C5840] mb-1.5">
               Certificate document
             </label>
 
@@ -189,17 +189,17 @@ export default function CertificationsSection({
             />
 
             {cert.documentName || cert.documentUploaded ? (
-              <div className="flex flex-wrap items-center gap-3 p-3 bg-[#EAF5EC] border border-[#BEE3C8] rounded-lg min-w-0">
-                <CheckCircle2 className="w-5 h-5 text-[#1D7446] shrink-0" />
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-[#ECF9C4] border border-[#C5E37A] rounded-xl min-w-0">
+                <CheckCircle2 className="w-5 h-5 text-[#2D8A3E] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p
-                    className="text-xs font-bold text-[#1D7446] truncate"
+                    className="text-xs font-bold text-[#0B3C26] truncate"
                     title={cert.documentName}
                   >
                     {cert.documentName || "Certificate Document Attached"}
                   </p>
                   {cert.documentSize && (
-                    <p className="text-[10px] text-[#526458]">
+                    <p className="text-[10px] text-[#4E6D45]">
                       {cert.documentSize}
                     </p>
                   )}
@@ -208,12 +208,12 @@ export default function CertificationsSection({
                   <button
                     type="button"
                     onClick={() => fileInputRefs.current[cert.id]?.click()}
-                    className="inline-flex items-center gap-1 font-semibold text-[#24583B] hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 font-bold text-[#2D8A3E] hover:underline cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Change</span>
                   </button>
-                  <span className="text-[#BEE3C8]">|</span>
+                  <span className="text-[#C5E37A]">|</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveDocument(cert.id)}
@@ -229,12 +229,12 @@ export default function CertificationsSection({
                 <button
                   type="button"
                   onClick={() => fileInputRefs.current[cert.id]?.click()}
-                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg border border-[#D8D2C4] bg-white text-xs font-semibold text-[#38453D] hover:bg-[#FAF8F5] hover:border-[#24583B] transition-colors cursor-pointer shadow-2xs"
+                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl border border-[#D2DFC0] bg-white text-xs font-bold text-[#0B3C26] hover:bg-[#ECF9C4] hover:border-[#8DC63F] transition-colors cursor-pointer shadow-2xs"
                 >
-                  <FileText className="w-4 h-4 text-[#24583B]" />
+                  <FileText className="w-4 h-4 text-[#2D8A3E]" />
                   <span>Upload document</span>
                 </button>
-                <span className="text-[10px] text-[#7A877E]">
+                <span className="text-[10px] text-[#54754B]">
                   PDF, JPG or PNG · reviewed by the Admin · not automatically
                   verified
                 </span>
@@ -249,7 +249,7 @@ export default function CertificationsSection({
             )}
           </div>
 
-          <div className="pt-2 border-t border-[#EAE5DB] flex justify-end">
+          <div className="pt-2 border-t border-[#DDE7CE] flex justify-end">
             <button
               type="button"
               onClick={() => onRemoveCertification(cert.id)}
@@ -264,7 +264,7 @@ export default function CertificationsSection({
       <button
         type="button"
         onClick={onAddCertification}
-        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#D8D2C4] bg-white text-xs font-semibold text-[#38453D] hover:bg-[#FAF8F5] cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#D2DFC0] bg-[#F5F7EC] text-xs font-bold text-[#0B3C26] hover:bg-[#ECF9C4] transition-colors cursor-pointer"
       >
         <Plus className="w-3.5 h-3.5" />
         Add another certification

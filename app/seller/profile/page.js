@@ -91,10 +91,10 @@ export default function ProfileAndSettingsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#1F2922]">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#0B3C26]">
           Profile and account settings
         </h1>
-        <p className="text-xs text-[#526458] mt-0.5">
+        <p className="text-xs text-[#4E6D45] mt-0.5">
           Manage your Seller business profile and account preferences
         </p>
       </div>

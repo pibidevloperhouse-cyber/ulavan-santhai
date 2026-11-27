@@ -110,17 +110,17 @@ export default function ProductImagesSection({
   };
 
   return (
-    <div className="bg-white border border-[#EAE6DD] rounded-xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
+    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-[#1F2922]">
+          <h2 className="text-sm font-extrabold text-[#0B3C26]">
             2. Product images
           </h2>
           <span className="text-[#C53030] text-[10px] font-semibold">
             Mandatory
           </span>
         </div>
-        <span className="text-xs text-[#526458] font-medium">
+        <span className="text-xs text-[#4E6D45] font-medium">
           {images.length > 0 ? `${images.length} uploaded` : "Gallery"}
         </span>
       </div>
@@ -158,18 +158,18 @@ export default function ProductImagesSection({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer select-none ${
+        className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer select-none ${
           isDragging
-            ? "border-[#24583B] bg-[#EAF5EC] scale-[1.005]"
-            : "border-[#D2CDC0] bg-[#FAF8F5] hover:border-[#24583B] hover:bg-[#F5F2EB]"
+            ? "border-[#2D8A3E] bg-[#ECF9C4] scale-[1.005]"
+            : "border-[#D2DFC0] bg-[#F5F7EC] hover:border-[#2D8A3E] hover:bg-[#ECF9C4]/50"
         }`}
       >
-        <UploadCloud className="w-8 h-8 text-[#24583B] mx-auto mb-2 transition-transform group-hover:scale-110" />
-        <div className="text-xs font-semibold text-[#1F2922]">
+        <UploadCloud className="w-8 h-8 text-[#2D8A3E] mx-auto mb-2 transition-transform group-hover:scale-110" />
+        <div className="text-xs font-bold text-[#0B3C26]">
           Drag images here or{" "}
-          <span className="text-[#24583B] underline underline-offset-2">browse files</span>
+          <span className="text-[#2D8A3E] underline underline-offset-2">browse files</span>
         </div>
-        <div className="text-[10px] text-[#7A877E] mt-1">
+        <div className="text-[10px] text-[#54754B] mt-1">
           Multiple images · JPG, PNG or WebP · max 5MB per image · size and
           format are validated on upload
         </div>
@@ -192,21 +192,21 @@ export default function ProductImagesSection({
       {/* Image Preview Grid */}
       {images.length > 0 && (
         <div className="space-y-2 pt-2">
-          <div className="text-xs font-semibold text-[#38453D]">
+          <div className="text-xs font-semibold text-[#3C5840]">
             Uploaded Images ({images.length})
           </div>
           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3">
             {images.map((img) => (
               <div
                 key={img.id}
-                className={`border rounded-lg p-3 space-y-2.5 transition-all ${
+                className={`border rounded-xl p-3 space-y-2.5 transition-all ${
                   img.isPrimary
-                    ? "border-[#24583B] bg-[#F4F8F4] ring-1 ring-[#24583B]"
-                    : "border-[#E4DFD5] bg-[#FCFAF7]"
+                    ? "border-[#8DC63F] bg-[#F2FAE0] ring-1 ring-[#8DC63F]"
+                    : "border-[#DDE7CE] bg-[#F5F7EC]"
                 }`}
               >
                 {/* Thumbnail Display */}
-                <div className="h-28 bg-[#EAEFEA] rounded-md overflow-hidden flex items-center justify-center relative">
+                <div className="h-28 bg-[#ECF9C4] rounded-lg overflow-hidden flex items-center justify-center relative">
                   {img.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -215,10 +215,10 @@ export default function ProductImagesSection({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-[#24583B]" />
+                    <ImageIcon className="w-6 h-6 text-[#2D8A3E]" />
                   )}
                   {img.isPrimary && (
-                    <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-[#24583B] text-white text-[10px] font-bold shadow-xs">
+                    <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-[#C5F340] text-[#0B3C26] text-[10px] font-extrabold shadow-xs">
                       Primary
                     </span>
                   )}
@@ -226,33 +226,33 @@ export default function ProductImagesSection({
 
                 {/* Name / Info */}
                 {img.name && (
-                  <p className="text-[11px] text-[#38453D] font-medium truncate" title={img.name}>
+                  <p className="text-[11px] text-[#0B3C26] font-semibold truncate" title={img.name}>
                     {img.name}
                   </p>
                 )}
 
                 {/* Primary Radio */}
                 <div className="flex items-center justify-between text-xs">
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-[#38453D] text-[11px]">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-[#3C5840] text-[11px]">
                     <input
                       type="radio"
                       name="primary_image"
                       checked={Boolean(img.isPrimary)}
                       onChange={() => onSetPrimary?.(img.id)}
-                      className="text-[#24583B] focus:ring-0 cursor-pointer accent-[#24583B]"
+                      className="text-[#2D8A3E] focus:ring-0 cursor-pointer accent-[#2D8A3E]"
                     />
-                    <span className={img.isPrimary ? "font-bold text-[#24583B]" : ""}>
+                    <span className={img.isPrimary ? "font-bold text-[#2D8A3E]" : ""}>
                       {img.isPrimary ? "Primary image" : "Set as primary"}
                     </span>
                   </label>
                 </div>
 
                 {/* Replace & Delete Actions */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#EAE5DB] text-[11px]">
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#DDE7CE] text-[11px]">
                   <button
                     type="button"
                     onClick={() => triggerReplace(img.id)}
-                    className="inline-flex items-center gap-1 text-[#24583B] hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[#2D8A3E] font-semibold hover:underline cursor-pointer"
                   >
                     <RefreshCw className="w-3 h-3" />
                     <span>Replace</span>
@@ -272,7 +272,7 @@ export default function ProductImagesSection({
         </div>
       )}
 
-      <p className="text-[10px] text-[#7A877E]">
+      <p className="text-[10px] text-[#54754B]">
         Each uploaded image supports preview, replace, delete, and primary-image
         selection.
       </p>

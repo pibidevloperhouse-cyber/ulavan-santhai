@@ -2,7 +2,15 @@
 
 import { useSyncExternalStore } from "react";
 
-const emptySubscribe = () => () => {};
+const subscribeSession = (callback) => {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", callback);
+  window.addEventListener("ulavan_session_updated", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("ulavan_session_updated", callback);
+  };
+};
 
 export const defaultSessionUser = {
   name: "",
@@ -80,7 +88,7 @@ function getServerSnapshot() {
  */
 export function useSessionUser() {
   const authJson = useSyncExternalStore(
-    emptySubscribe,
+    subscribeSession,
     getClientSnapshot,
     getServerSnapshot
   );

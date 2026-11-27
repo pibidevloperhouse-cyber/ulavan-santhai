@@ -78,12 +78,12 @@ export default function SellerSelect({
         aria-expanded={isOpen}
         aria-label={ariaLabel}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`w-full min-w-0 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs text-left border transition-colors ${
+        className={`w-full min-w-0 flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs text-left border transition-colors ${
           disabled
-            ? "bg-gray-100 text-[#7A877E] border-[#D8D2C4] cursor-not-allowed"
+            ? "bg-[#F5F7EC] text-[#7A877E] border-[#DDE7CE] cursor-not-allowed"
             : isOpen
-            ? "bg-white border-[#24583B] text-[#1F2922] ring-1 ring-[#24583B]/20 cursor-pointer"
-            : "bg-white border-[#D8D2C4] text-[#1F2922] hover:border-[#24583B]/60 cursor-pointer"
+            ? "bg-white border-[#2D8A3E] text-[#0B3C26] ring-2 ring-[#C5F340]/50 cursor-pointer"
+            : "bg-white border-[#D2DFC0] text-[#0B3C26] hover:border-[#8DC63F] cursor-pointer"
         } ${triggerClassName}`}
       >
         <span
@@ -94,8 +94,8 @@ export default function SellerSelect({
           {displayLabel}
         </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-[#526458] shrink-0 transition-transform duration-150 ${
-            isOpen ? "rotate-180 text-[#24583B]" : ""
+          className={`w-3.5 h-3.5 text-[#4E6D45] shrink-0 transition-transform duration-150 ${
+            isOpen ? "rotate-180 text-[#2D8A3E]" : ""
           }`}
         />
       </button>
@@ -103,7 +103,7 @@ export default function SellerSelect({
       {isOpen && (
         <ul
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1 z-50 w-full max-w-full bg-white border border-[#D8D2C4] rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-98 duration-100"
+          className="absolute left-0 right-0 top-full mt-1 z-50 w-full max-w-full bg-white border border-[#DDE7CE] rounded-xl shadow-lg py-1 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-98 duration-100"
         >
           {normalizedOptions.length === 0 ? (
             <li className="px-3 py-2 text-xs text-[#7A877E]">
@@ -120,10 +120,10 @@ export default function SellerSelect({
                     onClick={() => handleSelect(opt)}
                     className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer whitespace-normal break-words ${
                       isLocked
-                        ? "text-[#7A877E] hover:bg-[#FAF8F5]"
+                        ? "text-[#7A877E] hover:bg-[#F5F7EC]"
                         : isSelected
-                        ? "bg-[#E8F0E3] text-[#174B35] font-semibold"
-                        : "text-[#1F2922] hover:bg-[#FAF8F5]"
+                        ? "bg-[#ECF9C4] text-[#0B3C26] font-bold"
+                        : "text-[#0B3C26] hover:bg-[#F5F7EC]"
                     }`}
                   >
                     <span className="flex-1 min-w-0">{opt.label}</span>
@@ -133,7 +133,7 @@ export default function SellerSelect({
                         aria-hidden="true"
                       />
                     ) : isSelected ? (
-                      <Check className="w-3.5 h-3.5 text-[#174B35] shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-[#2D8A3E] shrink-0" />
                     ) : null}
                   </button>
                 </li>
