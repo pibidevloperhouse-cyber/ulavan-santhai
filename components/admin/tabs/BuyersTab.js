@@ -80,7 +80,9 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
   const filteredBuyers = buyers.filter((buyer) => {
     const matchesSearch =
       buyer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      buyer.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       buyer.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      buyer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       buyer.district?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       buyer.operatingDistrict?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
@@ -276,7 +278,7 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
                         </td>
 
                         <td className="p-3.5">
-                          <div className="font-bold text-gray-900">{buyer.contactName}</div>
+                          <div className="font-bold text-gray-900">{buyer.email || buyer.contactName}</div>
                           <div className="text-gray-500 text-[11px]">{buyer.phone}</div>
                           <div className="text-[10px] text-emerald-800 font-semibold">{buyer.district}</div>
                         </td>
@@ -625,7 +627,7 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
                   <Building2 className="w-3.5 h-3.5" />
                   <span>Wholesale Procurement Buyer</span>
                 </div>
-                <h4 className="text-base sm:text-lg font-black">{fullViewBuyer.contactName}</h4>
+                <h4 className="text-base sm:text-lg font-black">{fullViewBuyer.businessName || fullViewBuyer.contactName}</h4>
                 <div className="text-xs text-emerald-100/90 flex items-center gap-1">
                   <Phone className="w-3 h-3 text-emerald-300" />
                   <span>{fullViewBuyer.phone}</span>
