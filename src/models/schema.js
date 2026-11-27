@@ -7,7 +7,17 @@ import {
   numeric,
   jsonb,
   integer,
+  customType,
 } from 'drizzle-orm/pg-core';
+
+/**
+ * Custom Drizzle type for PostgreSQL varchar array: varchar(50)[]
+ */
+export const varcharArray = customType({
+  dataType() {
+    return 'varchar(50)[]';
+  },
+});
 
 /**
  * 1. Users Table
@@ -59,7 +69,7 @@ export const documents = pgTable('documents', {
 export const buyerProfiles = pgTable('buyer_profiles', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).unique().notNull(),
-  buyerType: varchar('buyer_type', { length: 50 }).notNull(),
+  buyerType: varchar('buyer_type', { length: 255 }).notNull(),
 
   // Unified Identity & Brand
   businessName: varchar('business_name', { length: 150 }).notNull(),
@@ -93,26 +103,24 @@ export const buyerProfiles = pgTable('buyer_profiles', {
  */
 export const sellerProfiles = pgTable('seller_profiles', {
   id: varchar('id', { length: 64 }).primaryKey(),
-  userId: varchar('user_id', { length: 64 }).references(() => users.id).unique().notNull(),
-  sellerType: varchar('seller_type', { length: 50 }).notNull(),
+  userId: varchar('user_id', { length: 64 }).references(() => users.id, { onDelete: 'cascade' }).unique().notNull(),
+
+  // Stores array of authoritative reference IDs from seller_categories (e.g. ['CAT-SEL-01', 'CAT-SEL-02'])
+  sellerType: varcharArray('seller_type').notNull(),
 
   // Unified Identity & Brand
   businessName: varchar('business_name', { length: 150 }).notNull(),
 
-  // Geographic Location
-  district: varchar('district', { length: 100 }).notNull(),
+  // Common Operating Location
+  district: varchar('district', { length: 100 }),
   village: varchar('village', { length: 100 }),
   pinCode: varchar('pin_code', { length: 20 }),
   farmAddress: text('farm_address'),
 
-  // Compliance
+  // Compliance Flags & Registration Numbers
   isGst: boolean('is_gst').default(false).notNull(),
   gstin: varchar('gstin', { length: 50 }),
   fssaiNumber: varchar('fssai_number', { length: 50 }),
-
-  // Unified Operational Discovery
-  primaryProducts: text('primary_products'),
-  capacity: varchar('capacity', { length: 100 }),
 
   // Dynamic Full-Fidelity Category Attributes
   categoryDetails: jsonb('category_details').default({}).notNull(),
@@ -129,7 +137,7 @@ export const applications = pgTable('applications', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).notNull(),
   role: varchar('role', { length: 30 }).notNull(),
-  subType: varchar('sub_type', { length: 50 }).notNull(),
+  subType: varchar('sub_type', { length: 255 }).notNull(),
   profilePayload: jsonb('profile_payload').default({}),
   documents: jsonb('documents'),
   overallStatus: varchar('overall_status', { length: 30 }).default('PENDING_REVIEW').notNull(),
@@ -152,8 +160,9 @@ export const payments = pgTable('payments', {
   currency: varchar('currency', { length: 10 }).default('INR').notNull(),
   role: varchar('role', { length: 30 }).default('SELLER').notNull(),
   paymentMethod: varchar('payment_method', { length: 50 }).default('UPI').notNull(),
-  plan: varchar('plan', { length: 100 }).notNull(),
+  plan: varchar('plan', { length: 255 }).notNull(),
   planId: varchar('plan_id', { length: 50 }).default('SELLER_ANNUAL'),
+  metadata: jsonb('metadata').default({}),
   signature: text('signature'),
   status: varchar('status', { length: 30 }).default('CREATED').notNull(),
   paidAt: timestamp('paid_at'),
@@ -200,7 +209,22 @@ export const membershipPlans = pgTable('membership_plans', {
 });
 
 /**
- * 9. Product Categories Table
+ * 9. Seller Categories Table
+ * Authoritative master taxonomy for seller classifications linked to membership plans via Foreign Key.
+ */
+export const sellerCategories = pgTable('seller_categories', {
+  id: varchar('id', { length: 50 }).primaryKey(),
+  code: varchar('code', { length: 50 }).unique().notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  planId: varchar('plan_id', { length: 50 }).references(() => membershipPlans.id, { onDelete: 'restrict', onUpdate: 'cascade' }).notNull(),
+  requiredDocuments: jsonb('required_documents').default([]).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/**
+ * 10. Product Categories Table
  * Dynamic categories loaded from the database so Admins can add or update them.
  */
 export const productCategories = pgTable('product_categories', {

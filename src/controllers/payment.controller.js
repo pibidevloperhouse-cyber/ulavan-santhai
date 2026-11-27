@@ -32,6 +32,7 @@ export const createRazorpayOrder = async (req, res) => {
     const result = await paymentService.createRazorpayOrderService({
       userId: authUser.id,
       planId: req.body?.planId || req.body?.plan_id,
+      categories: req.body?.categories || req.body?.selectedSellerTypes || req.body?.selectedCategories,
     });
 
     return res.status(201).json(result);

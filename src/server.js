@@ -102,6 +102,14 @@ if (process.env.NODE_ENV !== 'test') {
 
     await verifyMailConnection();
   });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[SERVER FATAL] Port ${PORT} is already in use by another process.`);
+    } else {
+      console.error(`[SERVER FATAL] Unexpected server error:`, err);
+    }
+  });
 }
 
 export { app, server };

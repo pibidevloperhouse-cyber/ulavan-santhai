@@ -27,13 +27,22 @@ export const getUserStatusService = async (userId) => {
   }
 
   const statusPayload = {
+    id: user.id,
+    userId: user.id,
     name: user.name,
+    username: user.username,
     email: user.email,
     mobile: user.mobile,
+    role: user.role,
+    activeRole: user.role?.toLowerCase() || 'seller',
+    isVerified: Boolean(user.isVerified),
+    isPaid: Boolean(user.sellerPaid || user.buyerPaid),
+    onboarded: Boolean(user.sellerOnboarded || user.buyerOnboarded),
     sellerOnboarded: Boolean(user.sellerOnboarded),
     buyerOnboarded: Boolean(user.buyerOnboarded),
     sellerPaid: Boolean(user.sellerPaid),
     buyerPaid: Boolean(user.buyerPaid),
+    status: 'active',
   };
 
   return {
@@ -71,7 +80,7 @@ export const onboardSellerService = async (userId, sellerData = {}) => {
     sellerData.sellerClassification ||
     sellerData.subType ||
     SELLER_TYPES.FARMER;
-  const sellerPayload = extractSellerProfile(subType, sellerData);
+  const sellerPayload = await extractSellerProfile(subType, sellerData);
 
   // 1. Upsert seller profile via profileRepository
   await profileRepository.upsertSeller(userId, sellerPayload);
@@ -149,6 +158,23 @@ export const onboardBuyerService = async (userId, buyerData = {}) => {
 };
 
 /**
+ * Unpacks nested category objects from categoryDetails onto root for frontend consumption
+ * without duplicating them inside the database JSONB.
+ */
+export const flattenSellerCategoryDetails = (categoryDetails) => {
+  if (!categoryDetails || typeof categoryDetails !== 'object') return {};
+  const unpacked = {};
+  for (const [key, val] of Object.entries(categoryDetails)) {
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      Object.assign(unpacked, val);
+    } else {
+      unpacked[key] = val;
+    }
+  }
+  return unpacked;
+};
+
+/**
  * Service: Fetch Seller Dashboard
  * Guard: Requires user.sellerOnboarded === true
  * @param {string} userId
@@ -174,11 +200,13 @@ export const getSellerDashboardService = async (userId) => {
     throw error;
   }
 
-  const profile = await profileRepository.findSellerByUserId(userId);
+  const profile = await profileRepository.findSellerWithCategories(userId);
+  const unpackedFields = profile ? flattenSellerCategoryDetails(profile.categoryDetails) : {};
   const flattenedProfile = profile
     ? {
         ...profile,
-        ...(profile.categoryDetails || {}),
+        ...unpackedFields,
+        connectedCategories: profile.connectedCategories || [],
       }
     : null;
 
@@ -255,4 +283,87 @@ export const getBuyerMarketplaceService = async (userId) => {
     },
   };
 };
+
+/**
+ * Service: Fetch Seller Profile with Flattened Category Attributes
+ * Unpacks categoryDetails into root properties for seamless frontend consumption.
+ * @param {string} userId
+ * @returns {Promise<object>}
+ */
+export const getSellerProfileService = async (userId) => {
+  if (!userId) {
+    const error = new Error('User authentication required.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const profile = await profileRepository.findSellerWithCategories(userId);
+  if (!profile) {
+    const error = new Error('Seller profile not found. Please complete seller onboarding first.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const { categoryDetails, connectedCategories, ...baseProfile } = profile;
+  const unpackedFields = flattenSellerCategoryDetails(categoryDetails);
+  const flattenedProfile = {
+    ...baseProfile,
+    categoryDetails,
+    ...unpackedFields,
+    connectedCategories: connectedCategories || [],
+  };
+
+  return {
+    success: true,
+    profile: flattenedProfile,
+  };
+};
+
+/**
+ * Service: Update Seller Profile Details
+ * Validates, re-extracts, and updates seller profile in PostgreSQL.
+ * @param {string} userId
+ * @param {object} updatedFields
+ * @returns {Promise<object>}
+ */
+export const updateSellerProfileService = async (userId, updatedFields = {}) => {
+  if (!userId) {
+    const error = new Error('User authentication required.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const existing = await profileRepository.findSellerByUserId(userId);
+  if (!existing) {
+    const error = new Error('Seller profile not found. Please complete onboarding first.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Merge existing fields with updatedFields for safe partial updates
+  const existingUnpacked = flattenSellerCategoryDetails(existing.categoryDetails);
+  const mergedData = {
+    ...existing,
+    ...existingUnpacked,
+    ...updatedFields,
+  };
+
+  const subType = updatedFields.sellerType || existing.sellerType;
+  const sellerPayload = await extractSellerProfile(subType, mergedData);
+
+  const updatedProfile = await profileRepository.upsertSeller(userId, sellerPayload);
+  const { categoryDetails, ...baseProfile } = updatedProfile;
+  const unpackedFields = flattenSellerCategoryDetails(categoryDetails);
+
+  return {
+    success: true,
+    message: 'Seller profile updated successfully.',
+    profile: {
+      ...baseProfile,
+      categoryDetails,
+      ...unpackedFields,
+    },
+  };
+};
+
 

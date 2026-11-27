@@ -3,6 +3,7 @@ import * as profileRepository from '../repositories/profile.repository.js';
 import * as applicationRepository from '../repositories/application.repository.js';
 import * as userRepository from '../repositories/user.repository.js';
 import * as documentRepository from '../repositories/document.repository.js';
+import * as sellerCategoryRepository from '../repositories/sellerCategory.repository.js';
 
 /**
  * 8 Dynamic Seller Classification Categories
@@ -32,192 +33,248 @@ export const BUYER_TYPES = Object.freeze({
 });
 
 /**
- * Helper: Extract unified search attributes and category-specific details
- * across all 8 dynamic seller classifications with zero data loss.
- * @param {string} subType
- * @param {object} profile
- * @returns {object}
+ * Resolves category input (array or string) to master category IDs dynamically from public.seller_categories table
+ * @param {Array|string} input
+ * @param {Array<object>} [cachedCategories]
+ * @returns {Promise<Array<string>>}
  */
-export const extractSellerProfile = (subType, profile = {}) => {
-  const sellerType = String(subType || profile.sellerType || SELLER_TYPES.FARMER).trim();
+export const resolveCategoryIds = async (input, cachedCategories = null) => {
+  const activeCategories = Array.isArray(cachedCategories) && cachedCategories.length > 0
+    ? cachedCategories
+    : await sellerCategoryRepository.findAllActiveWithPlans();
 
-  const district = profile.district || null;
-  const village = profile.village || null;
-  const pinCode = profile.pinCode || profile.pincode || null;
-  const farmAddress = profile.farmAddress || profile.address || null;
+  if (!input) {
+    return activeCategories.length > 0 ? [activeCategories[0].id] : [];
+  }
 
-  let businessName = '';
-  let primaryProducts = '';
-  let capacity = '';
-  let isGst = false;
-  let gstin = null;
-  let fssaiNumber = null;
-  const categoryDetails = {};
-
-  switch (sellerType) {
-    case SELLER_TYPES.FARMER: {
-      businessName = profile.farmerFarmName || profile.farmName || 'Farmer Cultivator';
-      const crops = Array.isArray(profile.farmerCrops) ? profile.farmerCrops : (profile.crops || []);
-      primaryProducts = crops.join(', ');
-      capacity = profile.farmerAvailableQty || profile.availableQty || null;
-      isGst = false;
-      gstin = null;
-      fssaiNumber = null;
-
-      categoryDetails.farmName = profile.farmerFarmName || null;
-      categoryDetails.landSize = profile.farmerLandSize || profile.farmerLandArea || profile.landSize || null;
-      categoryDetails.category = profile.farmerCategory || profile.category || null;
-      categoryDetails.crops = crops;
-      categoryDetails.availableQty = profile.farmerAvailableQty || null;
-      categoryDetails.harvestMonths = profile.farmerHarvestMonths || profile.harvestMonths || null;
-      categoryDetails.priceExpectation = profile.farmerPriceExpectation || profile.priceExpectation || null;
-      categoryDetails.farmingMethod = profile.farmerMethod || profile.farmingMethod || null;
-      break;
-    }
-
-    case SELLER_TYPES.AGRICULTURAL_PRODUCER: {
-      businessName = profile.fpoName || 'FPO Producer Company';
-      const crops = Array.isArray(profile.fpoCrops) ? profile.fpoCrops : [];
-      primaryProducts = crops.join(', ');
-      capacity = profile.fpoCapacity || null;
-      isGst = profile.fpoIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.fpoGstin || profile.gstin || null;
-      fssaiNumber = null;
-
-      categoryDetails.fpoName = profile.fpoName || null;
-      categoryDetails.fpoStructure = profile.fpoStructure || profile.structure || null;
-      categoryDetails.fpoRegNumber = profile.fpoRegNumber || profile.regNumber || null;
-      categoryDetails.fpoMemberCount = profile.fpoMemberCount || profile.memberCount || null;
-      categoryDetails.fpoCombinedAcreage = profile.fpoCombinedAcreage || profile.combinedAcreage || null;
-      categoryDetails.fpoCrops = crops;
-      categoryDetails.fpoCapacity = profile.fpoCapacity || null;
-      categoryDetails.fpoIsGst = profile.fpoIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.fpoGstin = gstin;
-      break;
-    }
-
-    case SELLER_TYPES.ORGANIC_PRODUCER: {
-      businessName = profile.organicFarmName || 'Organic Producer Farm';
-      const crops = Array.isArray(profile.organicCrops) ? profile.organicCrops : [];
-      primaryProducts = crops.join(', ');
-      capacity = profile.organicCapacity || null;
-      isGst = Boolean(profile.isGst);
-      gstin = profile.gstin || null;
-      fssaiNumber = null;
-
-      categoryDetails.organicFarmName = profile.organicFarmName || null;
-      categoryDetails.organicAcreage = profile.organicAcreage || null;
-      categoryDetails.organicCertStatus = profile.organicCertStatus || profile.certStatus || null;
-      categoryDetails.organicCertAgency = profile.organicCertAgency || profile.certAgency || null;
-      categoryDetails.organicScopeNumber = profile.organicScopeNumber || profile.scopeNumber || null;
-      categoryDetails.organicCrops = crops;
-      categoryDetails.organicCapacity = profile.organicCapacity || null;
-      categoryDetails.organicMethod = profile.organicMethod || null;
-      break;
-    }
-
-    case SELLER_TYPES.RAW_MATERIAL_PROVIDER: {
-      businessName = profile.rawProviderName || 'Raw Material Provider';
-      const comms = Array.isArray(profile.rawCommodities)
-        ? profile.rawCommodities
-        : (typeof profile.rawCommodities === 'string' ? profile.rawCommodities.split(',').map(s => s.trim()) : []);
-      primaryProducts = comms.join(', ');
-      capacity = profile.rawStockCapacity || null;
-      isGst = profile.rawIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.rawGstin || profile.gstin || null;
-      fssaiNumber = null;
-
-      categoryDetails.rawProviderName = profile.rawProviderName || null;
-      categoryDetails.rawConstitution = profile.rawConstitution || null;
-      categoryDetails.rawCommodities = comms;
-      categoryDetails.rawSource = profile.rawSource || null;
-      categoryDetails.rawStockCapacity = profile.rawStockCapacity || null;
-      categoryDetails.rawMoq = profile.rawMoq || null;
-      categoryDetails.rawIsGst = profile.rawIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.rawGstin = gstin;
-      break;
-    }
-
-    case SELLER_TYPES.INGREDIENT_PRODUCER: {
-      businessName = profile.ingProducerName || 'Agri Ingredient Producer';
-      primaryProducts = profile.ingProducts || '';
-      capacity = profile.ingCapacity || null;
-      isGst = profile.ingIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.ingGstin || profile.gstin || null;
-      fssaiNumber = profile.ingFssaiNumber || profile.fssaiNumber || null;
-
-      categoryDetails.ingProducerName = profile.ingProducerName || null;
-      categoryDetails.ingProducts = profile.ingProducts || null;
-      categoryDetails.ingCapacity = profile.ingCapacity || null;
-      categoryDetails.ingTechnology = profile.ingTechnology || null;
-      categoryDetails.ingFssaiNumber = fssaiNumber;
-      categoryDetails.ingPackaging = profile.ingPackaging || null;
-      categoryDetails.ingIsGst = profile.ingIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.ingGstin = gstin;
-      break;
-    }
-
-    case SELLER_TYPES.MANUFACTURER: {
-      businessName = profile.mfgSellerName || 'Agro Manufacturer';
-      primaryProducts = profile.mfgProductsOffered || '';
-      capacity = profile.mfgCapacity || null;
-      isGst = profile.mfgIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.mfgGstin || profile.gstin || null;
-      fssaiNumber = profile.mfgFssaiNumber || profile.fssaiNumber || null;
-
-      categoryDetails.mfgSellerName = profile.mfgSellerName || null;
-      categoryDetails.mfgSellerConstitution = profile.mfgSellerConstitution || null;
-      categoryDetails.mfgCategory = profile.mfgCategory || null;
-      categoryDetails.mfgProductsOffered = profile.mfgProductsOffered || null;
-      categoryDetails.mfgRawMaterialsUsed = profile.mfgRawMaterialsUsed || null;
-      categoryDetails.mfgCapacity = profile.mfgCapacity || null;
-      categoryDetails.mfgFssaiNumber = fssaiNumber;
-      categoryDetails.mfgIsGst = profile.mfgIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.mfgGstin = gstin;
-      break;
-    }
-
-    case SELLER_TYPES.VALUE_ADDED_MANUFACTURER: {
-      businessName = profile.vaBrandName || 'Value-Added Enterprise';
-      primaryProducts = profile.vaProducts || '';
-      capacity = profile.vaMonthlyCapacity || null;
-      isGst = profile.vaIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.vaGstin || profile.gstin || null;
-      fssaiNumber = profile.vaFssaiNumber || profile.fssaiNumber || null;
-
-      categoryDetails.vaBrandName = profile.vaBrandName || null;
-      categoryDetails.vaProducts = profile.vaProducts || null;
-      categoryDetails.vaAgriInputs = profile.vaAgriInputs || null;
-      categoryDetails.vaMonthlyCapacity = profile.vaMonthlyCapacity || null;
-      categoryDetails.vaPackagingFormat = profile.vaPackagingFormat || null;
-      categoryDetails.vaFssaiNumber = fssaiNumber;
-      categoryDetails.vaIsGst = profile.vaIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.vaGstin = gstin;
-      break;
-    }
-
-    case SELLER_TYPES.OTHER:
-    default: {
-      businessName = profile.otherSellerName || profile.businessName || profile.farmName || 'Specialized Farm Enterprise';
-      primaryProducts = profile.otherProducts || '';
-      capacity = profile.otherStockQty || null;
-      isGst = profile.otherIsGst === 'Yes' || Boolean(profile.isGst);
-      gstin = profile.otherGstin || profile.gstin || null;
-      fssaiNumber = profile.fssaiNumber || null;
-
-      categoryDetails.otherSellerName = profile.otherSellerName || null;
-      categoryDetails.otherActivity = profile.otherActivity || null;
-      categoryDetails.otherProducts = profile.otherProducts || null;
-      categoryDetails.otherStockQty = profile.otherStockQty || null;
-      categoryDetails.otherIsGst = profile.otherIsGst || (isGst ? 'Yes' : 'No');
-      categoryDetails.otherGstin = gstin;
-      break;
+  let rawList = [];
+  if (Array.isArray(input)) {
+    rawList = input;
+  } else if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      rawList = trimmed.slice(1, -1).split(',').map((s) => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+    } else {
+      rawList = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
     }
   }
 
+  const ids = [];
+  for (const item of rawList) {
+    const clean = String(item).trim().toLowerCase();
+    if (!clean) continue;
+
+    // 1. Direct match by id in seller_categories (e.g. 'CAT-SEL-01')
+    const matchById = activeCategories.find((cat) => String(cat.id).trim().toLowerCase() === clean);
+    if (matchById) {
+      ids.push(matchById.id);
+      continue;
+    }
+
+    // 2. Match by code in seller_categories (e.g. 'Farmer', 'Agricultural Producer')
+    const matchByCode = activeCategories.find((cat) => String(cat.code).trim().toLowerCase() === clean);
+    if (matchByCode) {
+      ids.push(matchByCode.id);
+      continue;
+    }
+
+    // 3. Match by name in seller_categories (e.g. 'Farmer & Agricultural Cultivators')
+    const matchByName = activeCategories.find((cat) => String(cat.name).trim().toLowerCase() === clean);
+    if (matchByName) {
+      ids.push(matchByName.id);
+      continue;
+    }
+
+    if (/^CAT-SEL-\d+$/i.test(item.trim())) {
+      ids.push(item.trim().toUpperCase());
+    }
+  }
+
+  const unique = [...new Set(ids)];
+  return unique.length > 0
+    ? unique
+    : (activeCategories.length > 0 ? [activeCategories[0].id] : []);
+};
+
+/**
+ * Extracts form data for a specific category code from the submitted profile payload
+ * @param {string} code
+ * @param {object} profile
+ * @returns {object}
+ */
+export const extractCategoryDataForCode = (code, profile = {}) => {
+  const norm = String(code || '').trim().toLowerCase();
+  const data = {};
+
+  if (norm === 'farmer') {
+    const farmerFarmName = profile.farmerFarmName?.trim() || profile.farmName?.trim() || null;
+    if (farmerFarmName) data.farmerFarmName = farmerFarmName;
+  } else if (norm === 'agricultural producer') {
+    const fpoName = profile.fpoName?.trim() || null;
+    const fpoStructure = profile.fpoStructure || 'Farmer Producer Company (FPC)';
+    const fpoIsRegistered = profile.fpoIsRegistered || 'No';
+    const fpoRegNumber = fpoIsRegistered === 'Yes' ? profile.fpoRegNumber?.trim() || null : null;
+    if (fpoName || fpoRegNumber) {
+      data.fpoName = fpoName;
+      data.fpoStructure = fpoStructure;
+      data.fpoIsRegistered = fpoIsRegistered;
+      if (fpoRegNumber) data.fpoRegNumber = fpoRegNumber;
+    }
+  } else if (norm === 'organic producer') {
+    const organicFarmName = profile.organicFarmName?.trim() || null;
+    const organicCertStatus = profile.organicCertStatus || 'Certified Organic (NPOP)';
+    const organicHasLicense = profile.organicHasLicense || 'No';
+    const organicScopeNumber = organicHasLicense === 'Yes' ? profile.organicScopeNumber?.trim() || null : null;
+    if (organicFarmName || organicScopeNumber) {
+      data.organicFarmName = organicFarmName;
+      data.organicCertStatus = organicCertStatus;
+      data.organicHasLicense = organicHasLicense;
+      if (organicScopeNumber) data.organicScopeNumber = organicScopeNumber;
+    }
+  } else if (norm === 'raw-material provider') {
+    const rawProviderName = profile.rawProviderName?.trim() || null;
+    if (rawProviderName) data.rawProviderName = rawProviderName;
+  } else if (norm === 'ingredient producer') {
+    const ingProducerName = profile.ingProducerName?.trim() || null;
+    const ingHasFssai = profile.ingHasFssai || 'No';
+    const ingFssaiNumber = ingHasFssai === 'Yes' ? profile.ingFssaiNumber?.trim() || null : null;
+    if (ingProducerName) {
+      data.ingProducerName = ingProducerName;
+      data.ingHasFssai = ingHasFssai;
+      if (ingFssaiNumber) data.ingFssaiNumber = ingFssaiNumber;
+    }
+  } else if (norm === 'manufacturer') {
+    const mfgSellerName = profile.mfgSellerName?.trim() || null;
+    const mfgHasFssai = profile.mfgHasFssai || 'No';
+    const mfgFssaiNumber = mfgHasFssai === 'Yes' ? profile.mfgFssaiNumber?.trim() || null : null;
+    const mfgIsGst = profile.mfgIsGst || 'No';
+    const mfgGstin = mfgIsGst === 'Yes' ? profile.mfgGstin?.trim() || null : null;
+    if (mfgSellerName) {
+      data.mfgSellerName = mfgSellerName;
+      data.mfgHasFssai = mfgHasFssai;
+      if (mfgFssaiNumber) data.mfgFssaiNumber = mfgFssaiNumber;
+      data.mfgIsGst = mfgIsGst;
+      if (mfgGstin) data.mfgGstin = mfgGstin;
+    }
+  } else if (norm === 'value-added manufacturer') {
+    const vaBrandName = profile.vaBrandName?.trim() || null;
+    const vaHasFssai = profile.vaHasFssai || 'No';
+    const vaFssaiNumber = vaHasFssai === 'Yes' ? profile.vaFssaiNumber?.trim() || null : null;
+    if (vaBrandName) {
+      data.vaBrandName = vaBrandName;
+      data.vaHasFssai = vaHasFssai;
+      if (vaFssaiNumber) data.vaFssaiNumber = vaFssaiNumber;
+    }
+  } else if (norm === 'other') {
+    const otherSellerName = profile.otherSellerName?.trim() || profile.businessName?.trim() || null;
+    const otherActivity = profile.otherActivity?.trim() || null;
+    const otherIsGst = profile.otherIsGst || 'No';
+    const otherGstin = otherIsGst === 'Yes' ? profile.otherGstin?.trim() || null : null;
+    if (otherSellerName || otherActivity) {
+      if (otherSellerName) data.otherSellerName = otherSellerName;
+      if (otherActivity) data.otherActivity = otherActivity;
+      data.otherIsGst = otherIsGst;
+      if (otherGstin) data.otherGstin = otherGstin;
+    }
+  }
+
+  // Also support category details pre-keyed by code in profile payload
+  if (profile[code] && typeof profile[code] === 'object') {
+    Object.assign(data, profile[code]);
+  }
+  if (profile.categoryDetails?.[code] && typeof profile.categoryDetails[code] === 'object') {
+    Object.assign(data, profile.categoryDetails[code]);
+  }
+
+  return data;
+};
+
+/**
+ * Helper: Extract unified search attributes and category-specific details
+ * across all dynamic seller classifications with zero data loss.
+ * Fetches category metadata dynamically from public.seller_categories in Supabase.
+ * @param {string|Array} subType
+ * @param {object} profile
+ * @param {Array<object>} [cachedCategories]
+ * @returns {Promise<object>}
+ */
+export const extractSellerProfile = async (subType, profile = {}, cachedCategories = null) => {
+  const activeCategories = Array.isArray(cachedCategories) && cachedCategories.length > 0
+    ? cachedCategories
+    : await sellerCategoryRepository.findAllActiveWithPlans();
+
+  const rawCategoryInput =
+    profile.categoryIds ||
+    profile.selectedCategories ||
+    subType ||
+    profile.sellerType ||
+    'Farmer';
+  const categoryIds = await resolveCategoryIds(rawCategoryInput, activeCategories);
+  const primarySellerType = String(subType || profile.sellerType || 'Farmer').trim();
+
+  // Common location fields
+  const district = profile.district ? String(profile.district).trim() : null;
+  const village = profile.village ? String(profile.village).trim() : null;
+  const pinCode = profile.pinCode || profile.pincode ? String(profile.pinCode || profile.pincode).trim() : null;
+  const farmAddress = profile.farmAddress || profile.address ? String(profile.farmAddress || profile.address).trim() : null;
+
+  // Extract category data dynamically by looping directly through active categories from the database
+  const categoryDetails = {};
+
+  for (const category of activeCategories) {
+    // Only package categories that the seller selected in categoryIds
+    if (!categoryIds.includes(category.id)) {
+      continue;
+    }
+
+    const catData = extractCategoryDataForCode(category.code, profile);
+    if (catData && Object.keys(catData).length > 0) {
+      categoryDetails[category.id] = {
+        categoryId: category.id,
+        ...catData,
+      };
+    }
+  }
+
+  // Derive unified businessName from profile or the first matching category details
+  let businessName = profile.businessName?.trim() || profile.farmName?.trim() || '';
+  if (!businessName) {
+    for (const catId of categoryIds) {
+      const details = categoryDetails[catId];
+      if (details) {
+        businessName =
+          details.farmerFarmName ||
+          details.fpoName ||
+          details.organicFarmName ||
+          details.rawProviderName ||
+          details.ingProducerName ||
+          details.mfgSellerName ||
+          details.vaBrandName ||
+          details.otherSellerName ||
+          '';
+        if (businessName) break;
+      }
+    }
+  }
+  if (!businessName) businessName = 'Agri Enterprise';
+
+  // Derive compliance flags across all selected categories
+  let isGst = false;
+  let gstin = null;
+  let fssaiNumber = null;
+
+  for (const details of Object.values(categoryDetails)) {
+    if (details.mfgIsGst === 'Yes' || details.otherIsGst === 'Yes') isGst = true;
+    if (details.mfgGstin) gstin = details.mfgGstin;
+    if (details.otherGstin && !gstin) gstin = details.otherGstin;
+    if (details.ingFssaiNumber) fssaiNumber = details.ingFssaiNumber;
+    if (details.mfgFssaiNumber && !fssaiNumber) fssaiNumber = details.mfgFssaiNumber;
+    if (details.vaFssaiNumber && !fssaiNumber) fssaiNumber = details.vaFssaiNumber;
+  }
+
   return {
-    sellerType,
-    businessName: businessName || 'Agri Enterprise',
+    sellerType: categoryIds,
+    businessName,
     district: district || 'Not specified',
     village,
     pinCode,
@@ -225,8 +282,6 @@ export const extractSellerProfile = (subType, profile = {}) => {
     isGst,
     gstin,
     fssaiNumber,
-    primaryProducts: primaryProducts || null,
-    capacity: capacity || null,
     categoryDetails,
   };
 };
@@ -447,7 +502,7 @@ export const submitApplicationService = async ({
     console.log(`[APPLICATION] Buyer profile & onboarding updated for user: ${userId}`);
   } else {
     // SELLER
-    const sellerData = extractSellerProfile(cleanSubType, profile);
+    const sellerData = await extractSellerProfile(cleanSubType, profile);
     await profileRepository.upsertSeller(userId, sellerData);
     await userRepository.updateSellerOnboarding(userId);
     console.log(`[APPLICATION] Seller profile & onboarding updated for user: ${userId}`);
