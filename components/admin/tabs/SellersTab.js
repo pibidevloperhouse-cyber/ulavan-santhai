@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, CheckCircle2, XCircle, AlertCircle, Eye, FileText, Edit2, Check, Store, Plus, MapPin, X, Shield, Phone, CreditCard, Sparkles } from "lucide-react";
+import { Search, Filter, CheckCircle2, AlertCircle, Eye, FileText, Check, Store, Plus, MapPin, X, Shield, Phone, CreditCard, Sparkles } from "lucide-react";
+import { updateAdminSeller } from "@/services/adminApi";
 
 export const TAMIL_NADU_DISTRICTS = [
   "Coimbatore",
@@ -50,9 +51,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
   const [selectedSeller, setSelectedSeller] = useState(sellers[0] || null);
   const [fullViewSeller, setFullViewSeller] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState(null);
-  const [editFormError, setEditFormError] = useState("");
 
   // Add New Seller Modal State (Zero Static Pre-fills)
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -93,55 +91,26 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
   });
 
   const handleUpdateStatus = (id, newStatus) => {
+    let currentName = selectedSeller?.businessName || id;
     if (setSellers) {
       setSellers((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
+        prev.map((s) => {
+          if (s.id !== id) return s;
+          currentName = s.businessName || id;
+          return { ...s, status: newStatus };
+        })
       );
     }
     if (selectedSeller?.id === id) {
       setSelectedSeller((prev) => ({ ...prev, status: newStatus }));
     }
-    const currentName = selectedSeller?.businessName || id;
+    if (id) {
+      updateAdminSeller(id, { status: newStatus }).catch((err) => {
+        console.warn("Backend seller status update notification:", err);
+      });
+    }
     if (onLogAction) onLogAction(`Seller ${newStatus}`, `Marked "${currentName}" as ${newStatus}.`);
     if (onNotify) onNotify(`Seller "${currentName}" marked as ${newStatus}`);
-  };
-
-  const handleOpenEdit = (seller) => {
-    setEditFormError("");
-    setEditFormData({ ...seller });
-    setEditModalOpen(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editFormData) return;
-    if (!editFormData.businessName?.trim()) {
-      setEditFormError("Business / farm name cannot be empty.");
-      return;
-    }
-    if (!editFormData.phone?.trim()) {
-      setEditFormError("Contact mobile phone cannot be empty.");
-      return;
-    }
-
-    if (setSellers) {
-      setSellers((prev) =>
-        prev.map((s) => (s.id === editFormData.id ? { ...editFormData } : s))
-      );
-    }
-    if (selectedSeller?.id === editFormData.id) {
-      setSelectedSeller({ ...editFormData });
-    }
-    if (fullViewSeller?.id === editFormData.id) {
-      setFullViewSeller({ ...editFormData });
-    }
-    setEditModalOpen(false);
-    if (onLogAction)
-      onLogAction(
-        "Seller Profile Modified",
-        `Updated details for "${editFormData.businessName}".`
-      );
-    if (onNotify)
-      onNotify(`Seller profile for "${editFormData.businessName}" saved.`);
   };
 
   const handleAddNewSeller = () => {
@@ -356,16 +325,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
                               className="p-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-[#174B35] hover:bg-[#E8F0E3]/60 hover:border-[#729B59]/40 transition-all shadow-2xs cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Edit Icon */}
-                            <button
-                              type="button"
-                              title="Edit Seller Details"
-                              onClick={() => handleOpenEdit(seller)}
-                              className="p-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition-all shadow-2xs cursor-pointer"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Quick Approve Icon */}
@@ -651,207 +610,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* Edit Seller Profile Modal                                 */}
-      {/* ======================================================== */}
-      {editModalOpen && editFormData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-          <div className="relative bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
-            {/* Top Accent Ribbon */}
-            <div className="h-2 w-full bg-gradient-to-r from-[#174B35] via-emerald-500 to-[#174B35]" />
-
-            {/* Header */}
-            <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-[#174B35] shadow-xs">
-                  <Edit2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                    <span>Edit Cultivator Profile</span>
-                  </h4>
-                  <p className="text-xs text-gray-500 font-medium truncate max-w-xs">
-                    {editFormData.businessName}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition cursor-pointer"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form Body */}
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-              {editFormError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-rose-700 font-semibold animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{editFormError}</span>
-                </div>
-              )}
-
-              {/* Farm / Business Name */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Business / Farm Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.businessName || ""}
-                  onChange={(e) => {
-                    setEditFormData({
-                      ...editFormData,
-                      businessName: e.target.value,
-                    });
-                    if (editFormError) setEditFormError("");
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Seller Type & District */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Seller Classification
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.sellerType || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        sellerType: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Operating District
-                  </label>
-                  <select
-                    value={editFormData.district || "Coimbatore"}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        district: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  >
-                    {TAMIL_NADU_DISTRICTS.map((dist) => (
-                      <option key={dist} value={dist}>
-                        {dist}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Contact Name & Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Contact Person
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.contactName || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        contactName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Mobile Phone <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.phone || ""}
-                    onChange={(e) => {
-                      setEditFormData({
-                        ...editFormData,
-                        phone: e.target.value,
-                      });
-                      if (editFormError) setEditFormError("");
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.address || ""}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      address: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Products Offered */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Primary Crops Offered
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.productsOffered || ""}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      productsOffered: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition shadow-2xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                className="px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save Changes</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Verification Document Modal */}
       {previewDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
@@ -1012,54 +770,41 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
             </div>
 
             {/* Administrative Action Bar inside the Full Card */}
-            <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenEdit(fullViewSeller);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Edit Seller Dossier</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                {fullViewSeller.status !== "Approved" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleUpdateStatus(fullViewSeller.id, "Approved");
-                      setFullViewSeller((p) => ({ ...p, status: "Approved" }));
-                    }}
-                    className="flex-1 sm:flex-initial px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Approve Producer</span>
-                  </button>
-                )}
-
-                {fullViewSeller.status !== "Rejected" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleUpdateStatus(fullViewSeller.id, "Rejected");
-                      setFullViewSeller((p) => ({ ...p, status: "Rejected" }));
-                    }}
-                    className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold border border-red-200 transition-colors cursor-pointer"
-                  >
-                    Reject
-                  </button>
-                )}
-
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2 text-xs">
+              {fullViewSeller.status !== "Approved" && (
                 <button
                   type="button"
-                  onClick={() => setFullViewSeller(null)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold cursor-pointer"
+                  onClick={() => {
+                    handleUpdateStatus(fullViewSeller.id, "Approved");
+                    setFullViewSeller((p) => ({ ...p, status: "Approved" }));
+                  }}
+                  className="px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  Close
+                  <Check className="w-4 h-4" />
+                  <span>Approve Producer</span>
                 </button>
-              </div>
+              )}
+
+              {fullViewSeller.status !== "Rejected" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleUpdateStatus(fullViewSeller.id, "Rejected");
+                    setFullViewSeller((p) => ({ ...p, status: "Rejected" }));
+                  }}
+                  className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold border border-red-200 transition-colors cursor-pointer"
+                >
+                  Reject
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setFullViewSeller(null)}
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

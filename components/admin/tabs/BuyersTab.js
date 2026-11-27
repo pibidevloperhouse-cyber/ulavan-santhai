@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, PlusCircle, Check, Edit2, ShieldAlert, UserCheck, Users, Plus, Eye, X, Phone, MapPin, CreditCard, Building2, ShieldCheck, AlertCircle, Sparkles } from "lucide-react";
+import { Search, Filter, Users, Plus, Eye, X, Phone, MapPin, CreditCard, Building2, AlertCircle, Sparkles } from "lucide-react";
 
 export const TAMIL_NADU_DISTRICTS = [
   "Coimbatore",
@@ -49,11 +49,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedBuyer, setSelectedBuyer] = useState(buyers[0] || null);
   const [fullViewBuyer, setFullViewBuyer] = useState(null);
-  const [showManageAccessModal, setShowManageAccessModal] = useState(false);
-  const [extraSellersToAdd, setExtraSellersToAdd] = useState(10);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState(null);
-  const [editFormError, setEditFormError] = useState("");
 
   // Add Buyer Modal State (Zero Static Pre-fills)
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -115,74 +110,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
     }
     if (onLogAction) onLogAction("Buyer Status Changed", `Changed "${updatedName || id}" status to ${nextStatus}.`);
     if (onNotify) onNotify(`Buyer "${updatedName || id}" status changed to ${nextStatus}`);
-  };
-
-  const handleGrantAccess = () => {
-    if (!selectedBuyer) return;
-    if (setBuyers) {
-      setBuyers((prev) =>
-        prev.map((b) => {
-          if (b.id !== selectedBuyer.id) return b;
-          const parts = b.sellersViewable?.split("/") || ["0", "10"];
-          const currentTotal = parseInt(parts[1]?.trim() || "10", 10);
-          const newTotal = currentTotal + extraSellersToAdd;
-          return {
-            ...b,
-            sellersViewable: `${parts[0]?.trim() || "0"} / ${newTotal}`,
-            subscriptionStatus: `${b.subscriptionStatus} (+${extraSellersToAdd} extra)`,
-          };
-        })
-      );
-    }
-    setSelectedBuyer((prev) => {
-      const parts = prev.sellersViewable?.split("/") || ["0", "10"];
-      const currentTotal = parseInt(parts[1]?.trim() || "10", 10);
-      return {
-        ...prev,
-        sellersViewable: `${parts[0]?.trim() || "0"} / ${currentTotal + extraSellersToAdd}`,
-      };
-    });
-    setShowManageAccessModal(false);
-    if (onLogAction) onLogAction("Buyer Sourcing Limit Raised", `Allocated +${extraSellersToAdd} sellers to "${selectedBuyer.name}".`);
-    if (onNotify) onNotify(`Added +${extraSellersToAdd} sellers access to ${selectedBuyer.name}`);
-  };
-
-  const handleOpenEdit = (buyer) => {
-    setEditFormError("");
-    setEditFormData({ ...buyer });
-    setEditModalOpen(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editFormData) return;
-    if (!editFormData.name?.trim()) {
-      setEditFormError("Buyer company / trader name cannot be empty.");
-      return;
-    }
-    if (!editFormData.phone?.trim()) {
-      setEditFormError("Representative contact phone cannot be empty.");
-      return;
-    }
-
-    if (setBuyers) {
-      setBuyers((prev) =>
-        prev.map((b) => (b.id === editFormData.id ? { ...editFormData } : b))
-      );
-    }
-    if (selectedBuyer?.id === editFormData.id) {
-      setSelectedBuyer({ ...editFormData });
-    }
-    if (fullViewBuyer?.id === editFormData.id) {
-      setFullViewBuyer({ ...editFormData });
-    }
-    setEditModalOpen(false);
-    if (onLogAction)
-      onLogAction(
-        "Buyer Details Modified",
-        `Updated records for "${editFormData.name}".`
-      );
-    if (onNotify)
-      onNotify(`Buyer details for "${editFormData.name}" updated.`);
   };
 
   const handleAddNewBuyer = () => {
@@ -392,29 +319,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
                               className="p-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-[#174B35] hover:bg-[#E8F0E3]/60 hover:border-[#729B59]/40 transition-all shadow-2xs cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Edit Icon */}
-                            <button
-                              type="button"
-                              title="Edit Buyer Details"
-                              onClick={() => handleOpenEdit(buyer)}
-                              className="p-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition-all shadow-2xs cursor-pointer"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Manage Access Quota Icon */}
-                            <button
-                              type="button"
-                              title="Grant Extra Farmer Quota (+10)"
-                              onClick={() => {
-                                setSelectedBuyer(buyer);
-                                setShowManageAccessModal(true);
-                              }}
-                              className="p-1.5 rounded-xl bg-[#E8F0E3] border border-[#729B59]/40 text-[#174B35] hover:bg-[#174B35] hover:text-white transition-all shadow-2xs cursor-pointer"
-                            >
-                              <PlusCircle className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Suspend / Activate Icon */}
@@ -675,247 +579,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
       )}
 
       {/* ======================================================== */}
-      {/* Edit Buyer Details Modal                                  */}
-      {/* ======================================================== */}
-      {editModalOpen && editFormData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-          <div className="relative bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
-            {/* Top Accent Ribbon */}
-            <div className="h-2 w-full bg-gradient-to-r from-[#174B35] via-emerald-500 to-[#174B35]" />
-
-            {/* Header */}
-            <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-[#174B35] shadow-xs">
-                  <Edit2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                    <span>Edit Buyer Procurement Profile</span>
-                  </h4>
-                  <p className="text-xs text-gray-500 font-medium truncate max-w-xs">
-                    {editFormData.name}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition cursor-pointer"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form Body */}
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-              {editFormError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-rose-700 font-semibold animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{editFormError}</span>
-                </div>
-              )}
-
-              {/* Company / Mandi Name */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Buyer Business / Mandi Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.name || ""}
-                  onChange={(e) => {
-                    setEditFormData({ ...editFormData, name: e.target.value });
-                    if (editFormError) setEditFormError("");
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Classification & District */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Buyer Classification
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.buyerType || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        buyerType: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Operating Coverage
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.operatingDistrict || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        operatingDistrict: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Contact Name & Mobile Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Representative Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.contactName || ""}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        contactName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Mobile Phone <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.phone || ""}
-                    onChange={(e) => {
-                      setEditFormData({
-                        ...editFormData,
-                        phone: e.target.value,
-                      });
-                      if (editFormError) setEditFormError("");
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Interested Commodities */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Interested Commodities
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.interestCommodities || ""}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      interestCommodities: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition shadow-2xs cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                className="px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save Changes</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manage Access Modal */}
-      {showManageAccessModal && selectedBuyer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h4 className="text-sm font-bold text-gray-900">
-                Manage Buyer Access &bull; {selectedBuyer.name}
-              </h4>
-              <button type="button" onClick={() => setShowManageAccessModal(false)} className="text-gray-400">&times;</button>
-            </div>
-
-            <div className="text-xs space-y-3">
-              <p className="text-gray-600 leading-relaxed">
-                Ulavan Santhai pricing policy grants ₹365 for up to 10 sellers, plus ₹10 for every additional 10 sellers. Select credits to allocate:
-              </p>
-
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">
-                  Additional Sellers to Credit:
-                </label>
-                <div className="flex items-center gap-3">
-                  {[10, 20, 50].map((num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setExtraSellersToAdd(num)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-                        extraSellersToAdd === num
-                          ? "bg-[#174B35] text-white border-[#174B35]"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      +{num} Sellers
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#E8F0E3]/40 rounded-xl border border-[#729B59]/30">
-                <div className="text-gray-600">Current Entitlement: <span className="font-bold text-gray-900">{selectedBuyer.sellersViewable}</span></div>
-                <div className="text-[#174B35] font-bold mt-1">
-                  New Total will be: {parseInt(selectedBuyer.sellersViewable?.split("/")[1] || "10", 10) + extraSellersToAdd} Sellers
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowManageAccessModal(false)}
-                className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleGrantAccess}
-                className="px-5 py-2 rounded-xl bg-[#174B35] text-white text-xs font-bold"
-              >
-                Save New Access
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
       {/* 🚀 BUYER FULL VIEW CARD MODAL                            */}
       {/* ======================================================== */}
       {fullViewBuyer && (
@@ -998,71 +661,33 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
               </div>
             </div>
 
-            {/* Quota Management & Access Snapshot */}
-            <div className="p-4 rounded-2xl bg-[#E8F0E3]/70 border border-[#729B59]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <span className="font-black text-[#174B35] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-[#174B35]" />
-                  <span>Direct Farmer Contact Allowance</span>
-                </span>
-                <p className="text-gray-700 font-semibold">
-                  Buyer has revealed {fullViewBuyer.sellersViewable} cultivators. Add +10 quota with one click.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedBuyer(fullViewBuyer);
-                  setShowManageAccessModal(true);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>Grant Extra Quota</span>
-              </button>
-            </div>
-
             {/* Administrative Action Bar inside the Full Card */}
-            <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => {
-                  handleOpenEdit(fullViewBuyer);
+                  handleToggleStatus(fullViewBuyer.id);
+                  setFullViewBuyer((p) => ({
+                    ...p,
+                    status: p.status === "Active" ? "Suspended" : "Active",
+                  }));
                 }}
-                className="px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                className={`px-4 py-2 rounded-xl font-bold border transition-colors cursor-pointer ${
+                  fullViewBuyer.status === "Active"
+                    ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                    : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
+                }`}
               >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Edit Buyer Details</span>
+                {fullViewBuyer.status === "Active" ? "Suspend Account" : "Activate Account"}
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleToggleStatus(fullViewBuyer.id);
-                    setFullViewBuyer((p) => ({
-                      ...p,
-                      status: p.status === "Active" ? "Suspended" : "Active",
-                    }));
-                  }}
-                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-bold border transition-colors cursor-pointer ${
-                    fullViewBuyer.status === "Active"
-                      ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
-                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
-                  }`}
-                >
-                  {fullViewBuyer.status === "Active" ? "Suspend Account" : "Activate Account"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFullViewBuyer(null)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setFullViewBuyer(null)}
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   calculateAdminStats,
 } from "@/data/adminPortalData";
 import { getSellerCategories, getBuyerCategories } from "@/services/categoryStorage";
+import { getAdminBuyers, getAdminSellers } from "@/services/adminApi";
 
 import DashboardTab from "@/components/admin/tabs/DashboardTab";
 import SellersTab from "@/components/admin/tabs/SellersTab";
@@ -104,6 +105,37 @@ function AdminPortalContent() {
       }
     }
   }, []);
+
+  // Fetch live buyers and sellers strictly from backend DB tables joined with users
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!["dashboard", "buyers", "sellers"].includes(activeTab)) return;
+
+    (async () => {
+      try {
+        const [buyersRes, sellersRes] = await Promise.all([
+          getAdminBuyers(),
+          getAdminSellers(),
+        ]);
+
+        if (buyersRes?.success && Array.isArray(buyersRes.data)) {
+          setBuyers(buyersRes.data);
+          try {
+            localStorage.setItem("ulavan_admin_buyers", JSON.stringify(buyersRes.data));
+          } catch (e) {}
+        }
+
+        if (sellersRes?.success && Array.isArray(sellersRes.data)) {
+          setSellers(sellersRes.data);
+          try {
+            localStorage.setItem("ulavan_admin_sellers", JSON.stringify(sellersRes.data));
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.error("Failed to load live buyers/sellers from backend:", err);
+      }
+    })();
+  }, [activeTab]);
 
   // Sync to localStorage whenever products, sellers, buyers, transactions, or logs change
   useEffect(() => {
