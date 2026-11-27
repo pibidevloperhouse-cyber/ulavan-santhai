@@ -140,9 +140,9 @@ export const getAllBuyersService = async () => {
     formattedBuyers.push({
       id: bp.id,
       userId: bp.userId,
-      // Name: business name with fallback to user name from users table
-      name: bp.businessName || bp.userName || 'Agri Mandi Buyer',
-      // contactName: strictly retrieved from users table (joined via bp.user_id = users.id)
+      // Real user name strictly retrieved from users table (joined via bp.user_id = users.id)
+      name: bp.userName || bp.businessName || 'Agri Mandi Buyer',
+      businessName: bp.businessName || '',
       contactName: bp.userName || 'Procurement Desk',
       phone: bp.userMobile || '',
       email: bp.userEmail || '',
@@ -179,7 +179,9 @@ export const getAllBuyersService = async () => {
       formattedBuyers.push({
         id: `BP_${sp.id.replace('SP_', '')}`,
         userId: sp.userId,
-        name: sp.businessName || sp.userName || 'Wholesale Buyer',
+        // Real user name strictly retrieved from users table (joined via sp.user_id = users.id)
+        name: sp.userName || sp.businessName || 'Wholesale Buyer',
+        businessName: sp.businessName || '',
         contactName: sp.userName || 'Procurement Desk',
         phone: sp.userMobile || '',
         email: sp.userEmail || '',
