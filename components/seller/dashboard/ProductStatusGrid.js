@@ -2,88 +2,97 @@
 
 import React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-
-const STATUS_DOT = {
-  Draft: "bg-[#6B7280]",
-  Submitted: "bg-[#D97706]",
-  "Under Review": "bg-[#D97706]",
-  Approved: "bg-[#1D7446]",
-  Published: "bg-[#174B35]",
-  Inactive: "bg-[#6B7280]",
-  Rejected: "bg-[#DC2626]",
-  "Expired / Unavailable": "bg-[#DC2626]",
-};
+import { ArrowUpRight } from "lucide-react";
 
 export default function ProductStatusGrid({ statusBreakdown = [] }) {
-  const orderedLabels = [
-    "Draft",
-    "Submitted",
-    "Under Review",
-    "Approved",
-    "Published",
-    "Inactive",
-    "Rejected",
-    "Expired / Unavailable",
+  const byLabel = new Map(
+    statusBreakdown.map((item) => [item.label, Number(item.count) || 0])
+  );
+
+  const stages = [
+    {
+      num: "01",
+      label: "Draft",
+      count: byLabel.get("Draft") || 0,
+      href: "/seller/products?status=Draft",
+      cardClass: "bg-[#F5F5EB] hover:bg-[#ECECD9] border-[#0B3C26]/10",
+      badgeClass: "bg-white text-[#0B3C26]",
+    },
+    {
+      num: "02",
+      label: "In Review",
+      count: (byLabel.get("Submitted") || 0) + (byLabel.get("Under Review") || 0),
+      href: "/seller/products?status=Under%20Review",
+      cardClass: "bg-[#F5F5EB] hover:bg-[#ECECD9] border-[#0B3C26]/10",
+      badgeClass: "bg-[#FEF3C7] text-[#92400E]",
+    },
+    {
+      num: "03",
+      label: "Approved & Live",
+      count: (byLabel.get("Approved") || 0) + (byLabel.get("Published") || 0),
+      href: "/seller/products?status=Published",
+      cardClass: "bg-[#C5F340]/45 hover:bg-[#C5F340]/70 border-[#0B3C26]/15",
+      badgeClass: "bg-[#0B3C26] text-white",
+    },
+    {
+      num: "04",
+      label: "Inactive / Issues",
+      count:
+        (byLabel.get("Inactive") || 0) +
+        (byLabel.get("Rejected") || 0) +
+        (byLabel.get("Expired / Unavailable") || 0),
+      href: "/seller/products?status=Inactive",
+      cardClass: "bg-[#F5F5EB] hover:bg-[#ECECD9] border-[#0B3C26]/10",
+      badgeClass: "bg-white text-[#991B1B]",
+    },
   ];
 
-  const byLabel = new Map(statusBreakdown.map((item) => [item.label, item]));
-  const items = orderedLabels.map(
-    (label) => byLabel.get(label) || { label, count: 0, statusKey: label }
-  );
-
-  const totalCount = items.reduce(
-    (sum, item) => sum + (Number(item.count) || 0),
-    0
-  );
+  const totalCount = stages.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="bg-white border border-[#E5E0D5] rounded-xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0ECE4]">
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-sm font-bold text-[#111827]">
-            Product listings by status
+    <div className="bg-white rounded-3xl p-5 sm:p-6 ring-1 ring-[#0B3C26]/10 shadow-xs space-y-5 min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#54754B]">
+            CATALOG PIPELINE
+          </div>
+          <h2 className="text-base sm:text-lg font-extrabold text-[#0B3C26] mt-0.5">
+            Product Listings by Stage
           </h2>
-          <span className="font-space text-[11px] font-semibold text-[#5B6860] bg-[#F5F4F0] px-2 py-0.5 rounded-md">
-            {totalCount}
-          </span>
         </div>
 
         <Link
           href="/seller/products"
-          className="inline-flex items-center gap-0.5 text-xs text-[#174B35] font-semibold hover:underline"
+          className="inline-flex items-center gap-2 text-xs font-bold text-[#0B3C26] hover:opacity-80 shrink-0 group"
         >
-          <span>Manage products</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <span>Manage all</span>
+          <span className="w-7 h-7 rounded-full bg-[#0B3C26] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </span>
         </Link>
       </div>
 
-      {/* Balanced Status Matrix: 2-col mobile, 4-col tablet, 2-col inside 1024px split, 4-col on xl desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3">
-        {items.map((item) => {
-          const dotColor = STATUS_DOT[item.label] || "bg-[#6B7280]";
-          return (
-            <Link
-              key={item.label}
-              href={`/seller/products?status=${encodeURIComponent(item.label)}`}
-              className="min-w-0 bg-[#FAF9F6] hover:bg-[#F3F5F0] border border-[#EAE6DD] hover:border-[#9EB5A0] rounded-lg p-3 flex flex-col justify-between transition-colors cursor-pointer group"
-            >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                <span
-                  title={item.label}
-                  className="text-xs font-medium text-[#374151] group-hover:text-[#111827] truncate"
-                >
-                  {item.label}
-                </span>
-              </div>
-
-              <div className="mt-2.5 font-space text-xl sm:text-2xl font-bold text-[#111827] group-hover:text-[#174B35] transition-colors leading-none">
-                {item.count}
-              </div>
-            </Link>
-          );
-        })}
+      {/* Clean 4-stage horizontal grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stages.map((stage) => (
+          <Link
+            key={stage.label}
+            href={stage.href}
+            className={`p-4 rounded-2xl border transition-all group min-w-0 ${stage.cardClass}`}
+          >
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#4E6D45] truncate">
+              {stage.num} / {stage.label}
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="font-space text-2xl sm:text-3xl font-bold text-[#0B3C26] leading-none">
+                {stage.count}
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.badgeClass}`}>
+                {totalCount > 0 ? `${Math.round((stage.count / totalCount) * 100)}%` : "0%"}
+              </span>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

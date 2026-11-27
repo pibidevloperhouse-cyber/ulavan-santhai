@@ -15,7 +15,7 @@ function SellerLayoutShell({ children }) {
   const profile = getDynamicSellerProfile(sessionUser);
 
   return (
-    <div className="min-h-screen bg-[#FBF9F4] text-[#1F2922] pt-14 lg:pt-0 overflow-x-clip">
+    <div className="min-h-screen bg-[#F5F5EB] text-[#0B3C26] pt-14 lg:pt-0 overflow-x-clip">
       {/* Mobile Top Header - fixed at top on mobile/tablet so it never scrolls out of view */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white text-gray-900 px-3 sm:px-4 flex items-center justify-between border-b border-gray-200 shadow-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
