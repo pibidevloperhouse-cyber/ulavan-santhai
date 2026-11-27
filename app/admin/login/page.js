@@ -91,37 +91,62 @@ export default function AdminLoginPage() {
       panelClassName="admin-login-panel"
       backdrop={
         <div className="admin-icons-rail" aria-hidden="true">
+          {/* Gently Curved Connecting Line */}
+          <svg
+            className="admin-rail-line"
+            viewBox="0 0 100 320"
+            fill="none"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="adminRailCurveGrad" x1="0" y1="0" x2="0" y2="320" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#F2FFE0" stopOpacity="0" />
+                <stop offset="16%" stopColor="#F2FFE0" stopOpacity="0.62" />
+                <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.78" />
+                <stop offset="84%" stopColor="#F2FFE0" stopOpacity="0.62" />
+                <stop offset="100%" stopColor="#F2FFE0" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M 16 0 Q 100 160 16 320"
+              stroke="url(#adminRailCurveGrad)"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+
           {/* 1. Seedling Icon */}
           <div className="admin-bg-icon admin-bg-icon-1">
             <svg viewBox="0 0 64 64" fill="none">
-              <circle cx="32" cy="32" r="29.5" stroke="#DCEEC1" strokeOpacity="0.88" strokeWidth="1.75" />
               {/* Soil mound */}
               <path
-                d="M20.5 45.2C20.5 42.4 25.5 40.6 32 40.6C38.5 40.6 43.5 42.4 43.5 45.2C43.5 46.8 41.5 47.6 32 47.6C22.5 47.6 20.5 46.8 20.5 45.2Z"
-                fill="#ECFAD0"
+                d="M17.5 46.5C17.5 42.6 23.8 40.4 32 40.4C40.2 40.4 46.5 42.6 46.5 46.5C46.5 48.7 44.2 49.5 32 49.5C19.8 49.5 17.5 48.7 17.5 46.5Z"
+                fill="#FFFFFF"
               />
               {/* Center stem */}
-              <rect x="30.6" y="28.5" width="2.8" height="13.5" rx="1.4" fill="#ECFAD0" />
+              <rect x="30" y="26.5" width="4" height="16" rx="2" fill="#FFFFFF" />
               {/* Left leaf */}
               <path
-                d="M31.3 32.5C24.2 32.8 18.2 28.4 17.5 21.8C24.2 21.2 29.8 25.4 31.3 32.5Z"
-                fill="#ECFAD0"
+                d="M31 32.5C22.2 33 15.2 27.6 14.5 19.8C22.8 19.1 29.4 24.2 31 32.5Z"
+                fill="#FFFFFF"
               />
               <path
-                d="M21.2 24.4C24.8 26.2 28 28.7 30.2 31.4"
-                stroke="#145E30"
-                strokeWidth="1.2"
+                d="M19 23.2C23.5 25.4 27.2 28.4 29.8 31.4"
+                stroke="#0F5D2D"
+                strokeWidth="1.6"
                 strokeLinecap="round"
               />
               {/* Right leaf */}
               <path
-                d="M32.7 31.6C34.2 24.5 39.8 20.3 46.5 20.9C45.8 27.5 39.8 31.9 32.7 31.6Z"
-                fill="#ECFAD0"
+                d="M33 31.2C34.6 22.8 41.2 17.8 49.5 18.5C48.8 26.2 41.8 31.6 33 31.2Z"
+                fill="#FFFFFF"
               />
               <path
-                d="M42.8 23.6C39.2 25.4 36 27.9 33.8 30.6"
-                stroke="#145E30"
-                strokeWidth="1.2"
+                d="M45 21.8C40.5 24 36.8 27 34.2 30"
+                stroke="#0F5D2D"
+                strokeWidth="1.6"
                 strokeLinecap="round"
               />
             </svg>
@@ -130,42 +155,40 @@ export default function AdminLoginPage() {
           {/* 2. Tractor Icon */}
           <div className="admin-bg-icon admin-bg-icon-2">
             <svg viewBox="0 0 64 64" fill="none">
-              <circle cx="32" cy="32" r="29.5" stroke="#DCEEC1" strokeOpacity="0.88" strokeWidth="1.75" />
-              {/* Cab & Hood Body */}
+              {/* Cab, Hood & Exhaust Stack */}
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
-                d="M20 20.5C20 19.4 20.9 18.5 22 18.5H31.2C32.3 18.5 33.2 19.4 33.2 20.5V27H37.2V23.2H39.4C39.8 23.2 40.2 23.4 40.4 23.8L41.2 24.8H39.2V27H43.5C44.9 27 46 28.1 46 29.5V35.2H43.5C41.8 33.4 39 33.4 37.3 35.2H30.8C29 32.5 25.2 31.9 22.1 33.6C21.1 34.1 20.2 34.8 19.6 35.6H18.5V31.5H20V20.5ZM23 21.8V28.4H30.2V21.8H23Z"
-                fill="#ECFAD0"
+                d="M17.5 18.5C17.5 17.1 18.6 16 20 16H31.2C32.6 16 33.7 17.1 33.7 18.5V25.6H38V21.2H40.6C41.1 21.2 41.5 21.4 41.8 21.8L42.8 23.2H40.6V25.6H45.2C46.9 25.6 48.2 26.9 48.2 28.6V35.2H45.8C43.7 32.9 39.9 32.9 37.8 35.2H31C28.8 31.8 24.2 31 20.6 33.1C19.3 33.8 18.2 34.7 17.4 35.8H15.8V31.2H17.5V18.5ZM21 19.6V27.4H30.2V19.6H21Z"
+                fill="#FFFFFF"
               />
               {/* Rear Wheel */}
-              <circle cx="24.2" cy="39.8" r="6.4" stroke="#ECFAD0" strokeWidth="2.8" />
-              <circle cx="24.2" cy="39.8" r="2.2" fill="#ECFAD0" />
+              <circle cx="22.8" cy="40.5" r="7" stroke="#FFFFFF" strokeWidth="3.4" />
+              <circle cx="22.8" cy="40.5" r="2.6" fill="#FFFFFF" />
               {/* Front Wheel */}
-              <circle cx="40.4" cy="40.6" r="5.4" stroke="#ECFAD0" strokeWidth="2.6" />
-              <circle cx="40.4" cy="40.6" r="1.9" fill="#ECFAD0" />
+              <circle cx="41.8" cy="41.8" r="5.6" stroke="#FFFFFF" strokeWidth="3.1" />
+              <circle cx="41.8" cy="41.8" r="2.2" fill="#FFFFFF" />
             </svg>
           </div>
 
           {/* 3. Wheat Icon */}
           <div className="admin-bg-icon admin-bg-icon-3">
             <svg viewBox="0 0 64 64" fill="none">
-              <circle cx="32" cy="32" r="29.5" stroke="#DCEEC1" strokeOpacity="0.88" strokeWidth="1.75" />
               {/* Top center grain */}
               <path
-                d="M32 13.5C34.3 16 34.8 19.2 32 22C29.2 19.2 29.7 16 32 13.5Z"
-                fill="#ECFAD0"
+                d="M32 11C35.2 14.3 35.8 18.4 32 22C28.2 18.4 28.8 14.3 32 11Z"
+                fill="#FFFFFF"
               />
               {/* Left grains (top, mid, bottom) */}
-              <path d="M23.5 19.5C27.2 20.2 29.8 23.2 29.8 26.8C26.2 26.5 23.5 23.5 23.5 19.5Z" fill="#ECFAD0" />
-              <path d="M23.5 27C27.2 27.7 29.8 30.7 29.8 34.3C26.2 34 23.5 31 23.5 27Z" fill="#ECFAD0" />
-              <path d="M23.5 34.5C27.2 35.2 29.8 38.2 29.8 41.8C26.2 41.5 23.5 38.5 23.5 34.5Z" fill="#ECFAD0" />
+              <path d="M21.8 17.8C26.4 18.5 29.6 22.1 29.6 26.5C25.2 26.2 21.8 22.6 21.8 17.8Z" fill="#FFFFFF" />
+              <path d="M21.8 26.2C26.4 26.9 29.6 30.5 29.6 34.9C25.2 34.6 21.8 31 21.8 26.2Z" fill="#FFFFFF" />
+              <path d="M21.8 34.6C26.4 35.3 29.6 38.9 29.6 43.3C25.2 43 21.8 39.4 21.8 34.6Z" fill="#FFFFFF" />
               {/* Right grains (top, mid, bottom) */}
-              <path d="M40.5 19.5C36.8 20.2 34.2 23.2 34.2 26.8C37.8 26.5 40.5 23.5 40.5 19.5Z" fill="#ECFAD0" />
-              <path d="M40.5 27C36.8 27.7 34.2 30.7 34.2 34.3C37.8 34 40.5 31 40.5 27Z" fill="#ECFAD0" />
-              <path d="M40.5 34.5C36.8 35.2 34.2 38.2 34.2 41.8C37.8 41.5 40.5 38.5 40.5 34.5Z" fill="#ECFAD0" />
+              <path d="M42.2 17.8C37.6 18.5 34.4 22.1 34.4 26.5C38.8 26.2 42.2 22.6 42.2 17.8Z" fill="#FFFFFF" />
+              <path d="M42.2 26.2C37.6 26.9 34.4 30.5 34.4 34.9C38.8 34.6 42.2 31 42.2 26.2Z" fill="#FFFFFF" />
+              <path d="M42.2 34.6C37.6 35.3 34.4 38.9 34.4 43.3C38.8 43 42.2 39.4 42.2 34.6Z" fill="#FFFFFF" />
               {/* Stalk stem */}
-              <rect x="30.8" y="21.5" width="2.4" height="27.5" rx="1.2" fill="#ECFAD0" />
+              <rect x="30.4" y="21" width="3.2" height="30.5" rx="1.6" fill="#FFFFFF" />
             </svg>
           </div>
         </div>
