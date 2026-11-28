@@ -70,9 +70,10 @@ export const buyerProfiles = pgTable('buyer_profiles', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).unique().notNull(),
   buyerType: varchar('buyer_type', { length: 255 }).notNull(),
+  buyerType: varchar('buyer_type', { length: 255 }).notNull(),
 
   // Unified Identity & Brand
-  businessName: varchar('business_name', { length: 150 }).notNull(),
+  businessName: varchar('business_name', { length: 150 }),
 
   // Geographic Location
   district: varchar('district', { length: 100 }).notNull(),
@@ -109,7 +110,7 @@ export const sellerProfiles = pgTable('seller_profiles', {
   sellerType: varcharArray('seller_type').notNull(),
 
   // Unified Identity & Brand
-  businessName: varchar('business_name', { length: 150 }).notNull(),
+  businessName: varchar('business_name', { length: 150 }),
 
   // Common Operating Location
   district: varchar('district', { length: 100 }),
@@ -137,6 +138,7 @@ export const applications = pgTable('applications', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).notNull(),
   role: varchar('role', { length: 30 }).notNull(),
+  subType: varchar('sub_type', { length: 255 }).notNull(),
   subType: varchar('sub_type', { length: 255 }).notNull(),
   profilePayload: jsonb('profile_payload').default({}),
   documents: jsonb('documents'),

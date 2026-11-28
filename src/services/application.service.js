@@ -272,6 +272,13 @@ export const extractSellerProfile = async (subType, profile = {}, cachedCategori
     if (details.vaFssaiNumber && !fssaiNumber) fssaiNumber = details.vaFssaiNumber;
   }
 
+  if (primaryProducts) {
+    categoryDetails.productsOffered = primaryProducts;
+  }
+  if (capacity) {
+    categoryDetails.capacity = capacity;
+  }
+
   return {
     sellerType: categoryIds,
     businessName,
@@ -490,7 +497,9 @@ export const submitApplicationService = async ({
   const normalizedRole = String(role || account?.activeRole || 'BUYER').trim().toUpperCase();
   const cleanSubType = String(
     subType || (normalizedRole === 'BUYER' ? BUYER_TYPES.INDIVIDUAL : SELLER_TYPES.FARMER)
-  ).trim();
+  )
+    .trim()
+    .slice(0, 255);
   const finalAppId = String(applicationId || `US_${normalizedRole}_${crypto.randomInt(100000, 999999)}`).trim();
   const now = new Date();
 
