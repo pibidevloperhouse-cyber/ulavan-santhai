@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Filter, CheckCircle2, AlertCircle, Eye, FileText, Check, Store, MapPin, X, Shield, Phone, CreditCard } from "lucide-react";
-import { updateAdminSeller } from "@/services/adminApi";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, CheckCircle2, AlertCircle, Eye, FileText, Check, Store, MapPin, X, Shield, Phone, CreditCard, ExternalLink, Download, Loader2 } from "lucide-react";
+import { updateAdminSeller, getSellerDocuments } from "@/services/adminApi";
 
 export const TAMIL_NADU_DISTRICTS = [
   "Coimbatore",
@@ -50,7 +50,41 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedSeller, setSelectedSeller] = useState(sellers[0] || null);
   const [fullViewSeller, setFullViewSeller] = useState(null);
+  const [sellerUserDocs, setSellerUserDocs] = useState([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [docLoadError, setDocLoadError] = useState(false);
+
+  // Fetch user-wise uploaded documents strictly for the opened seller (user_documents bucket)
+  useEffect(() => {
+    const userId = fullViewSeller?.userId;
+    if (!userId) {
+      setSellerUserDocs([]);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingDocs(true);
+    setSellerUserDocs([]);
+
+    getSellerDocuments(userId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success && Array.isArray(res.data)) {
+          setSellerUserDocs(res.data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSellerUserDocs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDocs(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fullViewSeller?.userId]);
 
   const filteredSellers = sellers.filter((seller) => {
     const matchesSearch =
@@ -281,51 +315,150 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
       )}
 
       {/* Verification Document Modal */}
-      {previewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#174B35]" />
-                <span>Certificate Verification</span>
-              </h4>
-              <button
-                type="button"
-                onClick={() => setPreviewDoc(null)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold cursor-pointer"
-              >
-                &times;
-              </button>
-            </div>
+      {previewDoc && (() => {
+        const viewSrc = previewDoc.previewUrl || previewDoc.url || "";
+        const fallbackSrc = previewDoc.url || previewDoc.previewUrl || "";
+        const docHint = `${previewDoc.mimeType || ""} ${previewDoc.fileName || ""} ${previewDoc.storagePath || ""} ${previewDoc.url || ""}`.toLowerCase();
+        const isPdf = previewDoc.mimeType === "application/pdf" || docHint.includes(".pdf");
+        const isImage =
+          previewDoc.mimeType?.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|bmp)(\?|$)/i.test(docHint);
 
-            <div className="space-y-2 text-xs">
-              <div className="font-bold text-gray-900 text-sm">{previewDoc.name}</div>
-              <div className="text-gray-600">Document No: <span className="font-semibold text-gray-900">{previewDoc.number}</span></div>
-              <div className="text-gray-600">Authority: <span className="font-semibold text-gray-900">{previewDoc.authority}</span></div>
-              <div className="text-gray-600">Validity: <span className="font-semibold text-[#174B35]">{previewDoc.validity}</span></div>
-            </div>
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+            <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h4 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#174B35]" />
+                  <span>Document Preview &bull; {previewDoc.name}</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewDoc(null);
+                    setDocLoadError(false);
+                  }}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-lg font-bold cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-            <div className="p-4 rounded-xl bg-[#E8F0E3]/60 border border-[#729B59]/30 text-center">
-              <CheckCircle2 className="w-8 h-8 text-[#174B35] mx-auto mb-1" />
-              <p className="text-xs font-bold text-[#174B35]">Verified Document Record</p>
-              <p className="text-[11px] text-gray-500">Document matched and verified against official registries.</p>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Document Type</span>
+                  <span className="font-bold text-gray-900">{previewDoc.name}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Document ID / File</span>
+                  <span className="font-semibold text-gray-900 break-all">{previewDoc.fileName || previewDoc.number}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Status / Authority</span>
+                  <span className="font-semibold text-[#174B35]">{previewDoc.validity || previewDoc.status} &bull; {previewDoc.authority}</span>
+                </div>
+              </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewDoc(null);
-                  if (onNotify) onNotify(`Certificate "${previewDoc.name}" confirmed verified`);
-                }}
-                className="px-4 py-2 rounded-xl bg-[#174B35] text-white text-xs font-bold hover:bg-[#103A29] cursor-pointer"
-              >
-                Confirm Verification
-              </button>
+              {viewSrc ? (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+                  {docLoadError ? (
+                    <div className="p-6 text-center space-y-2">
+                      <AlertCircle className="w-8 h-8 text-amber-600 mx-auto" />
+                      <p className="text-xs font-bold text-gray-800">Inline preview could not be rendered</p>
+                      <p className="text-[11px] text-gray-500">Use the Open in New Tab button below to view directly from storage.</p>
+                    </div>
+                  ) : isPdf ? (
+                    <iframe
+                      src={viewSrc}
+                      title={previewDoc.fileName || previewDoc.name}
+                      className="w-full h-[60vh] rounded-xl border border-gray-200 bg-white"
+                      onError={() => setDocLoadError(true)}
+                    />
+                  ) : isImage ? (
+                    <div className="flex items-center justify-center bg-white rounded-xl border border-gray-200 p-2 min-h-[220px]">
+                      <img
+                        src={viewSrc}
+                        alt={previewDoc.fileName || previewDoc.name}
+                        className="max-h-[60vh] w-auto object-contain rounded-lg"
+                        onError={(e) => {
+                          if (fallbackSrc && e.currentTarget.src !== fallbackSrc) {
+                            e.currentTarget.src = fallbackSrc;
+                          } else {
+                            setDocLoadError(true);
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={viewSrc}
+                      title={previewDoc.fileName || previewDoc.name}
+                      className="w-full h-[60vh] rounded-xl border border-gray-200 bg-white"
+                      onError={() => setDocLoadError(true)}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-[#E8F0E3]/60 border border-[#729B59]/30 text-center">
+                  <CheckCircle2 className="w-8 h-8 text-[#174B35] mx-auto mb-1" />
+                  <p className="text-xs font-bold text-[#174B35]">Metadata Verification Record</p>
+                  <p className="text-[11px] text-gray-500">No uploaded file attached to this compliance entry.</p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  {viewSrc && (
+                    <>
+                      <a
+                        href={fallbackSrc || viewSrc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-bold inline-flex items-center gap-1.5"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in New Tab</span>
+                      </a>
+                      <a
+                        href={viewSrc}
+                        download={previewDoc.fileName || previewDoc.number || "document"}
+                        className="px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-bold inline-flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </a>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewDoc(null);
+                      setDocLoadError(false);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewDoc(null);
+                      setDocLoadError(false);
+                      if (onNotify) onNotify(`Certificate "${previewDoc.name}" confirmed verified`);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#174B35] text-white text-xs font-bold hover:bg-[#103A29] cursor-pointer"
+                  >
+                    Confirm Verification
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ======================================================== */}
       {/* 🚀 SELLER FULL VIEW CARD MODAL                           */}
@@ -412,30 +545,61 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
               </div>
             </div>
 
-            {/* Verification Documents & Land Records */}
+            {/* Verification Documents & Land Records (Strictly User-Wise) */}
             <div className="p-4 rounded-2xl bg-[#E8F0E3]/70 border border-[#729B59]/40 space-y-2 text-xs">
-              <span className="font-black text-[#174B35] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-[#174B35]" />
-                <span>Submitted Land &amp; Identity Certificates</span>
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-black text-[#174B35] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-[#174B35]" />
+                  <span>Submitted Land &amp; Identity Certificates</span>
+                </span>
+                {isLoadingDocs && (
+                  <span className="text-[11px] font-semibold text-[#174B35] flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Loading user docs...</span>
+                  </span>
+                )}
+              </div>
               <div className="divide-y divide-[#729B59]/20 pt-1">
-                {fullViewSeller.certifications?.map((doc, idx) => (
-                  <div key={idx} className="py-2 flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-bold text-gray-900">{doc.name}</div>
-                      <div className="text-[11px] text-gray-600">
-                        {doc.number} &bull; {doc.authority}
+                {(() => {
+                  // Merge user-wise fetched documents from user_documents bucket with any static compliance metadata
+                  const fetchedIds = new Set(sellerUserDocs.map((d) => d.documentId || d.id));
+                  const metadataOnly = (fullViewSeller.certifications || []).filter(
+                    (c) => !c.url && !c.previewUrl && !fetchedIds.has(c.number) && c.name !== "Cultivator Onboarding Record" && c.name !== "Verified Seller Membership"
+                  );
+                  const displayDocs =
+                    sellerUserDocs.length > 0
+                      ? [...sellerUserDocs, ...metadataOnly]
+                      : fullViewSeller.certifications || [];
+
+                  if (displayDocs.length === 0) {
+                    return (
+                      <p className="py-2 text-gray-500 italic">
+                        No documents uploaded by this seller yet.
+                      </p>
+                    );
+                  }
+
+                  return displayDocs.map((doc, idx) => (
+                    <div key={doc.id || doc.number || idx} className="py-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-gray-900">{doc.name || doc.documentType}</div>
+                        <div className="text-[11px] text-gray-600 truncate">
+                          {doc.fileName ? `${doc.fileName} • ` : ""}{doc.number || doc.id} &bull; {doc.authority}
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDocLoadError(false);
+                          setPreviewDoc(doc);
+                        }}
+                        className="shrink-0 px-2.5 py-1 rounded-lg bg-white border border-[#729B59]/50 text-[#174B35] font-bold text-[11px] hover:bg-[#174B35] hover:text-white transition-colors cursor-pointer"
+                      >
+                        {doc.previewUrl || doc.url ? "View Document" : "Inspect Doc"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewDoc(doc)}
-                      className="px-2.5 py-1 rounded-lg bg-white border border-[#729B59]/50 text-[#174B35] font-bold text-[11px] hover:bg-[#174B35] hover:text-white transition-colors cursor-pointer"
-                    >
-                      Inspect Doc
-                    </button>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
 

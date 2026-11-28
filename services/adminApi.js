@@ -57,3 +57,18 @@ export async function updateAdminSeller(sellerId, updatedData = {}) {
   });
   return res;
 }
+
+/**
+ * Fetch user-wise uploaded documents for a specific seller strictly scoped by userId
+ * @param {string} userId
+ * @returns {Promise<{ success: boolean, data: Array<object>, error?: string }>}
+ */
+export async function getSellerDocuments(userId) {
+  const cleanUserId = String(userId || "").trim();
+  if (!cleanUserId) {
+    return { success: false, data: [], error: "Missing seller userId" };
+  }
+  return apiFetch(`/api/v1/admin/sellers/${encodeURIComponent(cleanUserId)}/documents`, {
+    method: "GET",
+  });
+}
