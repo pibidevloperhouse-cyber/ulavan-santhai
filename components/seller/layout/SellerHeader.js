@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import HeaderAlertsPopover from "./HeaderAlertsPopover";
 
 export default function SellerHeader({
@@ -33,8 +33,17 @@ export default function SellerHeader({
       )}
 
       <Link
+        href="/seller/settings"
+        title="Account Settings"
+        aria-label="Account Settings"
+        className="hidden lg:flex w-9 h-9 rounded-xl bg-white hover:bg-[#F5F7EC] text-[#3C5840] hover:text-[#0B3C26] items-center justify-center border border-[#DDE7CE] shadow-2xs transition-colors cursor-pointer shrink-0"
+      >
+        <Settings className="w-4 h-4" />
+      </Link>
+
+      <Link
         href="/seller/profile"
-        title="View Profile and Settings"
+        title="View Seller Profile"
         className="hidden lg:flex w-9 h-9 rounded-full bg-[#ECF9C4] text-[#0B3C26] font-extrabold text-xs items-center justify-center border border-[#C5E37A] shadow-2xs hover:ring-2 hover:ring-[#8DC63F]/40 transition-all cursor-pointer shrink-0"
       >
         {avatarText}

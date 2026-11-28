@@ -11,6 +11,7 @@ import {
   CreditCard,
   Bell,
   User,
+  Settings,
   X,
   LogOut,
   ChevronRight,
@@ -75,9 +76,14 @@ export default function SellerSidebar({
           badge: notificationCount,
         },
         {
-          name: "Profile & settings",
+          name: "Profile",
           href: "/seller/profile",
           icon: User,
+        },
+        {
+          name: "Settings",
+          href: "/seller/settings",
+          icon: Settings,
         },
       ],
     },

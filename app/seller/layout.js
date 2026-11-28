@@ -60,7 +60,7 @@ function SellerLayoutShell({ children }) {
 
           <Link
             href="/seller/profile"
-            title="View profile and settings"
+            title="View Seller Profile"
             className="w-8 h-8 rounded-full bg-[#ECF9C4] text-[#0B3C26] font-bold text-xs flex items-center justify-center border border-[#C5E37A] hover:ring-2 hover:ring-[#8DC63F]/40 transition-all cursor-pointer shrink-0"
           >
             {profile.avatarInitials || "S"}

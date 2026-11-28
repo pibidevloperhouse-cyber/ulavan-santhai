@@ -49,7 +49,11 @@ export { default as PaymentResultCards } from "./subscription/PaymentResultCards
 export { default as PaymentHistoryTable } from "./subscription/PaymentHistoryTable";
 
 // Profile & Account Settings Components
-export { default as AccountStatusCard } from "./profile/AccountStatusCard";
 export { default as SellerProfileForm } from "./profile/SellerProfileForm";
+export { default as OnboardingClassificationFields } from "./profile/OnboardingClassificationFields";
+export { default as SellerDocumentsSection } from "./profile/SellerDocumentsSection";
 export { default as AccountSecurityCard } from "./profile/AccountSecurityCard";
-export { default as BuyerRoleAndChannelsCard } from "./profile/BuyerRoleAndChannelsCard";
+export {
+  default as BuyerRoleAndChannelsCard,
+  SettingsFooterBar,
+} from "./profile/BuyerRoleAndChannelsCard";
