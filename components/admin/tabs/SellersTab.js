@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, CheckCircle2, AlertCircle, Eye, FileText, Check, Store, Plus, MapPin, X, Shield, Phone, CreditCard, Sparkles } from "lucide-react";
+import { Search, Filter, CheckCircle2, AlertCircle, Eye, FileText, Check, Store, MapPin, X, Shield, Phone, CreditCard } from "lucide-react";
 import { updateAdminSeller } from "@/services/adminApi";
 
 export const TAMIL_NADU_DISTRICTS = [
@@ -52,33 +52,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
   const [fullViewSeller, setFullViewSeller] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
 
-  // Add New Seller Modal State (Zero Static Pre-fills)
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [newSellerData, setNewSellerData] = useState({
-    businessName: "",
-    sellerType: "Direct Cultivator",
-    contactName: "",
-    phone: "",
-    district: "Coimbatore",
-    address: "",
-    productsOffered: "",
-  });
-
-  const handleOpenAddModal = () => {
-    setFormError("");
-    setNewSellerData({
-      businessName: "",
-      sellerType: "Direct Cultivator",
-      contactName: "",
-      phone: "",
-      district: "Coimbatore",
-      address: "",
-      productsOffered: "",
-    });
-    setAddModalOpen(true);
-  };
-
   const filteredSellers = sellers.filter((seller) => {
     const matchesSearch =
       seller.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,70 +86,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
     if (onNotify) onNotify(`Seller "${currentName}" marked as ${newStatus}`);
   };
 
-  const handleAddNewSeller = () => {
-    setFormError("");
-    const businessName = newSellerData.businessName.trim();
-    const contactName = newSellerData.contactName.trim();
-    const phone = newSellerData.phone.trim();
-    const district = newSellerData.district || "Coimbatore";
-    const address =
-      newSellerData.address.trim() || `${district}, Tamil Nadu`;
-    const productsOffered =
-      newSellerData.productsOffered.trim() || "Fresh Agricultural Harvest";
-
-    if (!businessName) {
-      setFormError("Please enter the cultivator / business name.");
-      return;
-    }
-    if (!phone) {
-      setFormError("Please enter the contact mobile phone number.");
-      return;
-    }
-
-    const newRecord = {
-      id: `SEL-${String(sellers.length + 1).padStart(3, "0")}`,
-      businessName,
-      sellerType: newSellerData.sellerType,
-      contactName: contactName || "Primary Cultivator",
-      phone,
-      district,
-      subscription: "Active (₹365/Yr)",
-      status: "Approved",
-      address,
-      productsOffered,
-      certifications: [
-        {
-          name: "Patta / Land Document",
-          number: `TN-${district.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`,
-          authority: "Govt of Tamil Nadu",
-          validity: "Permanent",
-        },
-      ],
-    };
-
-    if (setSellers) {
-      setSellers((prev) => [newRecord, ...prev]);
-    }
-    setSelectedSeller(newRecord);
-    setAddModalOpen(false);
-    setNewSellerData({
-      businessName: "",
-      sellerType: "Direct Cultivator",
-      contactName: "",
-      phone: "",
-      district: "Coimbatore",
-      address: "",
-      productsOffered: "",
-    });
-    if (onLogAction)
-      onLogAction(
-        "Seller Enrolled",
-        `Enrolled new seller/cultivator "${newRecord.businessName}".`
-      );
-    if (onNotify)
-      onNotify(`Cultivator "${newRecord.businessName}" registered successfully.`);
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Top Filter and Search Bar */}
@@ -193,16 +102,7 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleOpenAddModal}
-            className="px-3.5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Seller</span>
-          </button>
-
-          <Filter className="w-4 h-4 text-gray-500 ml-1" />
+          <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -225,17 +125,9 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
           <div className="max-w-md mx-auto">
             <h3 className="text-base font-extrabold text-gray-900">No Sellers Registered Yet</h3>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Cultivator and direct farm producer registrations will appear here for verification. You can also manually add a producer account below.
+              Cultivator and direct farm producer registrations will appear here for verification.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenAddModal}
-            className="px-5 py-2.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Register First Seller</span>
-          </button>
         </div>
       ) : (
         <div className="w-full">
@@ -383,228 +275,6 @@ export default function SellersTab({ sellers = [], setSellers, onLogAction, onNo
               <span className="font-bold text-[#174B35]">
                 {filteredSellers.length} Cultivators Registered
               </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* Add New Seller / Cultivator Modal                         */}
-      {/* ======================================================== */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-          <div className="relative bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
-            {/* Top Accent Ribbon */}
-            <div className="h-2 w-full bg-gradient-to-r from-[#174B35] via-emerald-500 to-[#174B35]" />
-
-            {/* Header */}
-            <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-[#174B35] shadow-xs">
-                  <Store className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                    <span>Register New Cultivator</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100/70 text-[#174B35]">
-                      Direct Seller
-                    </span>
-                  </h4>
-                  <p className="text-xs text-gray-500 font-medium">
-                    Onboard genuine farmers, FPOs, and organic producers into the platform
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAddModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition cursor-pointer"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form Body */}
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-              {formError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-rose-700 font-semibold animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {/* Farm / Business Name */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Farm / Business Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Kongu Natural Organic Farmers Collective"
-                  value={newSellerData.businessName}
-                  onChange={(e) => {
-                    setNewSellerData({
-                      ...newSellerData,
-                      businessName: e.target.value,
-                    });
-                    if (formError) setFormError("");
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Seller Type & District */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Seller Classification
-                  </label>
-                  <select
-                    value={newSellerData.sellerType}
-                    onChange={(e) =>
-                      setNewSellerData({
-                        ...newSellerData,
-                        sellerType: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  >
-                    <option value="Direct Cultivator">Direct Cultivator</option>
-                    <option value="Organic Producer">Organic Producer</option>
-                    <option value="Farmer Producer Org (FPO)">
-                      Farmer Producer Org (FPO)
-                    </option>
-                    <option value="Cooperative Society">Cooperative Society</option>
-                    <option value="Agro-Processing Unit">Agro-Processing Unit</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Operating District (Tamil Nadu)
-                  </label>
-                  <select
-                    value={newSellerData.district}
-                    onChange={(e) =>
-                      setNewSellerData({
-                        ...newSellerData,
-                        district: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  >
-                    {TAMIL_NADU_DISTRICTS.map((dist) => (
-                      <option key={dist} value={dist}>
-                        {dist}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Contact Name & Mobile Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Contact Person / Farmer Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. K. Subramanian"
-                    value={newSellerData.contactName}
-                    onChange={(e) =>
-                      setNewSellerData({
-                        ...newSellerData,
-                        contactName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Mobile Phone Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. +91 98421 12345"
-                    value={newSellerData.phone}
-                    onChange={(e) => {
-                      setNewSellerData({
-                        ...newSellerData,
-                        phone: e.target.value,
-                      });
-                      if (formError) setFormError("");
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Farm Address */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Farm Location / Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. SF No. 128, Thondamuthur Road, Coimbatore"
-                  value={newSellerData.address}
-                  onChange={(e) =>
-                    setNewSellerData({
-                      ...newSellerData,
-                      address: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Products Offered */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Primary Agricultural Crops Offered
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Traditional Rice, Wood-Pressed Oils, Minor Millets"
-                  value={newSellerData.productsOffered}
-                  onChange={(e) =>
-                    setNewSellerData({
-                      ...newSellerData,
-                      productsOffered: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Annual direct trade pass enrolled</span>
-              </span>
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition shadow-2xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddNewSeller}
-                  className="px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
-                >
-                  <Store className="w-4 h-4" />
-                  <span>Register Cultivator</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

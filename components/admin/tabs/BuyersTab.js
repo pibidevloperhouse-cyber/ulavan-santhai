@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, Users, Plus, Eye, X, Phone, MapPin, CreditCard, Building2, AlertCircle, Sparkles } from "lucide-react";
+import { Search, Filter, Users, Eye, X, Phone, MapPin, CreditCard, Building2, AlertCircle } from "lucide-react";
 
 export const TAMIL_NADU_DISTRICTS = [
   "Coimbatore",
@@ -50,33 +50,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
   const [selectedBuyer, setSelectedBuyer] = useState(buyers[0] || null);
   const [fullViewBuyer, setFullViewBuyer] = useState(null);
 
-  // Add Buyer Modal State (Zero Static Pre-fills)
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [newBuyerData, setNewBuyerData] = useState({
-    name: "",
-    buyerType: "Business / Mandi Trader",
-    contactName: "",
-    phone: "",
-    district: "Coimbatore",
-    operatingDistrict: "",
-    interestCommodities: "",
-  });
-
-  const handleOpenAddModal = () => {
-    setFormError("");
-    setNewBuyerData({
-      name: "",
-      buyerType: "Business / Mandi Trader",
-      contactName: "",
-      phone: "",
-      district: "Coimbatore",
-      operatingDistrict: "",
-      interestCommodities: "",
-    });
-    setAddModalOpen(true);
-  };
-
   const filteredBuyers = buyers.filter((buyer) => {
     const matchesSearch =
       buyer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,69 +87,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
     if (onNotify) onNotify(`Buyer "${updatedName || id}" status changed to ${nextStatus}`);
   };
 
-  const handleAddNewBuyer = () => {
-    setFormError("");
-    const name = newBuyerData.name.trim();
-    const contactName = newBuyerData.contactName.trim();
-    const phone = newBuyerData.phone.trim();
-    const district = newBuyerData.district || "Coimbatore";
-    const operatingDistrict =
-      newBuyerData.operatingDistrict.trim() || `${district}, Tamil Nadu`;
-    const interestCommodities =
-      newBuyerData.interestCommodities.trim() ||
-      "Paddy, Organic Vegetables, Millets, Oilseeds";
-
-    if (!name) {
-      setFormError("Please enter the company / mandi trader name.");
-      return;
-    }
-    if (!phone) {
-      setFormError("Please enter the contact mobile phone number.");
-      return;
-    }
-
-    const newRecord = {
-      id: `BUY-${String(buyers.length + 1).padStart(3, "0")}`,
-      name,
-      buyerType: newBuyerData.buyerType,
-      contactName: contactName || "Commercial Procurement Desk",
-      phone,
-      district,
-      operatingDistrict,
-      sellersViewable: "0 / 10",
-      subscriptionStatus: "Verified Annual Access (₹365/Yr)",
-      status: "Active",
-      registeredDate: new Date().toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      interestCommodities,
-    };
-
-    if (setBuyers) {
-      setBuyers((prev) => [newRecord, ...prev]);
-    }
-    setSelectedBuyer(newRecord);
-    setAddModalOpen(false);
-    setNewBuyerData({
-      name: "",
-      buyerType: "Business / Mandi Trader",
-      contactName: "",
-      phone: "",
-      district: "Coimbatore",
-      operatingDistrict: "",
-      interestCommodities: "",
-    });
-    if (onLogAction)
-      onLogAction(
-        "Buyer Enrolled",
-        `Enrolled commercial mandi buyer "${newRecord.name}".`
-      );
-    if (onNotify)
-      onNotify(`Commercial buyer "${newRecord.name}" registered successfully.`);
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Search and Filter */}
@@ -193,16 +103,7 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleOpenAddModal}
-            className="px-3.5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Buyer</span>
-          </button>
-
-          <Filter className="w-4 h-4 text-gray-500 ml-1" />
+          <Filter className="w-4 h-4 text-gray-500" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -224,17 +125,9 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
           <div className="max-w-md mx-auto">
             <h3 className="text-base font-extrabold text-gray-900">No Buyers Registered Yet</h3>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Wholesale mandi buyers and commercial food processors will appear here once registered. You can add a buyer record below.
+              Wholesale mandi buyers and commercial food processors will appear here once registered.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenAddModal}
-            className="px-5 py-2.5 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-xs cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Register First Buyer</span>
-          </button>
         </div>
       ) : (
         <div className="w-full">
@@ -350,231 +243,6 @@ export default function BuyersTab({ buyers = [], setBuyers, onLogAction, onNotif
               <span className="font-bold text-[#174B35]">
                 {filteredBuyers.length} Buyers Registered
               </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* Add New Mandi Buyer Modal                                */}
-      {/* ======================================================== */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-          <div className="relative bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
-            {/* Top Accent Ribbon */}
-            <div className="h-2 w-full bg-gradient-to-r from-[#174B35] via-emerald-500 to-[#174B35]" />
-
-            {/* Header */}
-            <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100/80 flex items-center justify-center text-[#174B35] shadow-xs">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                    <span>Register Mandi Buyer</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100/70 text-[#174B35]">
-                      Wholesale Trader
-                    </span>
-                  </h4>
-                  <p className="text-xs text-gray-500 font-medium">
-                    Enroll licensed agro-traders, supermarket chains, and food millers
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAddModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition cursor-pointer"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form Body */}
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-              {formError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-rose-700 font-semibold animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {/* Company / Mandi Trader Name */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Company / Mandi Trader Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Kongu Super Mandi Traders & Wholesale Mart"
-                  value={newBuyerData.name}
-                  onChange={(e) => {
-                    setNewBuyerData({ ...newBuyerData, name: e.target.value });
-                    if (formError) setFormError("");
-                  }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Buyer Classification & Base District */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Buyer Classification
-                  </label>
-                  <select
-                    value={newBuyerData.buyerType}
-                    onChange={(e) =>
-                      setNewBuyerData({
-                        ...newBuyerData,
-                        buyerType: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  >
-                    <option value="Business / Mandi Trader">
-                      Business / Mandi Trader
-                    </option>
-                    <option value="Retail Mandi Chain">Retail Mandi Chain</option>
-                    <option value="Modern Supermarket / Hypermarket">
-                      Modern Supermarket / Hypermarket
-                    </option>
-                    <option value="Food Processing Unit / Miller">
-                      Food Processing Unit / Miller
-                    </option>
-                    <option value="Direct Institutional Consumer">
-                      Direct Institutional Consumer
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Primary Operating District
-                  </label>
-                  <select
-                    value={newBuyerData.district}
-                    onChange={(e) =>
-                      setNewBuyerData({
-                        ...newBuyerData,
-                        district: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  >
-                    {TAMIL_NADU_DISTRICTS.map((dist) => (
-                      <option key={dist} value={dist}>
-                        {dist}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Contact Representative & Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Procurement Officer / Contact Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. R. Karthik (Procurement Lead)"
-                    value={newBuyerData.contactName}
-                    onChange={(e) =>
-                      setNewBuyerData({
-                        ...newBuyerData,
-                        contactName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                    Mobile Phone Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. +91 98400 12345"
-                    value={newBuyerData.phone}
-                    onChange={(e) => {
-                      setNewBuyerData({
-                        ...newBuyerData,
-                        phone: e.target.value,
-                      });
-                      if (formError) setFormError("");
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Operating Region Coverage */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Operating Districts Coverage
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Coimbatore, Tiruppur, Erode, Nilgiris"
-                  value={newBuyerData.operatingDistrict}
-                  onChange={(e) =>
-                    setNewBuyerData({
-                      ...newBuyerData,
-                      operatingDistrict: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-
-              {/* Interested Commodities */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-                  Interested Agricultural Commodities
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Traditional Rice, Small Shallots, Bananas, Cold Pressed Oils"
-                  value={newBuyerData.interestCommodities}
-                  onChange={(e) =>
-                    setNewBuyerData({
-                      ...newBuyerData,
-                      interestCommodities: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-gray-300 hover:border-gray-400 text-xs font-semibold text-gray-900 placeholder:text-gray-400 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#174B35] focus:ring-4 focus:ring-emerald-600/10 transition-all rounded-xl shadow-2xs"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Default 10 cultivators access quota granted</span>
-              </span>
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 text-xs font-bold transition shadow-2xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddNewBuyer}
-                  className="px-5 py-2 rounded-xl bg-[#174B35] hover:bg-[#103A29] text-white text-xs font-bold shadow-md hover:shadow-lg transition cursor-pointer flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Register Buyer</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
