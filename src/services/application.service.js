@@ -39,7 +39,14 @@ export const BUYER_TYPES = Object.freeze({
  * @returns {object}
  */
 export const extractSellerProfile = (subType, profile = {}) => {
-  const sellerType = String(subType || profile.sellerType || SELLER_TYPES.FARMER).trim();
+  const rawType = subType || profile.sellerType || SELLER_TYPES.FARMER;
+  const sellerTypesList = Array.isArray(rawType)
+    ? rawType.map((s) => String(s).trim()).filter(Boolean)
+    : String(rawType)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+  const sellerType = sellerTypesList[0] || SELLER_TYPES.FARMER;
 
   const district = profile.district || null;
   const village = profile.village || null;
@@ -215,8 +222,15 @@ export const extractSellerProfile = (subType, profile = {}) => {
     }
   }
 
+  if (primaryProducts) {
+    categoryDetails.productsOffered = primaryProducts;
+  }
+  if (capacity) {
+    categoryDetails.capacity = capacity;
+  }
+
   return {
-    sellerType,
+    sellerType: sellerTypesList.length > 0 ? sellerTypesList : [sellerType],
     businessName: businessName || 'Agri Enterprise',
     district: district || 'Not specified',
     village,
@@ -225,8 +239,6 @@ export const extractSellerProfile = (subType, profile = {}) => {
     isGst,
     gstin,
     fssaiNumber,
-    primaryProducts: primaryProducts || null,
-    capacity: capacity || null,
     categoryDetails,
   };
 };
@@ -435,7 +447,9 @@ export const submitApplicationService = async ({
   const normalizedRole = String(role || account?.activeRole || 'BUYER').trim().toUpperCase();
   const cleanSubType = String(
     subType || (normalizedRole === 'BUYER' ? BUYER_TYPES.INDIVIDUAL : SELLER_TYPES.FARMER)
-  ).trim();
+  )
+    .trim()
+    .slice(0, 255);
   const finalAppId = String(applicationId || `US_${normalizedRole}_${crypto.randomInt(100000, 999999)}`).trim();
   const now = new Date();
 

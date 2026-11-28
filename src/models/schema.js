@@ -59,10 +59,10 @@ export const documents = pgTable('documents', {
 export const buyerProfiles = pgTable('buyer_profiles', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).unique().notNull(),
-  buyerType: varchar('buyer_type', { length: 50 }).notNull(),
+  buyerType: varchar('buyer_type', { length: 255 }).notNull(),
 
   // Unified Identity & Brand
-  businessName: varchar('business_name', { length: 150 }).notNull(),
+  businessName: varchar('business_name', { length: 150 }),
 
   // Geographic Location
   district: varchar('district', { length: 100 }).notNull(),
@@ -94,27 +94,23 @@ export const buyerProfiles = pgTable('buyer_profiles', {
 export const sellerProfiles = pgTable('seller_profiles', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).unique().notNull(),
-  sellerType: varchar('seller_type', { length: 50 }).notNull(),
+  sellerType: varchar('seller_type', { length: 100 }).array().notNull(),
 
   // Unified Identity & Brand
-  businessName: varchar('business_name', { length: 150 }).notNull(),
+  businessName: varchar('business_name', { length: 150 }),
 
   // Geographic Location
-  district: varchar('district', { length: 100 }).notNull(),
+  district: varchar('district', { length: 100 }),
   village: varchar('village', { length: 100 }),
   pinCode: varchar('pin_code', { length: 20 }),
   farmAddress: text('farm_address'),
 
   // Compliance
-  isGst: boolean('is_gst').default(false).notNull(),
+  isGst: boolean('is_gst').default(false),
   gstin: varchar('gstin', { length: 50 }),
   fssaiNumber: varchar('fssai_number', { length: 50 }),
 
-  // Unified Operational Discovery
-  primaryProducts: text('primary_products'),
-  capacity: varchar('capacity', { length: 100 }),
-
-  // Dynamic Full-Fidelity Category Attributes
+  // Dynamic Full-Fidelity Category Attributes (also holds primaryProducts / capacity)
   categoryDetails: jsonb('category_details').default({}).notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -129,7 +125,7 @@ export const applications = pgTable('applications', {
   id: varchar('id', { length: 64 }).primaryKey(),
   userId: varchar('user_id', { length: 64 }).references(() => users.id).notNull(),
   role: varchar('role', { length: 30 }).notNull(),
-  subType: varchar('sub_type', { length: 50 }).notNull(),
+  subType: varchar('sub_type', { length: 255 }).notNull(),
   profilePayload: jsonb('profile_payload').default({}),
   documents: jsonb('documents'),
   overallStatus: varchar('overall_status', { length: 30 }).default('PENDING_REVIEW').notNull(),

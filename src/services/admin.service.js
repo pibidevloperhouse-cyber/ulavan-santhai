@@ -102,7 +102,7 @@ export const adminLoginService = async ({ email, password } = {}) => {
  * @returns {Promise<Array<object>>}
  */
 export const getAllBuyersService = async () => {
-  const { buyers, sellers } = await profileRepository.findAllBuyersWithUserDetails();
+  const { buyers, sellers, onboardedBuyerUsers = [] } = await profileRepository.findAllBuyersWithUserDetails();
 
   const buyerUserIds = new Set();
   const formattedBuyers = [];
@@ -203,6 +203,47 @@ export const getAllBuyersService = async () => {
     }
   }
 
+  // 3. Ensure any user with buyer_onboarded = true or buyer_paid = true without a profile row still shows up
+  for (const u of onboardedBuyerUsers) {
+    if (!buyerUserIds.has(u.id)) {
+      buyerUserIds.add(u.id);
+
+      const registeredDate = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })
+        : 'Active';
+
+      formattedBuyers.push({
+        id: `USR_${u.id.replace('usr_', '').slice(0, 8).toUpperCase()}`,
+        userId: u.id,
+        name: u.name || 'Registered Buyer',
+        businessName: '',
+        contactName: u.name || 'Registered Buyer',
+        phone: u.mobile || '',
+        email: u.email || '',
+        district: 'Tamil Nadu',
+        operatingDistrict: 'Tamil Nadu',
+        buyerType: 'Verified Buyer',
+        sellersViewable: '0 / 10',
+        subscriptionStatus: u.buyerPaid
+          ? 'Verified Annual Access (₹365/Yr)'
+          : 'Active Member',
+        status: 'Active',
+        registeredDate,
+        interestCommodities: 'Fresh Vegetables, Fruits, Millets, Paddy',
+        procurementVolume: 'Regular',
+        isGst: false,
+        gstin: '',
+        fssaiNumber: '',
+        address: '',
+        sourceTable: 'users',
+      });
+    }
+  }
+
   return formattedBuyers;
 };
 
@@ -265,7 +306,12 @@ const extractSellerProducts = (details = {}) => {
  * @returns {Promise<Array<object>>}
  */
 export const getAllSellersService = async () => {
-  const { sellers, sellerApps } = await profileRepository.findAllSellersWithUserDetails();
+  const {
+    sellers,
+    sellerApps,
+    onboardedSellerUsers = [],
+    uploadedDocs = [],
+  } = await profileRepository.findAllSellersWithUserDetails();
 
   // Map latest seller application per userId
   const latestAppByUser = new Map();
@@ -275,7 +321,19 @@ export const getAllSellersService = async () => {
     }
   }
 
-  return sellers.map((sp) => {
+  // Group uploaded documents per userId
+  const docsByUser = new Map();
+  for (const doc of uploadedDocs) {
+    if (!docsByUser.has(doc.userId)) {
+      docsByUser.set(doc.userId, []);
+    }
+    docsByUser.get(doc.userId).push(doc);
+  }
+
+  const sellerUserIds = new Set();
+
+  const formattedSellers = sellers.map((sp) => {
+    sellerUserIds.add(sp.userId);
     const details = sp.categoryDetails || {};
     const app = latestAppByUser.get(sp.userId);
 
@@ -307,6 +365,18 @@ export const getAllSellersService = async () => {
             url: docVal.url || null,
           });
         }
+      }
+    }
+    if (certifications.length === 0) {
+      const userDocs = docsByUser.get(sp.userId) || [];
+      for (const d of userDocs) {
+        certifications.push({
+          name: d.documentType || 'Uploaded Document',
+          number: d.id || d.fileName,
+          authority: 'Verified Upload',
+          validity: d.status || 'Uploaded',
+          url: d.fileUrl || null,
+        });
       }
     }
     if (sp.gstin) {
@@ -372,6 +442,64 @@ export const getAllSellersService = async () => {
       fssaiNumber: sp.fssaiNumber || '',
     };
   });
+
+  // Include any user with seller_onboarded = true or seller_paid = true without a profile row
+  for (const u of onboardedSellerUsers) {
+    if (!sellerUserIds.has(u.id)) {
+      sellerUserIds.add(u.id);
+      const userDocs = docsByUser.get(u.id) || [];
+      const app = latestAppByUser.get(u.id);
+      const certifications = userDocs.map((d) => ({
+        name: d.documentType || 'Uploaded Document',
+        number: d.id || d.fileName,
+        authority: 'Verified Upload',
+        validity: d.status || 'Uploaded',
+        url: d.fileUrl || null,
+      }));
+      if (certifications.length === 0) {
+        certifications.push({
+          name: 'Verified Seller Membership',
+          number: u.id,
+          authority: 'Ulavan Santhai Verification',
+          validity: 'Active',
+        });
+      }
+
+      const registeredDate = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })
+        : 'Active';
+
+      formattedSellers.push({
+        id: `USR_${u.id.replace('usr_', '').slice(0, 8).toUpperCase()}`,
+        userId: u.id,
+        businessName: u.name || 'Registered Cultivator',
+        sellerType: 'Farmer & Cultivators',
+        contactName: u.name || 'Primary Cultivator',
+        phone: u.mobile || '',
+        email: u.email || '',
+        district: 'Tamil Nadu',
+        village: '',
+        pinCode: '',
+        subscription: u.sellerPaid ? 'Active (₹365/Yr)' : 'Pending / Trial',
+        status:
+          (app?.overallStatus && APP_STATUS_TO_UI[app.overallStatus.toUpperCase()]) ||
+          (u.sellerPaid ? 'Approved' : 'Pending Review'),
+        address: 'Tamil Nadu',
+        productsOffered: 'Direct Agricultural Harvest',
+        certifications,
+        registeredDate,
+        isGst: false,
+        gstin: '',
+        fssaiNumber: '',
+      });
+    }
+  }
+
+  return formattedSellers;
 };
 
 /**

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, or } from 'drizzle-orm';
 import { db } from '../config/db.js';
-import { buyerProfiles, sellerProfiles, users, applications } from '../models/schema.js';
+import { buyerProfiles, sellerProfiles, users, applications, documents } from '../models/schema.js';
 
 /**
  * Repository: Profile Data Access Layer
@@ -82,11 +82,32 @@ export const upsertSeller = async (userId, sellerData) => {
   const existing = await findSellerByUserId(userId);
   const now = new Date();
 
+  const { primaryProducts, capacity, ...rest } = sellerData || {};
+  const normalizedSellerType = Array.isArray(rest.sellerType)
+    ? rest.sellerType
+    : rest.sellerType
+    ? String(rest.sellerType)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : ['Farmer'];
+
+  const sanitizedData = {
+    ...rest,
+    sellerType: normalizedSellerType,
+    categoryDetails: {
+      ...(existing?.categoryDetails || {}),
+      ...(rest.categoryDetails || {}),
+      ...(primaryProducts ? { productsOffered: primaryProducts } : {}),
+      ...(capacity ? { capacity } : {}),
+    },
+  };
+
   if (existing) {
     const [updated] = await db
       .update(sellerProfiles)
       .set({
-        ...sellerData,
+        ...sanitizedData,
         updatedAt: now,
       })
       .where(eq(sellerProfiles.userId, userId))
@@ -94,13 +115,13 @@ export const upsertSeller = async (userId, sellerData) => {
     return updated;
   }
 
-  const profileId = sellerData.id || `SP_${crypto.randomInt(100000, 999999)}`;
+  const profileId = sanitizedData.id || `SP_${crypto.randomInt(100000, 999999)}`;
   const [created] = await db
     .insert(sellerProfiles)
     .values({
       id: profileId,
       userId,
-      ...sellerData,
+      ...sanitizedData,
       createdAt: now,
       updatedAt: now,
     })
@@ -168,7 +189,22 @@ export const findAllBuyersWithUserDetails = async () => {
     .leftJoin(users, eq(sellerProfiles.userId, users.id))
     .orderBy(desc(sellerProfiles.createdAt));
 
-  return { buyers, sellers };
+  const onboardedBuyerUsers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      mobile: users.mobile,
+      role: users.role,
+      buyerOnboarded: users.buyerOnboarded,
+      buyerPaid: users.buyerPaid,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(or(eq(users.buyerOnboarded, true), eq(users.buyerPaid, true)))
+    .orderBy(desc(users.createdAt));
+
+  return { buyers, sellers, onboardedBuyerUsers };
 };
 
 /**
@@ -234,7 +270,35 @@ export const findAllSellersWithUserDetails = async () => {
     .where(eq(applications.role, 'SELLER'))
     .orderBy(desc(applications.submittedAt));
 
-  return { sellers, sellerApps };
+  const onboardedSellerUsers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      mobile: users.mobile,
+      role: users.role,
+      sellerOnboarded: users.sellerOnboarded,
+      sellerPaid: users.sellerPaid,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(or(eq(users.sellerOnboarded, true), eq(users.sellerPaid, true)))
+    .orderBy(desc(users.createdAt));
+
+  const uploadedDocs = await db
+    .select({
+      id: documents.id,
+      userId: documents.userId,
+      documentType: documents.documentType,
+      fileName: documents.fileName,
+      fileUrl: documents.fileUrl,
+      status: documents.status,
+      createdAt: documents.createdAt,
+    })
+    .from(documents)
+    .orderBy(desc(documents.createdAt));
+
+  return { sellers, sellerApps, onboardedSellerUsers, uploadedDocs };
 };
 
 /**
