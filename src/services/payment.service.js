@@ -198,7 +198,7 @@ export const createRazorpayOrderService = async ({ userId, planId, categories })
     }));
   } else {
     // Fallback: strictly fetch default plan pricing from public.membership_plans in database
-    const defaultPlan = planId 
+    const defaultPlan = planId
       ? await planRepository.findActiveById(planId)
       : await planRepository.getDefaultPlan('SELLER');
 
@@ -662,4 +662,4 @@ export const processPaymentService = async ({
       paidAt: savedPayment.paidAt,
     },
   };
-};
+}
