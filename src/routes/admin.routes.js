@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { adminLogin, getAllBuyers, updateBuyer, getAllSellers, updateSeller } from '../controllers/admin.controller.js';
+import { getUserDocuments } from '../controllers/document.controller.js';
 import { adminLoginRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
@@ -26,5 +27,9 @@ router.get('/sellers', getAllSellers);
 // Endpoints: PATCH /api/v1/admin/sellers/:id & PUT /api/v1/admin/sellers/:id
 router.patch('/sellers/:id', updateSeller);
 router.put('/sellers/:id', updateSeller);
+
+// Route: Fetch user-wise uploaded documents for a seller from user_documents bucket
+// Endpoints: GET /api/v1/admin/sellers/:userId/documents & GET /api/admin/sellers/:userId/documents
+router.get('/sellers/:userId/documents', getUserDocuments);
 
 export default router;

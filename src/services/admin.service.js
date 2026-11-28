@@ -298,6 +298,105 @@ const extractSellerProducts = (details = {}) => {
   return 'Direct Agricultural Harvest';
 };
 
+const buildSellerCertifications = ({
+  userId,
+  profileId,
+  appDocuments,
+  userDocs = [],
+  gstin,
+  fssaiNumber,
+  organicScopeNumber,
+  organicCertStatus,
+  organicCertAgency,
+  isOnboarded = false,
+}) => {
+  const certifications = [];
+  const seenDocIds = new Set();
+
+  // 1. Real rows from 'documents' table strictly scoped to this userId
+  for (const d of userDocs) {
+    if (d.id) seenDocIds.add(d.id);
+    const previewUrl = `/api/v1/documents/${encodeURIComponent(d.id)}/view?userId=${encodeURIComponent(userId)}`;
+    certifications.push({
+      id: d.id,
+      documentId: d.id,
+      userId,
+      name: d.documentType || 'Uploaded Document',
+      number: d.id || d.fileName,
+      fileName: d.fileName,
+      mimeType: d.mimeType || '',
+      storagePath: d.storagePath || '',
+      authority: 'Verified Upload',
+      validity: d.status || 'Uploaded',
+      url: d.fileUrl || null,
+      previewUrl,
+    });
+  }
+
+  // 2. Supplement any valid non-blob document entries from application snapshot
+  if (appDocuments && typeof appDocuments === 'object') {
+    for (const [docKey, docVal] of Object.entries(appDocuments)) {
+      if (!docVal || typeof docVal !== 'object') continue;
+      const docId = docVal.documentId || '';
+      if (docId && seenDocIds.has(docId)) continue;
+      const rawUrl = typeof docVal.url === 'string' && !docVal.url.startsWith('blob:') ? docVal.url : null;
+      if (!rawUrl && !docId) continue;
+      if (docId) seenDocIds.add(docId);
+
+      certifications.push({
+        id: docId || docKey,
+        documentId: docId || null,
+        userId,
+        name: docVal.documentType || docKey.replace(/_/g, ' '),
+        number: docId || docVal.fileName || 'Uploaded',
+        fileName: docVal.fileName || docKey,
+        mimeType: docVal.mimeType || '',
+        authority: 'Verified Upload',
+        validity: 'Submitted',
+        url: rawUrl,
+        previewUrl: docId?.startsWith('DOC_')
+          ? `/api/v1/documents/${encodeURIComponent(docId)}/view?userId=${encodeURIComponent(userId)}`
+          : rawUrl,
+      });
+    }
+  }
+
+  if (gstin) {
+    certifications.push({
+      name: 'GSTIN Registration',
+      number: gstin,
+      authority: 'GST Council India',
+      validity: 'Active',
+    });
+  }
+  if (fssaiNumber) {
+    certifications.push({
+      name: 'FSSAI Food License',
+      number: fssaiNumber,
+      authority: 'FSSAI India',
+      validity: 'Active',
+    });
+  }
+  if (organicScopeNumber) {
+    certifications.push({
+      name: organicCertStatus || 'Organic Certification',
+      number: organicScopeNumber,
+      authority: organicCertAgency || 'NPOP / PGS-India',
+      validity: 'Active',
+    });
+  }
+  if (certifications.length === 0) {
+    certifications.push({
+      name: 'Cultivator Onboarding Record',
+      number: profileId || userId,
+      authority: 'Ulavan Santhai Verification',
+      validity: isOnboarded ? 'Onboarded' : 'Pending',
+    });
+  }
+
+  return certifications;
+};
+
 /**
  * Service: Fetch all sellers for Admin Portal
  * Reads all records from seller_profiles joined with users table (name, email, mobile via user_id)
@@ -353,64 +452,18 @@ export const getAllSellersService = async () => {
       [sp.village, sp.district, sp.pinCode].filter(Boolean).join(', ') ||
       'Tamil Nadu';
 
-    const certifications = [];
-    if (app?.documents && typeof app.documents === 'object') {
-      for (const [docKey, docVal] of Object.entries(app.documents)) {
-        if (docVal && typeof docVal === 'object') {
-          certifications.push({
-            name: docVal.documentType || docKey.replace(/_/g, ' '),
-            number: docVal.documentId || docVal.fileName || 'Uploaded',
-            authority: 'Verified Upload',
-            validity: 'Submitted',
-            url: docVal.url || null,
-          });
-        }
-      }
-    }
-    if (certifications.length === 0) {
-      const userDocs = docsByUser.get(sp.userId) || [];
-      for (const d of userDocs) {
-        certifications.push({
-          name: d.documentType || 'Uploaded Document',
-          number: d.id || d.fileName,
-          authority: 'Verified Upload',
-          validity: d.status || 'Uploaded',
-          url: d.fileUrl || null,
-        });
-      }
-    }
-    if (sp.gstin) {
-      certifications.push({
-        name: 'GSTIN Registration',
-        number: sp.gstin,
-        authority: 'GST Council India',
-        validity: 'Active',
-      });
-    }
-    if (sp.fssaiNumber) {
-      certifications.push({
-        name: 'FSSAI Food License',
-        number: sp.fssaiNumber,
-        authority: 'FSSAI India',
-        validity: 'Active',
-      });
-    }
-    if (details.organicScopeNumber) {
-      certifications.push({
-        name: details.organicCertStatus || 'Organic Certification',
-        number: details.organicScopeNumber,
-        authority: details.organicCertAgency || 'NPOP / PGS-India',
-        validity: 'Active',
-      });
-    }
-    if (certifications.length === 0) {
-      certifications.push({
-        name: 'Cultivator Onboarding Record',
-        number: sp.id,
-        authority: 'Ulavan Santhai Verification',
-        validity: sp.sellerOnboarded ? 'Onboarded' : 'Pending',
-      });
-    }
+    const certifications = buildSellerCertifications({
+      userId: sp.userId,
+      profileId: sp.id,
+      appDocuments: app?.documents,
+      userDocs: docsByUser.get(sp.userId) || [],
+      gstin: sp.gstin,
+      fssaiNumber: sp.fssaiNumber,
+      organicScopeNumber: details.organicScopeNumber,
+      organicCertStatus: details.organicCertStatus,
+      organicCertAgency: details.organicCertAgency,
+      isOnboarded: sp.sellerOnboarded,
+    });
 
     const registeredDate = sp.createdAt
       ? new Date(sp.createdAt).toLocaleDateString('en-IN', {
@@ -449,21 +502,13 @@ export const getAllSellersService = async () => {
       sellerUserIds.add(u.id);
       const userDocs = docsByUser.get(u.id) || [];
       const app = latestAppByUser.get(u.id);
-      const certifications = userDocs.map((d) => ({
-        name: d.documentType || 'Uploaded Document',
-        number: d.id || d.fileName,
-        authority: 'Verified Upload',
-        validity: d.status || 'Uploaded',
-        url: d.fileUrl || null,
-      }));
-      if (certifications.length === 0) {
-        certifications.push({
-          name: 'Verified Seller Membership',
-          number: u.id,
-          authority: 'Ulavan Santhai Verification',
-          validity: 'Active',
-        });
-      }
+      const certifications = buildSellerCertifications({
+        userId: u.id,
+        profileId: u.id,
+        appDocuments: app?.documents,
+        userDocs,
+        isOnboarded: true,
+      });
 
       const registeredDate = u.createdAt
         ? new Date(u.createdAt).toLocaleDateString('en-IN', {

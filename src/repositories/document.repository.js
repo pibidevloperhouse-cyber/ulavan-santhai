@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../config/db.js';
 import { documents } from '../models/schema.js';
 
@@ -38,7 +38,22 @@ export const findById = async (id) => {
 };
 
 /**
- * Find all documents uploaded by a specific user
+ * Find document record strictly scoped to a specific userId (prevents cross-user access)
+ * @param {string} id
+ * @param {string} userId
+ * @returns {Promise<object|null>}
+ */
+export const findByIdAndUserId = async (id, userId) => {
+  const [doc] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+    .limit(1);
+  return doc || null;
+};
+
+/**
+ * Find all documents uploaded by a specific user (newest first)
  * @param {string} userId
  * @returns {Promise<Array<object>>}
  */
@@ -46,7 +61,22 @@ export const findByUserId = async (userId) => {
   return db
     .select()
     .from(documents)
-    .where(eq(documents.userId, userId));
+    .where(eq(documents.userId, userId))
+    .orderBy(desc(documents.createdAt));
+};
+
+/**
+ * Find document record by storagePath (prevents cross-user folder collision)
+ * @param {string} storagePath
+ * @returns {Promise<object|null>}
+ */
+export const findByStoragePath = async (storagePath) => {
+  const [doc] = await db
+    .select()
+    .from(documents)
+    .where(eq(documents.storagePath, storagePath))
+    .limit(1);
+  return doc || null;
 };
 
 /**

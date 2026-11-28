@@ -332,6 +332,9 @@ export const findAllSellersWithUserDetails = async () => {
       documentType: documents.documentType,
       fileName: documents.fileName,
       fileUrl: documents.fileUrl,
+      storagePath: documents.storagePath,
+      mimeType: documents.mimeType,
+      fileSize: documents.fileSize,
       status: documents.status,
       createdAt: documents.createdAt,
     })
