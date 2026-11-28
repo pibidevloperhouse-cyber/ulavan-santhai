@@ -172,28 +172,38 @@ export const createRazorpayOrderService = async ({ userId, planId, categories })
   let totalAmountPaise = 0;
   let currency = 'INR';
   let planName = '';
-  let resolvedPlanId = 'SELLER_ANNUAL';
+  let resolvedPlanId = null;
   let breakdown = [];
 
   if (matchedCategories.length > 0) {
-    totalAmountPaise = matchedCategories.reduce((sum, c) => sum + Number(c.priceInPaise || 36500), 0);
+    // Strictly calculate price based on each category's plan_id price fetched from membership_plans
+    totalAmountPaise = matchedCategories.reduce((sum, c) => {
+      const price = Number(c.priceInPaise);
+      if (isNaN(price) || price <= 0) {
+        throw new Error(`Invalid pricing configured in database for category: ${c.code || c.id}`);
+      }
+      return sum + price;
+    }, 0);
     currency = matchedCategories[0].currency || 'INR';
     const categoryNames = matchedCategories.map((c) => c.name).join(', ');
     planName = `Seller Membership (${matchedCategories.length} Categories: ${categoryNames})`;
-    resolvedPlanId = matchedCategories.length === 1 ? (matchedCategories[0].planId || 'SELLER_ANNUAL') : 'SELLER_CUSTOM';
+    resolvedPlanId = matchedCategories.length === 1 ? matchedCategories[0].planId : 'SELLER_CUSTOM';
     breakdown = matchedCategories.map((c) => ({
       id: c.id,
       code: c.code,
       name: c.name,
       planId: c.planId,
-      priceInPaise: c.priceInPaise,
-      amountRupees: formatRupees(c.priceInPaise),
+      priceInPaise: Number(c.priceInPaise),
+      amountRupees: formatRupees(Number(c.priceInPaise)),
     }));
   } else {
-    // Fallback to default SELLER_ANNUAL plan
-    const defaultPlan = (await planRepository.findActiveById(planId || 'SELLER_ANNUAL')) || (await planRepository.getDefaultPlan('SELLER'));
+    // Fallback: strictly fetch default plan pricing from public.membership_plans in database
+    const defaultPlan = planId 
+      ? await planRepository.findActiveById(planId)
+      : await planRepository.getDefaultPlan('SELLER');
+
     if (!defaultPlan || !defaultPlan.isActive) {
-      const error = new Error(`Invalid or inactive plan selected: ${planId || 'DEFAULT'}`);
+      const error = new Error(`No active membership plan found in database for role SELLER`);
       error.statusCode = 400;
       throw error;
     }
@@ -569,12 +579,17 @@ export const processPaymentService = async ({
     directTxnId ||
     `TXN_${crypto.randomInt(100000, 999999)}`;
 
-  const rawAmount =
+  let rawAmount =
     paymentRecord.totalAmount ||
     paymentRecord.baseAmount ||
     reviewRequest.amount ||
-    directAmount ||
-    365.0;
+    directAmount;
+
+  if (!rawAmount) {
+    const roleForPlan = String(paymentRecord.role || reviewRequest.role || directRole || 'SELLER').toUpperCase();
+    const defaultPlan = await planRepository.getDefaultPlan(roleForPlan);
+    rawAmount = defaultPlan ? (defaultPlan.priceInPaise / 100).toFixed(2) : 0;
+  }
 
   const numericAmount = parseFloat(rawAmount).toFixed(2);
   const normalizedRole = String(
