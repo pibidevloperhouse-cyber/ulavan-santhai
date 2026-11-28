@@ -9,6 +9,7 @@ export default function CertificationsSection({
   onAddCertification,
   onRemoveCertification,
   onUpdateCertification,
+  isRecommended = false,
 }) {
   const fileInputRefs = useRef({});
   const [certErrors, setCertErrors] = useState({});
@@ -79,23 +80,33 @@ export default function CertificationsSection({
   ];
 
   return (
-    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
-        <div className="flex items-center gap-2">
+    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 shadow-2xs space-y-3 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-[#E7EEDB]">
+        <div>
           <h2 className="text-sm font-extrabold text-[#0B3C26]">
-            7. Certifications
+            Certifications
           </h2>
-          <span className="text-[#54754B] text-[10px]">Applicable</span>
+          <p className="text-[11px] text-[#54754B]">
+            {isRecommended
+              ? "Recommended for Organic Products. Add certificate details and upload supporting documents."
+              : "Optional compliance details and certificates for your product."}
+          </p>
         </div>
-        <span className="text-xs text-[#4E6D45] font-medium">
-          Compliance &amp; Documents
+        <span
+          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+            isRecommended
+              ? "bg-[#ECF9C4] border-[#C5E37A] text-[#0B3C26]"
+              : "bg-[#F5F7EC] border-[#DDE7CE] text-[#4E6D45]"
+          }`}
+        >
+          {isRecommended ? "Recommended" : "Optional"}
         </span>
       </div>
 
       {certifications.map((cert) => (
         <div
           key={cert.id}
-          className="border border-[#DDE7CE] rounded-2xl p-3.5 sm:p-4 bg-[#F5F7EC] space-y-3.5 min-w-0"
+          className="border border-[#DDE7CE] rounded-xl p-3 bg-[#F5F7EC] space-y-3 min-w-0"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="min-w-0">

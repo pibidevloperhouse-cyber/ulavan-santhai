@@ -4,12 +4,21 @@ import React from "react";
 import { getSellerCategories } from "@/services/categoryStorage";
 import SellerSelect from "../../ui/SellerSelect";
 
-const QUALITY_GRADES = [
-  "Select grade",
-  "Grade A (Export / Premium)",
-  "Grade B (Commercial / Standard)",
-  "Grade C (Processing)",
+export const PRODUCT_CATEGORIES = [
+  "Agricultural Products",
+  "Organic Products",
+  "Agricultural Raw Materials",
+  "Agriculture-Derived Ingredients",
+  "Value-Added Products",
 ];
+
+export const CATEGORY_TO_STORAGE_CODES = {
+  "Agricultural Products": ["Farmer", "Agricultural Producer"],
+  "Organic Products": ["Organic Producer"],
+  "Agricultural Raw Materials": ["Raw-Material Provider"],
+  "Agriculture-Derived Ingredients": ["Ingredient Producer"],
+  "Value-Added Products": ["Value-Added Manufacturer", "Manufacturer"],
+};
 
 export default function BasicInfoSection({
   productName,
@@ -21,14 +30,6 @@ export default function BasicInfoSection({
   sellerCategories,
   unlockedCategories = [],
   onLockedCategoryClick,
-  productType,
-  onProductTypeChange,
-  variety,
-  onVarietyChange,
-  qualityGrade,
-  onQualityGradeChange,
-  size,
-  onSizeChange,
   productDescription,
   onProductDescriptionChange,
 }) {
@@ -37,28 +38,31 @@ export default function BasicInfoSection({
       ? sellerCategories.filter((c) => c.status !== "Inactive")
       : getSellerCategories().filter((c) => c.status !== "Inactive");
 
-  const classificationNames = activeCategoriesList.map((c) => c.code || c.name);
   const unlockedSet = new Set(unlockedCategories);
-  const combinedCategories = Array.from(
-    new Set([...classificationNames, ...unlockedCategories.filter(Boolean)])
-  );
-
   const isSelectedCategoryUnlocked = Boolean(
     productCategory && unlockedSet.has(productCategory)
   );
 
-  const matchedCatObj = activeCategoriesList.find(
-    (c) => (c.code || c.name) === productCategory || c.name === productCategory
-  );
-
-  // Available subcategories strictly from the chosen active Seller Onboarding classification
+  const mappedCodes = CATEGORY_TO_STORAGE_CODES[productCategory] || [];
   const availableSubcategories = isSelectedCategoryUnlocked
-    ? matchedCatObj?.subcategories || []
+    ? Array.from(
+        new Set(
+          activeCategoriesList
+            .filter(
+              (c) =>
+                mappedCodes.includes(c.code) ||
+                mappedCodes.includes(c.name) ||
+                c.name === productCategory ||
+                c.code === productCategory
+            )
+            .flatMap((c) => c.subcategories || [])
+        )
+      )
     : [];
 
   const categoryOptions = [
     { value: "", label: "Select a category" },
-    ...combinedCategories.map((cat) => ({
+    ...PRODUCT_CATEGORIES.map((cat) => ({
       value: cat,
       label: cat,
       locked: !unlockedSet.has(cat),
@@ -79,39 +83,25 @@ export default function BasicInfoSection({
       ];
 
   return (
-    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
-        <h2 className="text-sm font-extrabold text-[#0B3C26]">
-          1. Basic information
-        </h2>
-        <span className="text-xs text-[#4E6D45] font-medium">Core Details</span>
+    <div className="space-y-3.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-[#E7EEDB]">
+        <div>
+          <h2 className="text-sm font-extrabold text-[#0B3C26]">
+            Product information
+          </h2>
+          <p className="text-[11px] text-[#54754B]">
+            Choose an unlocked category to see its product fields, or click a locked category to unlock it for ₹365.
+          </p>
+        </div>
+        <span className="text-[10px] font-bold text-[#C53030] bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full">
+          * Required
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Product name */}
-        <div className="sm:col-span-2 lg:col-span-1 min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Product name{" "}
-            <span className="text-[#C53030] text-[10px] font-normal">
-              Mandatory
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Millet flour"
-            value={productName}
-            onChange={(e) => onProductNameChange(e.target.value)}
-            className="w-full min-w-0 px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
-          />
-        </div>
-
-        {/* Product category */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Product category{" "}
-            <span className="text-[#C53030] text-[10px] font-normal">
-              Mandatory
-            </span>
+          <label className="block text-[11px] font-bold text-[#3C5840] mb-1">
+            Product category <span className="text-[#C53030]">*</span>
           </label>
           <SellerSelect
             value={isSelectedCategoryUnlocked ? productCategory : ""}
@@ -132,9 +122,8 @@ export default function BasicInfoSection({
           />
         </div>
 
-        {/* Product subcategory */}
         <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
+          <label className="block text-[11px] font-bold text-[#3C5840] mb-1">
             Subcategory{" "}
             <span className="text-[#2D8A3E] text-[10px] font-semibold">
               Applicable
@@ -150,101 +139,32 @@ export default function BasicInfoSection({
             ariaLabel="Product subcategory"
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Product type */}
         <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Product type{" "}
-            <span className="text-[#54754B] text-[10px] font-normal">
-              Applicable
-            </span>
+          <label className="block text-[11px] font-bold text-[#3C5840] mb-1">
+            Product name <span className="text-[#C53030]">*</span>
           </label>
           <input
             type="text"
-            placeholder="e.g. Flour, spice, grain, pasta"
-            value={productType}
-            onChange={(e) => onProductTypeChange(e.target.value)}
-            className="w-full min-w-0 px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
-          />
-        </div>
-
-        {/* Variety */}
-        <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Variety{" "}
-            <span className="text-[#54754B] text-[10px] font-normal">
-              Applicable
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. variety or cultivar name"
-            value={variety}
-            onChange={(e) => onVarietyChange(e.target.value)}
-            className="w-full min-w-0 px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
+            placeholder="e.g. Organic Foxtail Millet"
+            value={productName}
+            onChange={(e) => onProductNameChange(e.target.value)}
+            className="w-full min-w-0 px-3 py-2 bg-[#F8FAF3] focus:bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E] transition-colors"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Quality grade */}
-        <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Quality grade{" "}
-            <span className="text-[#54754B] text-[10px] font-normal">
-              Applicable
-            </span>
-          </label>
-          <SellerSelect
-            value={qualityGrade}
-            onChange={onQualityGradeChange}
-            options={QUALITY_GRADES}
-            ariaLabel="Quality grade"
-          />
-          <p className="text-[10px] text-[#54754B] mt-1">
-            Grade list is configurable per category.
-          </p>
-        </div>
-
-        {/* Size */}
-        <div className="min-w-0">
-          <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-            Size{" "}
-            <span className="text-[#54754B] text-[10px] font-normal">
-              Applicable
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. small / medium / large, or a size range"
-            value={size}
-            onChange={(e) => onSizeChange(e.target.value)}
-            className="w-full min-w-0 px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E]"
-          />
-        </div>
-      </div>
-
-      {/* Product description */}
       <div>
-        <label className="block text-xs font-semibold text-[#3C5840] mb-1">
-          Product description{" "}
-          <span className="text-[#C53030] text-[10px] font-normal">
-            Mandatory
-          </span>
+        <label className="block text-[11px] font-bold text-[#3C5840] mb-1">
+          Product description <span className="text-[#C53030]">*</span>
         </label>
         <textarea
           rows={3}
           placeholder="Describe the product clearly and accurately. Buyers read this before approaching you."
           value={productDescription}
           onChange={(e) => onProductDescriptionChange(e.target.value)}
-          className="w-full px-3 py-2 bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E] leading-relaxed"
+          className="w-full px-3 py-2 bg-[#F8FAF3] focus:bg-white border border-[#D2DFC0] rounded-xl text-xs text-[#0B3C26] focus:outline-none focus:border-[#2D8A3E] leading-relaxed transition-colors"
         />
-        <p className="text-[10px] text-[#54754B] mt-1">
-          You are responsible for accurate, complete, current and non-misleading
-          information.
-        </p>
       </div>
     </div>
   );

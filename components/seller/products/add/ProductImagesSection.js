@@ -110,18 +110,18 @@ export default function ProductImagesSection({
   };
 
   return (
-    <div className="bg-white border border-[#DDE7CE] rounded-2xl p-4 sm:p-6 shadow-2xs space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E7EEDB]">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-extrabold text-[#0B3C26]">
-            2. Product images
-          </h2>
-          <span className="text-[#C53030] text-[10px] font-semibold">
-            Mandatory
-          </span>
+    <div className="space-y-3 pt-3.5 border-t border-[#E7EEDB] min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-xs font-extrabold text-[#0B3C26]">
+            Product images <span className="text-[#C53030]">*</span>
+          </h3>
+          <p className="text-[11px] text-[#54754B]">
+            Upload multiple photos and pick the primary image shown to buyers.
+          </p>
         </div>
-        <span className="text-xs text-[#4E6D45] font-medium">
-          {images.length > 0 ? `${images.length} uploaded` : "Gallery"}
+        <span className="text-[10px] text-[#2D8A3E] bg-[#ECF9C4] border border-[#C5E37A] px-2.5 py-0.5 rounded-full font-bold">
+          {images.length > 0 ? `${images.length} selected` : "Multiple allowed"}
         </span>
       </div>
 
@@ -158,21 +158,29 @@ export default function ProductImagesSection({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer select-none ${
+        className={`border-2 border-dashed rounded-xl px-4 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all cursor-pointer select-none ${
           isDragging
-            ? "border-[#2D8A3E] bg-[#ECF9C4] scale-[1.005]"
+            ? "border-[#2D8A3E] bg-[#ECF9C4]"
             : "border-[#D2DFC0] bg-[#F5F7EC] hover:border-[#2D8A3E] hover:bg-[#ECF9C4]/50"
         }`}
       >
-        <UploadCloud className="w-8 h-8 text-[#2D8A3E] mx-auto mb-2 transition-transform group-hover:scale-110" />
-        <div className="text-xs font-bold text-[#0B3C26]">
-          Drag images here or{" "}
-          <span className="text-[#2D8A3E] underline underline-offset-2">browse files</span>
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-9 h-9 rounded-xl bg-white border border-[#DDE7CE] flex items-center justify-center shrink-0">
+            <UploadCloud className="w-5 h-5 text-[#2D8A3E]" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-[#0B3C26]">
+              Drag &amp; drop images here or{" "}
+              <span className="text-[#2D8A3E] underline underline-offset-2">browse files</span>
+            </div>
+            <div className="text-[10px] text-[#54754B]">
+              Multiple JPG, PNG or WebP · max 5MB per image
+            </div>
+          </div>
         </div>
-        <div className="text-[10px] text-[#54754B] mt-1">
-          Multiple images · JPG, PNG or WebP · max 5MB per image · size and
-          format are validated on upload
-        </div>
+        <span className="px-3 py-1.5 rounded-lg bg-white border border-[#D2DFC0] text-[11px] font-bold text-[#0B3C26] shrink-0">
+          + Add images
+        </span>
       </div>
 
       {/* Error Message if Any */}
@@ -191,22 +199,19 @@ export default function ProductImagesSection({
 
       {/* Image Preview Grid */}
       {images.length > 0 && (
-        <div className="space-y-2 pt-2">
-          <div className="text-xs font-semibold text-[#3C5840]">
-            Uploaded Images ({images.length})
-          </div>
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
             {images.map((img) => (
               <div
                 key={img.id}
-                className={`border rounded-xl p-3 space-y-2.5 transition-all ${
+                className={`border rounded-xl p-2 space-y-1.5 transition-all ${
                   img.isPrimary
                     ? "border-[#8DC63F] bg-[#F2FAE0] ring-1 ring-[#8DC63F]"
                     : "border-[#DDE7CE] bg-[#F5F7EC]"
                 }`}
               >
                 {/* Thumbnail Display */}
-                <div className="h-28 bg-[#ECF9C4] rounded-lg overflow-hidden flex items-center justify-center relative">
+                <div className="h-20 bg-[#ECF9C4] rounded-lg overflow-hidden flex items-center justify-center relative">
                   {img.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -272,10 +277,6 @@ export default function ProductImagesSection({
         </div>
       )}
 
-      <p className="text-[10px] text-[#54754B]">
-        Each uploaded image supports preview, replace, delete, and primary-image
-        selection.
-      </p>
     </div>
   );
 }

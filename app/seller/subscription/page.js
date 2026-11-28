@@ -10,6 +10,10 @@ import PaymentHistoryTable from "@/components/seller/subscription/PaymentHistory
 import UnlockCategoryFlow, {
   getUnlockDocRequirements,
 } from "@/components/seller/subscription/UnlockCategoryFlow";
+import {
+  PRODUCT_CATEGORIES,
+  CATEGORY_TO_STORAGE_CODES,
+} from "@/components/seller/products/add/BasicInfoSection";
 import { useSessionUser } from "@/services/sessionAuth";
 import {
   getDynamicSellerProfile,
@@ -106,20 +110,33 @@ function SellerSubscriptionContent() {
     [mergedUser]
   );
 
-  const unlockedCategories = useMemo(
-    () => getSellerUnlockedCategories(mergedUser, sellerCategories),
-    [mergedUser, sellerCategories]
-  );
+  const unlockedCategories = useMemo(() => {
+    const rawUnlocked = getSellerUnlockedCategories(mergedUser, sellerCategories);
+    const rawSet = new Set(rawUnlocked);
+
+    return PRODUCT_CATEGORIES.filter((prodCat) => {
+      if (rawSet.has(prodCat)) return true;
+      const mappedCodes = CATEGORY_TO_STORAGE_CODES[prodCat] || [];
+      return mappedCodes.some((code) => rawSet.has(code));
+    });
+  }, [mergedUser, sellerCategories]);
 
   const lockedCategoryOptions = useMemo(() => {
-    const activeCats = sellerCategories.filter((c) => c.status !== "Inactive");
     const unlockedSet = new Set(unlockedCategories);
-    return activeCats
-      .map((c) => c.code || c.name)
-      .filter((name, idx, arr) => name && arr.indexOf(name) === idx)
-      .filter((name) => !unlockedSet.has(name))
-      .map((name) => ({ value: name, label: name }));
-  }, [sellerCategories, unlockedCategories]);
+    return PRODUCT_CATEGORIES.filter((name) => !unlockedSet.has(name)).map(
+      (name) => ({ value: name, label: name })
+    );
+  }, [unlockedCategories]);
+
+  const normalizedUnlockParam = useMemo(() => {
+    if (!unlockParam) return "";
+    if (PRODUCT_CATEGORIES.includes(unlockParam)) return unlockParam;
+    return (
+      PRODUCT_CATEGORIES.find((prodCat) =>
+        (CATEGORY_TO_STORAGE_CODES[prodCat] || []).includes(unlockParam)
+      ) || ""
+    );
+  }, [unlockParam]);
 
   // Manual selection overrides URL param cleanly; "__NONE__" switches back to renewal mode
   const [manualUnlockCategory, setManualUnlockCategory] = useState(null);
@@ -159,18 +176,18 @@ function SellerSubscriptionContent() {
     if (unlockResult) return unlockResult.category;
     if (manualUnlockCategory === "__NONE__") return "";
     if (manualUnlockCategory) return manualUnlockCategory;
-    if (unlockParam && !unlockedCategories.includes(unlockParam)) {
-      return unlockParam;
+    if (normalizedUnlockParam && !unlockedCategories.includes(normalizedUnlockParam)) {
+      return normalizedUnlockParam;
     }
     return "";
-  }, [manualUnlockCategory, unlockParam, unlockedCategories, unlockResult]);
+  }, [manualUnlockCategory, normalizedUnlockParam, unlockedCategories, unlockResult]);
 
   const requestedAlreadyUnlocked =
     !unlockResult &&
     !manualUnlockCategory &&
-    Boolean(unlockParam) &&
-    unlockedCategories.includes(unlockParam)
-      ? unlockParam
+    Boolean(normalizedUnlockParam) &&
+    unlockedCategories.includes(normalizedUnlockParam)
+      ? normalizedUnlockParam
       : "";
 
   const docRequirements = useMemo(

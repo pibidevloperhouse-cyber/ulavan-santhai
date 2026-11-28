@@ -15,6 +15,11 @@ export const STANDARD_SELLER_TYPES = [
   "Manufacturer",
   "Value-Added Manufacturer",
   "Other",
+  "Agricultural Products",
+  "Organic Products",
+  "Agricultural Raw Materials",
+  "Agriculture-Derived Ingredients",
+  "Value-Added Products",
 ];
 
 /**
@@ -28,7 +33,7 @@ export function getUnlockDocRequirements(
   const isCustom = !STANDARD_SELLER_TYPES.includes(category);
   const docs = [];
 
-  if (category === "Farmer") {
+  if (category === "Farmer" || category === "Agricultural Products") {
     docs.push({
       docType: "LAND_PROOF",
       title: "Patta / Chitta Document",
@@ -47,7 +52,7 @@ export function getUnlockDocRequirements(
     });
   }
 
-  if (category === "Organic Producer") {
+  if (category === "Organic Producer" || category === "Organic Products") {
     docs.push({
       docType: "ORGANIC_CERTIFICATE",
       title: "Organic Certification Document (NPOP / PGS-India)",
@@ -85,7 +90,10 @@ export function getUnlockDocRequirements(
   if (
     category === "Manufacturer" ||
     category === "Value-Added Manufacturer" ||
-    (category === "Ingredient Producer" && hasFssai === "Yes")
+    category === "Value-Added Products" ||
+    ((category === "Ingredient Producer" ||
+      category === "Agriculture-Derived Ingredients") &&
+      hasFssai === "Yes")
   ) {
     docs.push({
       docType: "FSSAI_LICENSE",
@@ -98,7 +106,9 @@ export function getUnlockDocRequirements(
 
   if (
     category === "Raw-Material Provider" ||
+    category === "Agricultural Raw Materials" ||
     category === "Ingredient Producer" ||
+    category === "Agriculture-Derived Ingredients" ||
     category === "Manufacturer" ||
     category === "Other" ||
     (isCustom && hasGst === "Yes") ||
@@ -135,7 +145,9 @@ export default function UnlockCategoryFlow({
 }) {
   const isCustomCategory =
     Boolean(unlockCategory) && !STANDARD_SELLER_TYPES.includes(unlockCategory);
-  const showFssaiToggle = unlockCategory === "Ingredient Producer";
+  const showFssaiToggle =
+    unlockCategory === "Ingredient Producer" ||
+    unlockCategory === "Agriculture-Derived Ingredients";
   const showGstToggle =
     unlockCategory === "Agricultural Producer" || isCustomCategory;
 
